@@ -265,3 +265,313 @@ export type Machine = {
   hint: string;
   exercises: MachineEx[];
 };
+
+export const MACHINES: Machine[] = [
+  {
+    id: "bench",
+    name: "Скамья для жима",
+    zone: "Жимовая",
+    hint: "Наведите камеру на гриф и стойки — в зале так и будет.",
+    exercises: [
+      {
+        name: "Жим лёжа",
+        path: "press",
+        cues: ["Лопатки собраны, грудь вверх", "Гриф на нижнюю часть груди", "Локти ~45°, стопы в пол"],
+        mistakes: ["Отрыв таза", "Гриф гуляет по дуге к лицу"],
+      },
+      {
+        name: "Жим гантелей",
+        path: "press",
+        cues: ["Нейтральный запястный угол", "Опускайте до растяжения груди"],
+        mistakes: ["Стучать гантелями вверху", "Прогиб только в пояснице"],
+      },
+    ],
+  },
+  {
+    id: "rack",
+    name: "Силовая рама",
+    zone: "Низ",
+    hint: "Рама, зеркало, ограничители — сканер узнает стойку.",
+    exercises: [
+      {
+        name: "Присед со штангой",
+        path: "squat",
+        cues: ["Колени по носкам", "Таз между пятками", "Вставайте грудью, не лбом"],
+        mistakes: ["Колени заваливаются внутрь", "Пятки отрываются"],
+      },
+      {
+        name: "Жим стоя",
+        path: "press",
+        cues: ["Пресс и ягодицы в тонусе", "Гриф почти по лицу вверх"],
+        mistakes: ["Прогиб как мостик", "Дожимать плечами к ушам"],
+      },
+    ],
+  },
+  {
+    id: "cable",
+    name: "Блочный тренажёр",
+    zone: "Тяги",
+    hint: "Башня, рукоять, трос — типичный кроссовер.",
+    exercises: [
+      {
+        name: "Тяга верхнего блока",
+        path: "row",
+        cues: ["Грудь к ручке, локти вниз-назад", "Не заваливайте корпус"],
+        mistakes: ["Тянуть руками, а не спиной", "Рывок всем телом"],
+      },
+      {
+        name: "Тяга к поясу",
+        path: "row",
+        cues: ["Лопатка к позвоночнику", "Пауза в пике"],
+        mistakes: ["Круглая поясница", "Короткий ход"],
+      },
+    ],
+  },
+  {
+    id: "legpress",
+    name: "Жим ногами",
+    zone: "Низ",
+    hint: "Салазки и платформа под углом.",
+    exercises: [
+      {
+        name: "Жим платформы",
+        path: "squat",
+        cues: ["Полная стопа", "Не отрывать поясницу от спинки", "Контроль вниз"],
+        mistakes: ["Колени внутрь", "Замок коленей ударом"],
+      },
+    ],
+  },
+  {
+    id: "hyperext",
+    name: "Гиперэкстензия",
+    zone: "Задняя цепь",
+    hint: "Римский стул / наклонная скамья.",
+    exercises: [
+      {
+        name: "Разгибание корпуса",
+        path: "squat",
+        cues: ["Нейтральная шея", "Движение в бёдрах, не в пояснице", "Вверху не забрасывать"],
+        mistakes: ["Переразгиб как мостик", "Рывок с руками"],
+      },
+    ],
+  },
+  {
+    id: "lat",
+    name: "Турник / гравитрон",
+    zone: "Верх · тяга",
+    hint: "Перекладина над головой.",
+    exercises: [
+      {
+        name: "Подтягивания",
+        path: "row",
+        cues: ["Лопатки вниз до сгиба рук", "Грудь к перекладине"],
+        mistakes: ["Качание корпусом", "Недожим вверху"],
+      },
+    ],
+  },
+];
+
+const MARIA_SESSIONS: ProgramSession[] = [
+  { id: "a", name: "День A", focus: "Ноги + ягодицы", items: ["Присед 4×6", "Румынская 3×8", "Выпады 3×10", "Ягодичный мост 3×12"] },
+  { id: "b", name: "День B", focus: "Верх · жим", items: ["Жим лёжа 4×6", "Жим гантелей 3×10", "Тяга блока 4×8", "Лицо-тяги 3×15"] },
+  { id: "c", name: "День C", focus: "Верх · тяга", items: ["Подтягивания 4×макс", "Тяга штанги 4×6", "Армейский жим 3×8", "Бицепс 3×12"] },
+];
+
+export function pad(n: number) {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+export function isoDate(d: Date) {
+  const date = Number.isNaN(d.getTime()) ? new Date() : d;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function parseISODate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || "");
+  if (!match) return new Date();
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+export function startOfWeek(d: Date) {
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return date;
+}
+
+export function addDays(d: Date, n: number) {
+  const next = new Date(d);
+  next.setDate(next.getDate() + n);
+  return next;
+}
+
+export function isPastDate(iso: string) {
+  const today = isoDate(new Date());
+  return iso < today;
+}
+
+export function nowHM() {
+  const n = new Date();
+  return `${pad(n.getHours())}:${pad(n.getMinutes())}`;
+}
+
+export function isSlotPast(date: string, time: string) {
+  const today = isoDate(new Date());
+  if (date < today) return true;
+  if (date > today) return false;
+  return time <= nowHM();
+}
+
+export function hoursUntilSlot(date: string, time: string) {
+  const [h, m] = time.split(":").map(Number);
+  const d = parseISODate(date);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return (d.getTime() - Date.now()) / 3600000;
+}
+
+export function isLateCancel(date: string, time: string, windowHours: number) {
+  return hoursUntilSlot(date, time) < windowHours;
+}
+
+export function hoursRu(n: number) {
+  const abs = Math.abs(Math.round(n));
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return "час";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "часа";
+  return "часов";
+}
+
+export function hoursUntilLabel(hours: number) {
+  if (hours < 1) return "меньше часа";
+  const rounded = Math.round(hours);
+  return `${rounded} ${hoursRu(rounded)}`;
+}
+
+export function sessionsRu(n: number) {
+  const abs = Math.abs(Math.round(n));
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return "занятие";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "занятия";
+  return "занятий";
+}
+
+export function isFrozen(client: Pick<Client, "frozenUntil">, today = isoDate(new Date())) {
+  return Boolean(client.frozenUntil && client.frozenUntil >= today);
+}
+
+export function packDaysLeft(client: Pick<Client, "packExpiresAt">, today = isoDate(new Date())) {
+  if (!client.packExpiresAt) return null;
+  return Math.round((parseISODate(client.packExpiresAt).getTime() - parseISODate(today).getTime()) / 86400000);
+}
+
+export function countdownLabel(date: string, time: string) {
+  const hours = hoursUntilSlot(date, time);
+  if (hours < 0) return "уже началось";
+  if (hours < 1) return `через ${Math.max(1, Math.round(hours * 60))} мин`;
+  if (hours < 24) return `через ${Math.round(hours)} ${hoursRu(Math.round(hours))}`;
+  const days = Math.floor(hours / 24);
+  return `через ${days} ${daysRu(days)}`;
+}
+
+export function weekVisitCount(bookings: Booking[], clientId: string, from = new Date()) {
+  const start = isoDate(startOfWeek(from));
+  const end = isoDate(addDays(startOfWeek(from), 7));
+  return bookings.filter((b) => b.clientId === clientId && b.date >= start && b.date < end).length;
+}
+
+export function scaleKbju(per100: Kbju, grams: number): Kbju {
+  const k = Math.max(1, grams) / 100;
+  const n = (v: number) => Math.round(v * k * 10) / 10;
+  return {
+    calories: Math.round(per100.calories * k),
+    protein: n(per100.protein),
+    fat: n(per100.fat),
+    carbs: n(per100.carbs),
+  };
+}
+
+/** Strength session: MET 6 × bodyweight × hours × how much of the plan was actually done. */
+export function workoutKcal(weightKg: number, minutes: number, done: number, total: number) {
+  const met = MET.силовая;
+  const ratio = total > 0 ? Math.min(1, done / total) : 0;
+  const effort = 0.5 + 0.5 * ratio;
+  const hours = Math.max(10, minutes) / 60;
+  return Math.max(0, Math.round(met * weightKg * hours * effort));
+}
+
+export type Motive = { kicker: string; line: string };
+
+export type MotiveCtx = {
+  client: Client;
+  today: string;
+  trainDay: boolean;
+  checkedIn: boolean;
+  hoursToSession: number | null;
+  foodCount: number;
+  workout: WorkoutLog | null;
+  checks: number;
+  totalItems: number;
+  frozen: boolean;
+};
+
+export function motiveFor(ctx: MotiveCtx): Motive {
+  const { client, trainDay, checkedIn, hoursToSession, foodCount, workout, checks, totalItems, frozen } = ctx;
+  if (frozen) {
+    return { kicker: "Пауза", line: "Заморозка по правилам. Ритм не сломан — он стоит на паузе." };
+  }
+  if (workout) {
+    return {
+      kicker: "Смена закрыта",
+      line: `${workout.kcal} ккал за работу. Дальше еда и сон — это тоже тренировка.`,
+    };
+  }
+  if (checkedIn && checks === 0) {
+    return { kicker: "Ты в зале", line: "Первый подход закрывает день. Не торгуйся с разминкой." };
+  }
+  if (checks > 0 && checks < totalItems) {
+    return {
+      kicker: "В работе",
+      line: `Ещё ${totalItems - checks}. Не договаривайся с собой на «завтра доделаю».`,
+    };
+  }
+  if (trainDay && hoursToSession !== null && hoursToSession > 0 && hoursToSession < 3) {
+    return { kicker: "Скоро слот", line: "Через пару часов ты уже под грифом. Собери форму сейчас." };
+  }
+  if (trainDay && !checkedIn) {
+    return { kicker: "День явки", line: "Слот стоит. Мотивация не нужна — нужна явка." };
+  }
+  if (!trainDay) {
+    return { kicker: "Восстановление", line: "Сегодня не лень. Сегодня это заложено в программу." };
+  }
+  if (foodCount === 0) {
+    return { kicker: "Дневник", line: "Один скан штрихкода — и день уже в плюсе. Курс держит дневник." };
+  }
+  if (client.streak >= 3) {
+    return { kicker: `Серия ${client.streak}`, line: "Ритм уже держит тебя. Не геройство — явка." };
+  }
+  return { kicker: "Дисциплина", line: "Серия начинается с явки, не с настроения." };
+}
+
+export type DayRitual = {
+  hall: boolean;
+  food: boolean;
+  report: boolean;
+  restDay: boolean;
+  done: number;
+};
+
+export function dayRitual(opts: {
+  trainDay: boolean;
+  checkedIn: boolean;
+  workout: boolean;
+  foodCount: number;
+  reportedToday: boolean;
+}): DayRitual {
+  const restDay = !opts.trainDay;
+  const hall = opts.checkedIn || opts.workout || restDay;
+  const food = opts.foodCount > 0;
+  const report = opts.reportedToday || food || opts.workout;
+  return { hall, food, report, restDay, done: [hall, food, report].filter(Boolean).length };
+}
