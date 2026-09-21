@@ -35,7 +35,7 @@ export function Surface({
   return (
     <div
       className={cn(
-        "rounded-xl bg-card p-4 shadow-border",
+        "apple-block p-4",
         glow === "ok" && "glow-ok",
         glow === "alert" && "glow-alert",
         glow === "soft" && "glow-soft",
