@@ -4,5 +4,10 @@ screenshots
 artifacts
 attachments
 *.log
-.grok
+.vercel
+.nitro
+dist
 migrations/auth
+**/*.test.ts
+**/*.test.mjs
+.DS_Store

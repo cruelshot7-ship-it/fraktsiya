@@ -4,10 +4,11 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 
+# HOST only. Do not pin PORT — Railway assigns it and proxies to that port.
 [env]
-PORT = "8080"
 HOST = "0.0.0.0"
+VITE_AUTH_ENABLED = "false"

@@ -16,10 +16,12 @@ Telegram Mini App студии: запись на слоты, баланс за�
 
 ## Railway
 
-1. [railway.app](https://railway.app) → New Project → Deploy from GitHub → `cruelshot7-ship-it/fraktsiya`
-2. Builder: Dockerfile (`railway.toml` уже указывает на него)
-3. Переменная `PORT` = `8080` (Railway часто выставляет сам)
-4. После деплоя скопируйте HTTPS URL
+1. [railway.app](https://railway.app) → New Project → Deploy from GitHub → [cruelshot7-ship-it/fraktsiya](https://github.com/cruelshot7-ship-it/fraktsiya)
+2. Builder: Dockerfile (файл `railway.toml` уже указывает на него)
+3. `PORT` Railway выставляет сам — контейнер слушает `0.0.0.0:$PORT`
+4. После деплоя скопируйте HTTPS URL в кнопку Mini App бота
+
+Переменные, которые можно добавить позже: `BOT_TOKEN` (не в git). Auth в этом релизе выключен.
 
 ## BotFather (новый бот)
 
