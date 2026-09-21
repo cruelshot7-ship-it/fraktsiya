@@ -1,8 +1,10 @@
 # Ruksha Discipline
 
-Telegram Mini App студии: запись на слоты, баланс занятий, программа, КБЖУ и CRM тренера.
+Telegram Mini App студии Евгения Рукши: запись на слоты, баланс занятий, программа, КБЖУ и CRM тренера.
 
 Сейчас это **клиентский демо-контур** (данные в браузере). Для продакшена нужны бот + API + база — не App Store в первом релизе.
+
+Логотип — монограмма **ER** (Evgeniy Ruksha).
 
 ## Правила занятий
 
@@ -14,21 +16,23 @@ Telegram Mini App студии: запись на слоты, баланс за�
 - Пакет действует 60 дней с последнего зачисления.
 - Полный слот → лист ожидания; при отмене место занимает следующий с балансом.
 
-## Railway
+## Деплой — Vercel
 
-1. [railway.app](https://railway.app) → New Project → Deploy from GitHub → [cruelshot7-ship-it/fraktsiya](https://github.com/cruelshot7-ship-it/fraktsiya)
-2. Builder: Dockerfile (файл `railway.toml` уже указывает на него)
-3. `PORT` Railway выставляет сам — контейнер слушает `0.0.0.0:$PORT`
-4. После деплоя скопируйте HTTPS URL в кнопку Mini App бота
+Сборка уже под Vercel (Nitro preset). Это основной хостинг Mini App.
 
-Переменные, которые можно добавить позже: `BOT_TOKEN` (не в git). Auth в этом релизе выключен.
+1. [vercel.com](https://vercel.com) → Add New → Project → GitHub [cruelshot7-ship-it/fraktsiya](https://github.com/cruelshot7-ship-it/fraktsiya)
+2. Build Command: `npm run build` (уже в `vercel.json`)
+3. После деплоя скопируйте HTTPS URL в кнопку Mini App бота
+4. Auth в этом релизе выключен. `BOT_TOKEN` — только в env, не в git
+
+Railway оставляем запасным вариантом (Dockerfile), если нужен всегда-включённый процесс под будущего бота.
 
 ## BotFather (новый бот)
 
 1. `@BotFather` → `/newbot` → имя **Ruksha Discipline**, username например `ruksha_discipline_bot`
-2. `/setmenubutton` → URL Mini App из Railway
+2. `/setmenubutton` → URL Mini App с Vercel
 3. `/setdomain` → домен без https (для WebApp)
-4. `/setdescription` и `/setuserpic` — логотип FR
-5. Токен бота — только в Railway env `BOT_TOKEN`, никогда в репозиторий
+4. `/setdescription` и `/setuserpic` — логотип ER
+5. Токен бота — только в env хостинга `BOT_TOKEN`, никогда в репозиторий
 
 Онлайн-тренировки — следующий релиз (тип слота `online` + видеокомната), не этот деплой.

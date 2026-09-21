@@ -1,11 +1,15 @@
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { STUDIO } from "@/data/studio";
 
+/** Interlocking ER — Evgeniy Ruksha. */
 export function MonogramSvg({ className }: { className?: string }) {
+  const raw = useId();
+  const gid = `er-${raw.replace(/:/g, "")}`;
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden fill="none">
       <defs>
-        <linearGradient id="ruksha-steel" x1="8" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gid} x1="8" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
           <stop stopColor="#f4f1ea" />
           <stop offset="0.28" stopColor="#c8c3b8" />
           <stop offset="0.52" stopColor="#8a867c" />
@@ -13,10 +17,13 @@ export function MonogramSvg({ className }: { className?: string }) {
           <stop offset="1" stopColor="#6f6b62" />
         </linearGradient>
       </defs>
-      <path
-        fill="url(#ruksha-steel)"
-        d="M10 8h22v8H20v8h14.5c9.2 0 15.5 5.4 15.5 14.2 0 6.2-3.4 11-9.2 13.2L52 56H40.6L32.8 44H20v12H10V8Zm10 24v8h13.2c3.8 0 6-1.8 6-4.2s-2.2-3.8-6-3.8H20Z"
-      />
+      <g fill={`url(#${gid})`}>
+        <path d="M5 6h31v9H15v6h24v9H15v8h31v9H5V6Z" />
+        <path
+          fillRule="evenodd"
+          d="M33 6h15.5C58.8 6 66 13 66 24.2c0 8.2-4.4 14.6-11.8 17.2L63 58H49L38.6 41H33V6Zm11 9.2v16.8h5c5 0 8-3.4 8-8.4s-3-8.4-8-8.4h-5Z"
+        />
+      </g>
     </svg>
   );
 }
@@ -28,7 +35,7 @@ export function BrandMark({ size = 40, className }: { size?: number; className?:
       style={{ width: size, height: size, borderRadius: Math.round(size * 0.22) }}
       aria-hidden
     >
-      <MonogramSvg className="h-[70%] w-[70%]" />
+      <MonogramSvg className="h-[72%] w-[72%]" />
     </span>
   );
 }
