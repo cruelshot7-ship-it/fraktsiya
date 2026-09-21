@@ -103,6 +103,7 @@ export const MET: Record<string, number> = {
   йога: 2.5,
 };
 
+
 export type Slot = {
   id: string;
   date: string;
@@ -371,7 +372,7 @@ export const MACHINES: Machine[] = [
   },
 ];
 
-const MARIA_SESSIONS: ProgramSession[] = [
+export const MARIA_SESSIONS: ProgramSession[] = [
   { id: "a", name: "День A", focus: "Ноги + ягодицы", items: ["Присед 4×6", "Румынская 3×8", "Выпады 3×10", "Ягодичный мост 3×12"] },
   { id: "b", name: "День B", focus: "Верх · жим", items: ["Жим лёжа 4×6", "Жим гантелей 3×10", "Тяга блока 4×8", "Лицо-тяги 3×15"] },
   { id: "c", name: "День C", focus: "Верх · тяга", items: ["Подтягивания 4×макс", "Тяга штанги 4×6", "Армейский жим 3×8", "Бицепс 3×12"] },
@@ -575,3 +576,5 @@ export function dayRitual(opts: {
   const report = opts.reportedToday || food || opts.workout;
   return { hall, food, report, restDay, done: [hall, food, report].filter(Boolean).length };
 }
+
+export * from "./studio-tail";
