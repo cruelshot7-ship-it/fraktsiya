@@ -1,0 +1,70 @@
+export type HapticStyle = "light" | "medium" | "heavy" | "rigid" | "soft";
+export type HapticNotify = "error" | "success" | "warning";
+
+export type TelegramWebApp = {
+  ready: () => void;
+  expand: () => void;
+  disableVerticalSwipes?: () => void;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  platform?: string;
+  isExpanded?: boolean;
+  viewportHeight?: number;
+  viewportStableHeight?: number;
+  onEvent?: (event: string, cb: () => void) => void;
+  offEvent?: (event: string, cb: () => void) => void;
+  HapticFeedback?: {
+    impactOccurred: (style: HapticStyle) => void;
+    notificationOccurred: (type: HapticNotify) => void;
+    selectionChanged: () => void;
+  };
+  showScanQrPopup?: (params: { text?: string }, cb: (text: string) => void) => void;
+  closeScanQrPopup?: () => void;
+};
+
+export function getTelegram(): TelegramWebApp | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp;
+}
+
+function bindVisualViewport() {
+  if (typeof window === "undefined") return;
+  const apply = () => {
+    const vv = window.visualViewport;
+    const height = vv ? vv.height : window.innerHeight;
+    const offset = vv ? vv.offsetTop : 0;
+    const keyboard = Math.max(0, window.innerHeight - height - offset);
+    const root = document.documentElement;
+    root.style.setProperty("--vv-height", `${Math.round(height)}px`);
+    root.style.setProperty("--vv-offset", `${Math.round(offset)}px`);
+    root.style.setProperty("--keyboard", `${Math.round(keyboard)}px`);
+    if (!getTelegram()?.viewportStableHeight) {
+      root.style.setProperty("--app-height", `${Math.round(height)}px`);
+    }
+  };
+  apply();
+  window.visualViewport?.addEventListener("resize", apply, { passive: true });
+  window.visualViewport?.addEventListener("scroll", apply, { passive: true });
+  window.addEventListener("orientationchange", () => window.setTimeout(apply, 250), { passive: true });
+}
+
+export function initTelegram() {
+  bindVisualViewport();
+  const tg = getTelegram();
+  if (!tg) return;
+  try {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor?.("#141310");
+    tg.setBackgroundColor?.("#141310");
+    tg.disableVerticalSwipes?.();
+    const apply = () => {
+      const h = tg.viewportStableHeight || tg.viewportHeight;
+      if (h) document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);
+    };
+    apply();
+    tg.onEvent?.("viewportChanged", apply);
+  } catch {
+    /* older Telegram WebViews omit some methods */
+  }
+}
