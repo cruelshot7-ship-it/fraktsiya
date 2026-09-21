@@ -1,29 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo, useState } from "react";
 import {
-  countdownLabel,
-  dayRitual,
-  DOW,
-  dowIndex,
   EXERCISES,
-  formatDayMonth,
-  hoursUntilSlot,
   isoDate,
   isFrozen,
-  motiveFor,
-  nextTrainDate,
-  programWeek,
-  sumFood,
-  sessionsRu,
   visitSession,
   WEEK_GOAL,
   weekVisitCount,
-  workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
-import { cn } from "@/lib/utils";
-import { Check, Flame } from "lucide-react";
 
 export function ProgramView() {
   const clients = useStudio((s) => s.clients);
@@ -33,285 +18,82 @@ export function ProgramView() {
   const lifts = useStudio((s) => s.lifts);
   const addLift = useStudio((s) => s.addLift);
   const checkIn = useStudio((s) => s.checkIn);
-  const toggleCheck = useStudio((s) => s.toggleCheck);
-  const completeWorkout = useStudio((s) => s.completeWorkout);
-  const checks = useStudio((s) => s.checks);
-  const workoutLogs = useStudio((s) => s.workoutLogs);
   const client = activeClient({ clients, activeClientId });
   const today = isoDate(new Date());
   const session = visitSession(client, today, bookings);
-  const week = programWeek(client, today);
-  const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
-  const weekLoad = bookings.filter((b) => b.clientId === client.id && b.date >= isoDate(new Date(Date.now() - 6 * 86400000))).length;
-  const weekVisits = weekVisitCount(bookings, client.id);
-  const next = nextTrainDate(client);
-  const nextSession = visitSession(client, next, bookings);
-  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
+  const visits = weekVisitCount(bookings, client.id);
+  const eaten = food.filter((f) => f.date === today && f.clientId === client.id);
+  const kcal = eaten.reduce((n, f) => n + f.calories, 0);
+  const frozen = isFrozen(client);
 
-  const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
-  const t = client.kbju;
-  const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today) ?? null;
-  const shown = session ?? nextSession;
-  const checked = checks[`${client.id}:${today}`] ?? [];
-  const itemCount = shown?.items.length ?? 0;
-  const liveKcal = checked.length
-    ? workoutKcal(client.weight, todayBook?.duration ?? 60, checked.length, itemCount || 1)
-    : 0;
-  const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
-  const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
-  const ritual = dayRitual({
-    trainDay,
-    checkedIn: Boolean(todayBook?.checkedIn),
-    workout: Boolean(todayWorkout),
-    foodCount,
-    reportedToday: client.lastReportAt === today,
-  });
-  const motive = motiveFor({
-    client,
-    today,
-    trainDay,
-    checkedIn: Boolean(todayBook?.checkedIn),
-    hoursToSession: hoursToToday,
-    foodCount,
-    workout: todayWorkout,
-    checks: checked.length,
-    totalItems: itemCount,
-    frozen: isFrozen(client),
-  });
+  const [ex, setEx] = useState(EXERCISES[0]);
+  const [kg, setKg] = useState("");
+  const [reps, setReps] = useState("");
+  const [sets, setSets] = useState("3");
 
-  const [exercise, setExercise] = useState("жим");
-  const [kg, setKg] = useState("60");
-  const [reps, setReps] = useState("6");
-  const [sets, setSets] = useState("4");
-  const [chartReady, setChartReady] = useState(false);
-  useEffect(() => setChartReady(true), []);
-
-  const series = useMemo(
-    () =>
-      lifts
-        .filter((l) => l.exercise === exercise && l.clientId === client.id)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((l) => ({ ...l, label: formatDayMonth(l.date) })),
-    [lifts, exercise, client.id],
+  const todayLifts = useMemo(
+    () => lifts.filter((l) => l.clientId === client.id && l.date === today),
+    [client.id, lifts, today],
   );
 
   return (
     <div className="stagger-in flex flex-col gap-3">
-      <Surface glow="ok">
-        <SectionLabel>{motive.kicker}</SectionLabel>
-        <p className="font-display mt-2 text-xl leading-tight tracking-wide">{motive.line}</p>
-        <p className="mt-2 text-tiny text-muted-foreground">Серия {client.streak} · дисциплина дня {ritual.done}/3</p>
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <RitualTick on={ritual.hall} label={ritual.restDay ? "отдых" : "зал"} />
-          <RitualTick on={ritual.food} label="еда" />
-          <RitualTick on={ritual.report} label="явка" />
-        </div>
-      </Surface>
-
-      <Surface glow={client.sessionsLeft <= 2 ? "alert" : session ? "ok" : undefined}>
-        <div className="flex items-start justify-between gap-3">
-          <SectionLabel>
-            {client.programTitle} · нед. {week}/{client.programWeeks}
-          </SectionLabel>
-          <p className="text-tiny text-muted-foreground tabular-nums">
-            {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
-          </p>
-        </div>
-        {session ? (
-          <>
-            <h2 className="font-display mt-2 text-xl tracking-wide">{session.name}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {session.focus}
-              {visiting ? " · вы сегодня в зале" : " · первый визит недели = день A"}
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 className="font-display mt-2 text-xl tracking-wide">Сегодня не тренировочный</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ближайший визит {formatDayMonth(next)}
-              {nextSession ? ` · ${nextSession.name}` : ""}
-            </p>
-          </>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Дни: {client.trainDays.map((d) => DOW[d]).join(" · ") || "не назначены"} ·{" "}
-          {client.trainTimes.join(", ") || "время свободно"}
+      <Surface glow={frozen ? "alert" : "ok"}>
+        <SectionLabel>Сегодня</SectionLabel>
+        <h2 className="font-display mt-1 text-2xl">{session?.name ?? "Восстановление"}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {frozen ? "Заморозка — слоты закрыты." : session?.focus ?? "День без зала. Держите дневник еды."}
         </p>
-        {weekLoad >= 3 ? (
-          <p className="mt-2 text-tiny text-ok">После этой — день восстановления. Сон и белок важнее ещё одного подхода.</p>
-        ) : null}
         <div className="mt-3">
-          <p className="text-tiny text-muted-foreground">
-            Неделя · {weekVisits} из {WEEK_GOAL}
-          </p>
-          <div className="mt-1.5 flex gap-1.5">
-            {Array.from({ length: WEEK_GOAL }, (_, i) => (
-              <span key={i} className={`h-1.5 flex-1 rounded-full ${i < weekVisits ? "bg-ok" : "bg-secondary"}`} />
-            ))}
-          </div>
+          <ProgressRail value={visits} max={WEEK_GOAL} tone="ok" />
         </div>
-        {todayBook && hoursToToday !== null && hoursToToday > 0 && hoursToToday < 24 ? (
-          <p className="mt-2 text-tiny text-ok">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
-        ) : null}
-        {todayBook && !todayBook.checkedIn ? (
-          <button
-            type="button"
-            onClick={() => checkIn(todayBook.id)}
-            className="pressable mt-3 h-12 w-full rounded-xl bg-ok text-sm font-medium text-ok-foreground"
-          >
-            Я на месте
-          </button>
-        ) : todayBook?.checkedIn ? (
-          <p className="mt-3 text-sm text-ok">Чек-ин принят. Хорошей тренировки.</p>
-        ) : null}
+        <p className="mt-2 text-tiny text-muted-foreground">
+          Неделя {visits}/{WEEK_GOAL} · еда {kcal} ккал
+        </p>
       </Surface>
 
-      {shown ? (
-        <Surface glow={todayWorkout ? "ok" : undefined}>
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="font-display text-base">{shown.name}</p>
-            <p className="text-xs text-muted-foreground">{shown.focus}</p>
-          </div>
-          <ul className="mt-3 space-y-1.5">
-            {shown.items.map((item) => {
-              const on = checked.includes(item);
-              return (
-                <li key={item}>
-                  <button
-                    type="button"
-                    onClick={() => toggleCheck(item)}
-                    className={cn(
-                      "pressable flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
-                      on ? "bg-ok-dim text-foreground" : "bg-transparent",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid size-5 shrink-0 place-items-center rounded-md border",
-                        on ? "border-ok bg-ok text-ok-foreground" : "border-hairline",
-                      )}
-                    >
-                      {on ? <Check className="size-3" /> : null}
-                    </span>
-                    <span className={on ? "line-through opacity-70" : ""}>{item}</span>
-                  </button>
-                </li>
-              );
-            })}
+      {session ? (
+        <Surface>
+          <SectionLabel>План</SectionLabel>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {session.items.map((item) => (
+              <li key={item} className="flex gap-2">
+                <span className="mt-2 size-1 shrink-0 rounded-full bg-ok" />
+                {item}
+              </li>
+            ))}
           </ul>
-          <div className="mt-4 border-t border-hairline pt-3">
-            <SectionLabel>Сожжено</SectionLabel>
-            <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
-              {todayWorkout ? todayWorkout.kcal : liveKcal}
-              <span className="text-base font-sans font-normal text-muted-foreground">ккал</span>
-              <Flame className="size-4 text-primary" />
-            </p>
-            <p className="mt-1 text-tiny text-muted-foreground">
-              MET силовая × {client.weight} кг × {todayBook?.duration ?? 60} мин
-              {checked.length ? ` · ${checked.length}/${itemCount || checked.length}` : " · отметьте подходы"}
-            </p>
-          </div>
-          {todayWorkout ? (
-            <p className="mt-3 text-sm text-ok">
-              Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.done} упр.
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => completeWorkout(itemCount || checked.length, todayBook?.duration ?? 60)}
-              className="pressable mt-4 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-            >
-              Завершить тренировку
-            </button>
-          )}
         </Surface>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Тренер ещё не назначил программу. Когда назначит — день сам подтянется к визиту.
-        </p>
-      )}
+      ) : null}
 
-      {client.sessions.length > 1 ? (
-        <div className="flex flex-col gap-2">
-          <SectionLabel>Цикл · по порядку визитов</SectionLabel>
-          {client.sessions.map((day, i) => {
-            const active = shown?.id === day.id;
-            return (
-              <Surface key={day.id} className={cn(active ? "glow-ok bg-ok-dim" : "opacity-70")}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-display text-sm">{day.name}</p>
-                  <p className="text-2xs text-muted-foreground">
-                    визит {i + 1} · {day.focus}
-                  </p>
-                </div>
-              </Surface>
-            );
-          })}
-        </div>
+      {todayBook && !todayBook.checkedIn ? (
+        <button
+          type="button"
+          className="pressable h-12 rounded-xl bg-ok text-sm font-medium text-ok-foreground"
+          onClick={() => checkIn(todayBook.id)}
+        >
+          Я в зале · {todayBook.time}
+        </button>
+      ) : todayBook?.checkedIn ? (
+        <Surface glow="ok">
+          <p className="text-sm">Чек-ин {todayBook.time} закрыт.</p>
+        </Surface>
       ) : null}
 
       <Surface>
-        <SectionLabel>КБЖУ · ваша цель</SectionLabel>
-        <div className="mt-3">
-          <ProgressRail value={eaten.calories} max={t.calories} />
-        </div>
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <Macro label="ккал" value={t.calories} current={eaten.calories} />
-          <Macro label="Б" value={t.protein} current={eaten.protein} />
-          <Macro label="Ж" value={t.fat} current={eaten.fat} />
-          <Macro label="У" value={t.carbs} current={eaten.carbs} />
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Сегодня: {eaten.calories} ккал. Тренер выставил индивидуально.
-        </p>
-      </Surface>
-
-      <Surface>
-        <SectionLabel>Прогресс</SectionLabel>
-        <div className="no-scrollbar mt-3 flex gap-1 overflow-x-auto">
-          {EXERCISES.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setExercise(item)}
-              className={cn(
-                "pressable h-9 shrink-0 rounded-full px-3 text-sm",
-                exercise === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
-              )}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 h-44">
-          {chartReady && series.length > 1 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <XAxis dataKey="label" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} tickLine={false} axisLine={false} width={36} domain={["dataMin - 5", "dataMax + 5"]} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: "var(--color-foreground)",
-                  }}
-                  formatter={(value) => [`${value} кг`, "вес"]}
-                />
-                <Line type="monotone" dataKey="weight" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="grid h-full place-items-center text-sm text-muted-foreground">
-              Нужно хотя бы две записи по упражнению
-            </p>
-          )}
-        </div>
+        <SectionLabel>Силовые</SectionLabel>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <Field label="Вес, кг">
+          <Field label="Движение">
+            <select className={inputClass} value={ex} onChange={(e) => setEx(e.target.value as typeof ex)}>
+              {EXERCISES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Вес">
             <input className={inputClass} inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />
           </Field>
           <Field label="Повторы">
@@ -320,65 +102,25 @@ export function ProgramView() {
           <Field label="Подходы">
             <input className={inputClass} inputMode="numeric" value={sets} onChange={(e) => setSets(e.target.value)} />
           </Field>
-          <button
-            type="button"
-            className="pressable mt-6 h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-            onClick={() => {
-              const w = Number(kg.replace(",", "."));
-              const r = Number(reps);
-              const st = Number(sets);
-              if (!w || !r || !st) return;
-              addLift(exercise, w, r, st);
-            }}
-          >
-            Записать подход
-          </button>
         </div>
+        <button
+          type="button"
+          className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+          onClick={() => {
+            if (!Number(kg) || !Number(reps)) return;
+            addLift(ex, Number(kg), Number(reps), Number(sets) || 3);
+            setKg("");
+            setReps("");
+          }}
+        >
+          Записать подход
+        </button>
+        {todayLifts.map((lift) => (
+          <p key={lift.id} className="mt-2 text-tiny text-muted-foreground">
+            {lift.exercise} · {lift.weight} кг × {lift.reps} × {lift.sets}
+          </p>
+        ))}
       </Surface>
-    </div>
-  );
-}
-
-function RitualTick({ on, label }: { on: boolean; label: string }) {
-  return (
-    <div className={cn("rounded-lg px-2 py-2 text-center", on ? "bg-ok-dim" : "bg-secondary")}>
-      <p className={cn("grid place-items-center", on ? "text-ok" : "text-muted-foreground")}>
-        {on ? <Check className="size-3.5" /> : <span className="block size-1.5 rounded-full bg-muted-foreground/50" />}
-      </p>
-      <p className="mt-1 text-2xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function Macro({
-  label,
-  value,
-  current,
-}: {
-  label: string;
-  value: number;
-  current: number;
-}) {
-  const ratio = Math.min(1, current / value);
-  const r = 16;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 40 40" className="size-12 -rotate-90">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
-        <circle
-          cx="20"
-          cy="20"
-          r={r}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="3"
-          strokeDasharray={`${c * ratio} ${c}`}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="font-display text-sm tabular-nums">{value}</span>
-      <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
     </div>
   );
 }
