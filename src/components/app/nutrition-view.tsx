@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScanLine } from "lucide-react";
-import { isoDate, MEALS, scaleKbju, sumFood, type ScanProduct } from "@/data/studio";
+import { isoDate, MEALS, sumFood } from "@/data/studio";
+import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
@@ -68,7 +69,7 @@ export function NutritionView() {
         Сканировать штрихкод / QR
       </button>
       <p className="text-tiny text-muted-foreground">
-        Как в Mist: камера, фото этикетки или цифры с упаковки. База — Open Food Facts + продукты студии.
+        Как в Mist: камера, фото или цифры. Open Food Facts + каталог студии. Каталог обновляется без пересборки. Если базы нет — заведём товар сами, дневник не встанет.
       </p>
 
       {todayFood.length > 0 ? (
