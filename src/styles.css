@@ -22,9 +22,9 @@
   --color-border: #332f28;
   --color-input: #332f28;
   --color-ring: #b23b2e;
-  --color-ok: #7a8f6e;
-  --color-ok-foreground: #e7f0e2;
-  --color-ok-dim: rgb(122 143 110 / 0.16);
+  --color-ok: #c4b08a;
+  --color-ok-foreground: #141310;
+  --color-ok-dim: rgb(196 176 138 / 0.16);
   --color-primary-dim: rgb(178 59 46 / 0.16);
   --color-hairline: #332f28;
   --color-surface-alt: #26241f;
@@ -44,7 +44,7 @@
 
   --shadow-border: inset 0 1px 0 rgb(236 231 220 / 0.07), 0 0 0 1px rgb(236 231 220 / 0.055), 0 10px 28px rgb(0 0 0 / 0.28);
   --shadow-border-hover: inset 0 1px 0 rgb(236 231 220 / 0.1), 0 0 0 1px rgb(236 231 220 / 0.1), 0 14px 32px rgb(0 0 0 / 0.34);
-  --shadow-glow-ok: 0 0 0 1px rgb(122 143 110 / 0.22), 0 0 22px rgb(122 143 110 / 0.12);
+  --shadow-glow-ok: 0 0 0 1px rgb(196 176 138 / 0.24), 0 0 22px rgb(196 176 138 / 0.12);
   --shadow-glow-alert: 0 0 0 1px rgb(178 59 46 / 0.26), 0 0 22px rgb(178 59 46 / 0.12);
   --shadow-popover: 0 0 0 1px #332f28, 0 18px 40px rgb(0 0 0 / 0.45);
 
@@ -190,7 +190,7 @@
 
 .ambient-glow {
   background:
-    radial-gradient(820px 280px at 12% -60px, rgb(122 143 110 / 0.16), transparent 64%),
+    radial-gradient(820px 280px at 12% -60px, rgb(196 176 138 / 0.14), transparent 64%),
     radial-gradient(720px 260px at 108% -40px, rgb(178 59 46 / 0.14), transparent 60%),
     var(--color-background);
 }
