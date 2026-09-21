@@ -1,6 +1,8 @@
-# ФИТНЕС ФРАКЦИЯ
+# Ruksha Discipline
 
 Telegram Mini App студии: запись на слоты, баланс занятий, программа, КБЖУ и CRM тренера.
+
+Сейчас это **клиентский демо-контур** (данные в браузере). Для продакшена нужны бот + API + база — не App Store в первом релизе.
 
 ## Правила занятий
 
@@ -12,20 +14,19 @@ Telegram Mini App студии: запись на слоты, баланс за�
 - Пакет действует 60 дней с последнего зачисления.
 - Полный слот → лист ожидания; при отмене место занимает следующий с балансом.
 
-## Локально
-
-```bash
-npm ci
-npm run dev
-```
-
-Приложение слушает `0.0.0.0:8080`.
-
 ## Railway
 
-1. New Project → Deploy from GitHub → `cruelshot7-ship-it/fraktsiya`
-2. Builder: Dockerfile (уже есть `railway.toml`)
-3. Порт `8080`, healthcheck `/`
-4. После деплоя вставьте HTTPS URL в кнопку Web App бота Telegram.
+1. [railway.app](https://railway.app) → New Project → Deploy from GitHub → `cruelshot7-ship-it/fraktsiya`
+2. Builder: Dockerfile (`railway.toml` уже указывает на него)
+3. Переменная `PORT` = `8080` (Railway часто выставляет сам)
+4. После деплоя скопируйте HTTPS URL
 
-Демо хранит данные в `localStorage` браузера. Боевой бот, камера на тренажёр и фото еды — следующий этап.
+## BotFather (новый бот)
+
+1. `@BotFather` → `/newbot` → имя **Ruksha Discipline**, username например `ruksha_discipline_bot`
+2. `/setmenubutton` → URL Mini App из Railway
+3. `/setdomain` → домен без https (для WebApp)
+4. `/setdescription` и `/setuserpic` — логотип FR
+5. Токен бота — только в Railway env `BOT_TOKEN`, никогда в репозиторий
+
+Онлайн-тренировки — следующий релиз (тип слота `online` + видеокомната), не этот деплой.
