@@ -1,0 +1,8 @@
+node_modules
+.git
+screenshots
+artifacts
+attachments
+*.log
+.grok
+migrations/auth
