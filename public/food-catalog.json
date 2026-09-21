@@ -1,0 +1,120 @@
+{
+  "version": 3,
+  "updated_at": "2026-09-21T21:00:00Z",
+  "note": "Горячий каталог студии. Меняйте version и products — Mini App подхватит без пересборки JS. features.offLookup=false отключает Open Food Facts, не останавливая дневник. products — объект {barcode: {name, brand, per100}} или массив {code, name, ...}. Пользовательские правки живут отдельно и не затираются.",
+  "features": {
+    "offLookup": true,
+    "remoteSearch": false
+  },
+  "products": {
+    "4600690101081": {
+      "name": "Молоко 2,5%",
+      "brand": "Простоквашино",
+      "per100": { "calories": 53, "protein": 2.8, "fat": 2.5, "carbs": 4.7 },
+      "servingGrams": 200
+    },
+    "4600690102555": {
+      "name": "Кефир 2,5%",
+      "brand": "Простоквашино",
+      "per100": { "calories": 53, "protein": 2.9, "fat": 2.5, "carbs": 4 }
+    },
+    "4810168030018": {
+      "name": "Творог 5%",
+      "brand": "Савушкин",
+      "per100": { "calories": 121, "protein": 17, "fat": 5, "carbs": 1.8 },
+      "servingGrams": 180
+    },
+    "4810268031553": {
+      "name": "Творог 9%",
+      "brand": "Бабушкина крынка",
+      "per100": { "calories": 159, "protein": 16.7, "fat": 9, "carbs": 2 }
+    },
+    "4810268023378": {
+      "name": "Йогурт Савушкин натуральный",
+      "brand": "Савушкин",
+      "per100": { "calories": 111.5, "protein": 7, "fat": 3.5, "carbs": 13 },
+      "servingGrams": 120
+    },
+    "4810268047602": {
+      "name": "Сметана 20%",
+      "brand": "Брест-Литовск",
+      "per100": { "calories": 202, "protein": 2.5, "fat": 20, "carbs": 3.2 }
+    },
+    "4607065001553": {
+      "name": "Гречка ядрица",
+      "brand": "Мистраль",
+      "per100": { "calories": 334, "protein": 12.6, "fat": 3.3, "carbs": 62 }
+    },
+    "4607001770016": {
+      "name": "Рис круглозёрный",
+      "brand": "Мистраль",
+      "per100": { "calories": 333, "protein": 6.7, "fat": 0.7, "carbs": 79 }
+    },
+    "4600690100015": {
+      "name": "Сметана 15%",
+      "brand": "Простоквашино",
+      "per100": { "calories": 160, "protein": 2.6, "fat": 15, "carbs": 3.6 }
+    },
+    "4607025392479": {
+      "name": "Йогурт натуральный",
+      "brand": "Савушкин",
+      "per100": { "calories": 66, "protein": 5, "fat": 3.2, "carbs": 3.5 },
+      "servingGrams": 125
+    },
+    "4600690103309": {
+      "name": "Творог зернёный",
+      "brand": "Простоквашино",
+      "per100": { "calories": 105, "protein": 12, "fat": 5, "carbs": 3 }
+    },
+    "4870202000018": {
+      "name": "Кумыс",
+      "brand": "Молочный",
+      "per100": { "calories": 50, "protein": 2.2, "fat": 1.9, "carbs": 5 }
+    },
+    "4810173001014": {
+      "name": "Масло сливочное 82%",
+      "brand": "Савушкин",
+      "per100": { "calories": 748, "protein": 0.5, "fat": 82.5, "carbs": 0.8 }
+    },
+    "4607001771235": {
+      "name": "Овсяные хлопья",
+      "brand": "Мистраль",
+      "per100": { "calories": 366, "protein": 12.3, "fat": 6.2, "carbs": 62 }
+    },
+    "5449000131805": {
+      "name": "Sprite",
+      "brand": "Coca-Cola",
+      "per100": { "calories": 13, "protein": 0, "fat": 0, "carbs": 3.3 },
+      "servingGrams": 250
+    },
+    "5000112637937": {
+      "name": "Coca-Cola Zero",
+      "brand": "Coca-Cola",
+      "per100": { "calories": 0.3, "protein": 0, "fat": 0, "carbs": 0 },
+      "servingGrams": 330
+    },
+    "3017620422003": {
+      "name": "Nutella",
+      "brand": "Ferrero",
+      "per100": { "calories": 539, "protein": 6.3, "fat": 30.9, "carbs": 57.5 }
+    },
+    "2000000000012": {
+      "name": "Протеин-шейк студии",
+      "brand": "Ruksha",
+      "per100": { "calories": 80, "protein": 10.7, "fat": 1.3, "carbs": 6 },
+      "servingGrams": 300
+    },
+    "2000000000029": {
+      "name": "Куриная грудка варёная",
+      "brand": "Ruksha",
+      "per100": { "calories": 137, "protein": 30, "fat": 1.8, "carbs": 0 },
+      "servingGrams": 150
+    },
+    "2000000000036": {
+      "name": "Рис отварной",
+      "brand": "Ruksha",
+      "per100": { "calories": 116, "protein": 2.2, "fat": 0.5, "carbs": 25 },
+      "servingGrams": 180
+    }
+  }
+}

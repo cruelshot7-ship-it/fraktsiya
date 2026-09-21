@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Oswald", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   --color-background: #141310;
   --color-foreground: #ece7dc;
@@ -42,8 +42,8 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 1.75rem;
 
-  --shadow-border: 0 0 0 1px rgb(236 231 220 / 0.06), 0 8px 24px rgb(0 0 0 / 0.22);
-  --shadow-border-hover: 0 0 0 1px rgb(236 231 220 / 0.1), 0 12px 28px rgb(0 0 0 / 0.3);
+  --shadow-border: inset 0 1px 0 rgb(236 231 220 / 0.07), 0 0 0 1px rgb(236 231 220 / 0.055), 0 10px 28px rgb(0 0 0 / 0.28);
+  --shadow-border-hover: inset 0 1px 0 rgb(236 231 220 / 0.1), 0 0 0 1px rgb(236 231 220 / 0.1), 0 14px 32px rgb(0 0 0 / 0.34);
   --shadow-glow-ok: 0 0 0 1px rgb(122 143 110 / 0.22), 0 0 22px rgb(122 143 110 / 0.12);
   --shadow-glow-alert: 0 0 0 1px rgb(178 59 46 / 0.26), 0 0 22px rgb(178 59 46 / 0.12);
   --shadow-popover: 0 0 0 1px #332f28, 0 18px 40px rgb(0 0 0 / 0.45);
@@ -68,15 +68,22 @@
     -moz-osx-font-smoothing: grayscale;
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+    height: 100%;
+    height: -webkit-fill-available;
   }
 
   body {
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    min-height: 100vh;
     min-height: 100dvh;
     min-height: 100svh;
+    min-height: var(--app-height, 100dvh);
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    overflow-x: hidden;
   }
 
   h1,
@@ -91,11 +98,25 @@
     text-wrap: pretty;
   }
 
+  img,
+  svg {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   :focus-visible {
@@ -194,11 +215,45 @@
   animation: glow-breathe 2.8s ease-in-out infinite;
 }
 
+.apple-block {
+  position: relative;
+  isolation: isolate;
+  border-radius: 1.375rem;
+  background:
+    linear-gradient(180deg, rgb(236 231 220 / 0.05), transparent 32%),
+    var(--color-card);
+  box-shadow: var(--shadow-border);
+}
+
+@supports (corner-shape: squircle) {
+  .apple-block {
+    corner-shape: squircle;
+  }
+}
+
+.nav-blur {
+  background: rgb(20 19 16 / 0.88);
+  -webkit-backdrop-filter: blur(16px) saturate(1.45);
+  backdrop-filter: blur(16px) saturate(1.45);
+}
+
 .pressable {
   transition: transform 160ms var(--ease-apple), box-shadow 220ms var(--ease-apple), background-color 180ms var(--ease-apple);
 }
+
 .pressable:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .apple-block:hover {
+    box-shadow: var(--shadow-border-hover);
+  }
 }
 
 @media (max-width: 340px) {
@@ -206,7 +261,7 @@
     --text-tiny: 0.625rem;
   }
   header h1 {
-    font-size: 1.375rem;
+    font-size: 1.25rem;
   }
 }
 
@@ -226,7 +281,7 @@
   .ambient-glow {
     border-radius: 1.5rem;
     margin: 1.25rem 0;
-    min-height: calc(100dvh - 2.5rem);
+    min-height: calc(var(--app-height, 100dvh) - 2.5rem);
   }
 }
 
@@ -255,4 +310,10 @@
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
 }
