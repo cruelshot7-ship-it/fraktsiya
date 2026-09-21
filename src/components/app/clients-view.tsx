@@ -208,3 +208,46 @@ export function ClientSheet() {
     </div>
   );
 }
+
+function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => void }) {
+  const food = useStudio((s) => s.food);
+  const bookings = useStudio((s) => s.bookings);
+  const today = isoDate(new Date());
+  const flag = clientFlag(client, today, food, bookings);
+  const week = programWeek(client, today);
+  return (
+    <div className="sheet-in flex min-h-0 flex-1 flex-col">
+      <header className="flex items-start gap-3 px-5 pt-5 pb-3">
+        <Avatar initials={initials(client)} tone={flag.tone} />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-xl leading-none">{shortName(client)}</p>
+          <p className="mt-1 truncate text-tiny text-muted-foreground">
+            {client.programTitle} \u00b7 неделя {week}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid size-9 place-items-center rounded-full bg-secondary text-muted-foreground"
+          aria-label="Закрыть"
+        >
+          <X className="size-4" />
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto px-5 pb-8">
+        {flag.badge ? (
+          <div className="mb-3">
+            <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill>
+          </div>
+        ) : null}
+        <Surface>
+          <SectionLabel>Баланс занятий</SectionLabel>
+          <p className="font-display mt-2 text-3xl tabular-nums">
+            {client.sessionsLeft}
+            <span className="ml-2 text-base font-sans font-normal text-muted-foreground">{sessionsRu(client.sessionsLeft)}</span>
+          </p>
+        </Surface>
+      </div>
+    </div>
+  );
+}
