@@ -1,18 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   clientFlag,
+  daysAgoPhrase,
+  DOW,
   formatDayMonth,
   FREEZE_OPTIONS,
   initials,
   isoDate,
   isFrozen,
+  PACK_VALID_DAYS,
+  packDaysLeft,
   PACKS,
+  programWeek,
   sessionsRu,
   shortName,
+  visitSession,
+  WEEKDAY_TIMES,
+  weightDelta,
   type Client,
+  type ProgramSession,
 } from "@/data/studio";
-import { activeClient, useStudio } from "@/lib/studio-store";
+import { useStudio } from "@/lib/studio-store";
 import { Avatar, Field, inputClass, Pill, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
+import { cn } from "@/lib/utils";
+import { Plus, X } from "lucide-react";
 
 export function ClientsView() {
   const clients = useStudio((s) => s.clients);
@@ -23,64 +35,162 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const today = isoDate(new Date());
-  const [q, setQ] = useState("");
 
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return clients
-      .map((c) => ({ client: c, flag: clientFlag(c, today, food, bookings) }))
-      .filter(({ client, flag }) => {
-        if (needle && !`${client.firstName} ${client.lastName}`.toLowerCase().includes(needle)) return false;
-        if (clientFilter === "attention") return flag.attention;
-        if (clientFilter === "today") return flag.today;
-        return true;
-      });
-  }, [bookings, clientFilter, clients, food, q, today]);
+  const rows = useMemo(
+    () =>
+      clients.map((client) => ({
+        client,
+        flag: clientFlag(client, today, food, bookings),
+        week: programWeek(client, today),
+      })),
+    [clients, food, bookings, today],
+  );
+
+  const todayCount = rows.filter((r) => r.flag.today).length;
+  const attentionCount = rows.filter((r) => r.flag.attention).length;
+  const weekBookings = bookings.filter((b) => {
+    const d = new Date(`${b.date}T00:00:00`);
+    const now = new Date();
+    const start = new Date(now);
+    const offset = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - offset);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return d >= start && d < end;
+  }).length;
+
+  const visible = rows.filter((r) => {
+    if (clientFilter === "attention") return r.flag.attention;
+    if (clientFilter === "today") return r.flag.today;
+    return true;
+  });
 
   return (
-    <div className="stagger-in flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-3 px-1 py-1">
+        <Kpi value={todayCount} label={"тренировки\nсегодня"} tone="ok" />
+        <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />
+        <Kpi value={weekBookings} label={"записей\nна неделю"} />
+      </div>
+
       <div className="flex gap-1.5">
-        {(["all", "today", "attention"] as const).map((id) => (
+        <FilterChip active={clientFilter === "all"} onClick={() => setClientFilter("all")}>
+          Все {clients.length}
+        </FilterChip>
+        <FilterChip active={clientFilter === "attention"} onClick={() => setClientFilter("attention")}>
+          Внимание {attentionCount}
+        </FilterChip>
+        <FilterChip active={clientFilter === "today"} onClick={() => setClientFilter("today")}>
+          Сегодня {todayCount}
+        </FilterChip>
+      </div>
+
+      <div className="stagger-in flex flex-col gap-2">
+        {visible.map(({ client, flag, week }) => (
           <button
-            key={id}
+            key={client.id}
             type="button"
-            onClick={() => setClientFilter(id)}
-            className={`pressable h-9 rounded-full px-3 text-tiny ${clientFilter === id ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"}`}
+            onClick={() => openClientSheet(client.id)}
+            className={cn(
+              "pressable relative overflow-hidden rounded-xl bg-card p-3.5 text-left shadow-border",
+              flag.tone === "alert" && "glow-alert",
+              flag.tone === "ok" && "glow-ok",
+            )}
           >
-            {id === "all" ? "Все" : id === "today" ? "Сегодня" : "Внимание"}
+            <span
+              className={cn(
+                "absolute inset-y-3 left-0 w-0.5 rounded-full",
+                flag.tone === "alert" && "bg-primary",
+                flag.tone === "ok" && "bg-ok",
+                flag.tone === "none" && "bg-transparent",
+              )}
+            />
+            <div className="flex items-start gap-3">
+              <Avatar initials={initials(client)} tone={flag.tone} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-display truncate text-base leading-tight">{shortName(client)}</p>
+                  {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                </div>
+                <p className="mt-0.5 truncate text-tiny text-muted-foreground">
+                  {client.programTitle} \u00b7 неделя {week}
+                  {client.trainTimes[0] ? ` \u00b7 ${client.trainTimes[0]}` : ""}
+                  {` \u00b7 ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`}
+                </p>
+                <div className="mt-2.5">
+                  <ProgressRail
+                    value={flag.eaten.calories}
+                    max={client.kbju.calories}
+                    tone={flag.tone === "alert" ? "alert" : "ok"}
+                  />
+                  <p className="mt-1 text-tiny text-muted-foreground">
+                    {flag.eaten.calories} из {client.kbju.calories} ккал \u00b7 серия {client.streak}
+                  </p>
+                </div>
+              </div>
+            </div>
           </button>
         ))}
       </div>
-      <input className={inputClass} placeholder="Найти клиента…" value={q} onChange={(e) => setQ(e.target.value)} />
-      {rows.map(({ client, flag }) => (
-        <button
-          key={client.id}
-          type="button"
-          onClick={() => openClientSheet(client.id)}
-          className="pressable flex items-center gap-3 rounded-xl bg-card px-3 py-3 text-left shadow-border"
-        >
-          <Avatar initials={initials(client)} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{shortName(client)}</p>
-            <p className="text-tiny text-muted-foreground">
-              {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
-              {flag.badge ? ` · ${flag.badge}` : ""}
-            </p>
-          </div>
-          {flag.tone === "alert" ? <Pill tone="alert">!</Pill> : flag.today ? <Pill tone="ok">сегодня</Pill> : null}
-        </button>
-      ))}
+
       <button
         type="button"
-        className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-        onClick={() => {
-          const id = addClient();
-          if (id) openClientSheet(id);
-        }}
+        onClick={() => addClient()}
+        className="pressable flex h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline text-sm text-muted-foreground"
       >
-        Новый клиент
+        <Plus className="size-4" />
+        Добавить клиента
       </button>
     </div>
+  );
+}
+
+function Kpi({
+  value,
+  label,
+  tone,
+}: {
+  value: number;
+  label: string;
+  tone?: "ok" | "alert";
+}) {
+  return (
+    <div>
+      <p
+        className={cn(
+          "font-display text-3xl leading-none tabular-nums",
+          tone === "ok" && "text-ok",
+          tone === "alert" && "text-primary",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-1.5 whitespace-pre-line text-2xs leading-tight text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "pressable h-8 rounded-full px-3 text-tiny font-medium",
+        active ? "bg-foreground text-background" : "bg-secondary text-muted-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -88,89 +198,13 @@ export function ClientSheet() {
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const clients = useStudio((s) => s.clients);
   const openClientSheet = useStudio((s) => s.openClientSheet);
-  const creditSessions = useStudio((s) => s.creditSessions);
-  const freezeClient = useStudio((s) => s.freezeClient);
-  const unfreezeClient = useStudio((s) => s.unfreezeClient);
-  const updateClient = useStudio((s) => s.updateClient);
-  const client = clients.find((c) => c.id === sheetClientId) ?? null;
+  const client = clients.find((c) => c.id === sheetClientId);
   if (!client) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70">
-      <div className="sheet-in max-h-[92dvh] w-full max-w-app overflow-y-auto rounded-t-3xl bg-card px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl">{client.firstName} {client.lastName}</h2>
-          <button type="button" className="text-sm text-muted-foreground" onClick={() => openClientSheet(null)}>
-            Закрыть
-          </button>
-        </div>
-        <p className="mt-1 text-tiny text-muted-foreground">
-          {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
-          {isFrozen(client) && client.frozenUntil ? ` · заморозка до ${formatDayMonth(client.frozenUntil)}` : ""}
-        </p>
-        <div className="mt-4">
-          <SectionLabel>Зачислить</SectionLabel>
-        </div>
-        <div className="mt-2 flex gap-2">
-          {PACKS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className="pressable h-11 flex-1 rounded-xl bg-ok text-sm font-medium text-ok-foreground"
-              onClick={() => creditSessions(client.id, n)}
-            >
-              +{n}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4">
-          <SectionLabel>Заморозка</SectionLabel>
-        </div>
-        <div className="mt-2 flex gap-2">
-          {FREEZE_OPTIONS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              className="pressable h-11 flex-1 rounded-xl bg-secondary text-sm"
-              onClick={() => freezeClient(client.id, d)}
-            >
-              {d} дн
-            </button>
-          ))}
-        </div>
-        {isFrozen(client) ? (
-          <button
-            type="button"
-            className="pressable mt-2 h-11 w-full rounded-xl bg-primary text-sm text-primary-foreground"
-            onClick={() => unfreezeClient(client.id)}
-          >
-            Снять заморозку
-          </button>
-        ) : null}
-        <WeightField client={client} onSave={(kg) => updateClient(client.id, { weight: kg })} />
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="ambient-glow flex min-h-0 flex-1 flex-col">
+        <ClientSheetBody client={client} onClose={() => openClientSheet(null)} />
       </div>
-    </div>
-  );
-}
-
-function WeightField({ client, onSave }: { client: Client; onSave: (kg: number) => void }) {
-  const [kg, setKg] = useState(String(client.weight));
-  return (
-    <div className="mt-4">
-      <Field label="Вес, кг">
-        <input className={inputClass} inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />
-      </Field>
-      <button
-        type="button"
-        className="pressable mt-2 h-11 w-full rounded-xl bg-secondary text-sm"
-        onClick={() => {
-          const n = Number(kg);
-          if (n > 30 && n < 250) onSave(n);
-        }}
-      >
-        Сохранить вес
-      </button>
-      <ProgressRail value={client.sessionsLeft} max={12} tone="ok" />
     </div>
   );
 }
