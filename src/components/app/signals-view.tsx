@@ -14,9 +14,13 @@ export function SignalsView() {
   const setTab = useStudio((s) => s.setTab);
   const selectDay = useStudio((s) => s.selectDay);
   const bookings = useStudio((s) => s.bookings);
+  const joinRequests = useStudio((s) => s.joinRequests);
+  const approveJoin = useStudio((s) => s.approveJoin);
+  const rejectJoin = useStudio((s) => s.rejectJoin);
 
+  const pending = joinRequests.filter((r) => r.status === "pending");
   const items = notices
-    .filter((n) => n.audience === "trainer" && !dismissed.includes(n.id))
+    .filter((n) => n.audience === "trainer" && n.kind !== "join" && !dismissed.includes(n.id))
     .sort((a, b) => b.at.localeCompare(a.at));
 
   return (
@@ -63,7 +67,29 @@ export function SignalsView() {
         </div>
       </Surface>
 
-      {items.length === 0 ? (
+      {pending.map((req) => (
+        <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border glow-ok">
+          <p className="font-display text-base">
+            {req.firstName} {req.lastName}
+          </p>
+          {req.telegramUsername ? <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p> : null}
+          <p className="mt-1 text-sm text-muted-foreground">Нажал Старт — принять в зал?</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+              onClick={() => approveJoin(req.id)}
+            >
+              Принять
+            </button>
+            <button type="button" className="pressable h-11 rounded-xl bg-secondary text-sm" onClick={() => rejectJoin(req.id)}>
+              Отклонить
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {items.length === 0 && pending.length === 0 ? (
         <div className="grid min-h-48 place-items-center px-6 text-center">
           <div>
             <Bell className="mx-auto mb-3 size-6 text-muted-foreground" />

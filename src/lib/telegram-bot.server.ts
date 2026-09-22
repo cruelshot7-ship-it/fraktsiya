@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest, type Notice } from "@/data/studio";
+import { BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -72,7 +72,13 @@ export async function registerJoin(user: {
   } catch {
     payload = emptyPayload();
   }
-  if (payload.clients.some((c) => c.telegramId === user.id)) {
+  const uname = (user.username ?? "").replace(/^@/, "").trim().toLowerCase();
+  const inHall = payload.clients.some(
+    (c) =>
+      c.telegramId === user.id ||
+      (uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
+  );
+  if (inHall) {
     await tg("sendMessage", {
       chat_id: user.id,
       text: "Вы уже в зале. Откройте приложение.",
@@ -91,33 +97,22 @@ export async function registerJoin(user: {
     at: hoursAgoIso(0),
     status: "pending",
   };
-  if (!pending) {
-    const notice: Notice = {
-      id: `nt_join_${user.id}`,
-      audience: "trainer",
-      clientId: req.id,
-      kind: "join",
-      title: `Заявка: ${req.firstName} ${req.lastName}`.trim(),
-      body: req.telegramUsername ? `@${req.telegramUsername}` : "Нажал Старт в боте",
-      at: req.at,
-    };
-    payload = {
-      ...payload,
-      joinRequests: [req, ...(payload.joinRequests ?? []).filter((r) => r.telegramId !== user.id)],
-      notices: [notice, ...payload.notices].slice(0, 40),
-    };
-    await saveStudioState(payload);
-    const who = [req.firstName, req.lastName].filter(Boolean).join(" ");
-    const handle = req.telegramUsername ? `@${req.telegramUsername}` : `id ${req.telegramId}`;
-    await tg("sendMessage", {
-      chat_id: TRAINER_TG_ID,
-      text: `Заявка в зал\n${who}\n${handle}\n\nПринять или отклонить:`,
-      reply_markup: decideKeyboard(user.id),
-    });
-  }
+  if (pending) return { ok: true, already: false };
+  payload = {
+    ...payload,
+    joinRequests: [req, ...(payload.joinRequests ?? []).filter((r) => r.telegramId !== user.id)],
+  };
+  await saveStudioState(payload);
+  const who = [req.firstName, req.lastName].filter(Boolean).join(" ");
+  const handle = req.telegramUsername ? `@${req.telegramUsername}` : `id ${req.telegramId}`;
+  await tg("sendMessage", {
+    chat_id: TRAINER_TG_ID,
+    text: `Заявка в зал\n${who}\n${handle}`,
+    reply_markup: decideKeyboard(user.id),
+  });
   await tg("sendMessage", {
     chat_id: user.id,
-    text: "Заявка у тренера. Как примет — откроется зал: слоты, программа, питание.",
+    text: "Заявка у тренера. Как примет — откроется зал.",
     reply_markup: webAppKeyboard("Открыть заявку"),
   });
   return { ok: true, already: false };
@@ -132,8 +127,11 @@ export async function decideJoin(telegramId: string, approve: boolean) {
   }
   const req = (payload.joinRequests ?? []).find((r) => r.telegramId === telegramId);
   if (approve) {
-    const exists = payload.clients.some((c) => c.telegramId === telegramId);
-    const fresh = exists
+    const uname = (req?.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+    const existing =
+      payload.clients.find((c) => c.telegramId === telegramId) ??
+      payload.clients.find((c) => uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname);
+    const fresh = existing
       ? null
       : {
           ...emptyClient(),
@@ -145,7 +143,11 @@ export async function decideJoin(telegramId: string, approve: boolean) {
         };
     payload = {
       ...payload,
-      clients: fresh ? [...payload.clients, fresh] : payload.clients,
+      clients: fresh
+        ? [...payload.clients, fresh]
+        : payload.clients.map((c) =>
+            c.id === existing!.id ? { ...c, telegramId, telegramUsername: req?.telegramUsername ?? c.telegramUsername } : c,
+          ),
       joinRequests: (payload.joinRequests ?? []).map((r) =>
         r.telegramId === telegramId ? { ...r, status: "approved" as const } : r,
       ),

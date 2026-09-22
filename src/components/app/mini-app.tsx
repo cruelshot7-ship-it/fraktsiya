@@ -106,7 +106,10 @@ export function MiniApp() {
     };
   }, [hydrate, refreshCloud]);
 
-  const trainerBadge = notices.filter((n) => n.audience === "trainer" && !dismissed.includes(n.id)).length;
+  const joinRequests = useStudio((s) => s.joinRequests);
+  const trainerBadge =
+    notices.filter((n) => n.audience === "trainer" && n.kind !== "join" && !dismissed.includes(n.id)).length +
+    joinRequests.filter((r) => r.status === "pending").length;
   const clientInbox = notices.filter((n) => n.audience === "client" && n.clientId === client?.id && !dismissed.includes(n.id));
   const nextMine = bookings
     .filter((b) => b.clientId === client?.id && !isSlotPast(b.date, b.time))
