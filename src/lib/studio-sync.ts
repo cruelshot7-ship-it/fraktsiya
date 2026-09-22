@@ -114,7 +114,6 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     streak: incomingSelf.streak ?? mine.streak,
     sessionsLeft: incomingSelf.sessionsLeft ?? mine.sessionsLeft,
     ledger: incomingSelf.ledger ?? mine.ledger,
-    kbju: incomingSelf.kbju ?? mine.kbju,
   };
   return {
     ...current,
