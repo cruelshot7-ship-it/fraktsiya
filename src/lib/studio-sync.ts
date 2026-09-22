@@ -27,6 +27,7 @@ export type StudioPayload = {
   waitlist: WaitlistEntry[];
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
+  trainerUsername: string | null;
 };
 
 const STUDIO_ID = "ruksha";
@@ -59,6 +60,7 @@ function emptyPayload(): StudioPayload {
     waitlist: [],
     workoutLogs: [],
     checks: {},
+    trainerUsername: null,
   };
 }
 
@@ -98,6 +100,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
     checks: id
       ? Object.fromEntries(Object.entries(payload.checks).filter(([k]) => k.startsWith(`${id}:`)))
       : {},
+    trainerUsername: payload.trainerUsername ?? null,
   };
 }
 
@@ -153,8 +156,23 @@ export const pullStudio = createServerFn({ method: "POST" })
     let created = false;
 
     if (session.role === "client") {
-      const exists = payload.clients.some((c) => c.telegramId === session.user.id);
-      if (!exists) {
+      const byId = payload.clients.some((c) => c.telegramId === session.user.id);
+      const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
+      const byName = uname
+        ? payload.clients.find((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
+        : undefined;
+      if (!byId && byName) {
+        payload = {
+          ...payload,
+          clients: payload.clients.map((c) =>
+            c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
+          ),
+        };
+        await sql.query(
+          "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+          [STUDIO_ID, JSON.stringify(payload)],
+        );
+      } else if (!byId) {
         const fresh = clientFromTelegram(session.user);
         const notice: Notice = {
           id: `nt_new_${session.user.id}`,
@@ -179,6 +197,14 @@ export const pullStudio = createServerFn({ method: "POST" })
         );
       }
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
+    }
+
+    if (session.user.username && payload.trainerUsername !== session.user.username) {
+      payload = { ...payload, trainerUsername: session.user.username };
+      await sql.query(
+        "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+        [STUDIO_ID, JSON.stringify(payload)],
+      );
     }
 
     return { ok: true, role: "trainer", payload };

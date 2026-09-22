@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, CalendarDays, Users } from "lucide-react";
+import { Bell, CalendarDays, MessageCircle, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
@@ -14,7 +14,7 @@ import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
-import { initTelegram, getTelegramUser } from "@/lib/telegram";
+import { initTelegram, getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
@@ -55,6 +55,8 @@ export function MiniApp() {
   const dismissSignal = useStudio((s) => s.dismissSignal);
   const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
+  const trainerUsername = useStudio((s) => s.trainerUsername);
+  const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [tgLocked, setTgLocked] = useState(false);
@@ -140,6 +142,18 @@ export function MiniApp() {
                 <BrandLockup />
                 <div className="flex items-center gap-1.5">
                   {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} />}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!openTrainerChat(trainerUsername)) {
+                        showToast("Напишите тренеру в Telegram — он пришлёт ссылку на бота.");
+                      }
+                    }}
+                    className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok"
+                    aria-label="Написать тренеру"
+                  >
+                    <MessageCircle className="size-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setInboxOpen(true)}

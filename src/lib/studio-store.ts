@@ -38,6 +38,7 @@ import {
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { stripDemoData } from "@/lib/studio-clean";
+import { getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
@@ -58,6 +59,7 @@ type PersistShape = {
   waitlist: WaitlistEntry[];
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
+  trainerUsername?: string | null;
 };
 
 type State = {
@@ -83,6 +85,7 @@ type State = {
   waitlist: WaitlistEntry[];
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
+  trainerUsername: string | null;
   toast: string | null;
   hydrate: () => void;
   setTab: (tab: TabId) => void;
@@ -169,6 +172,7 @@ function snap(s: State): PersistShape {
     waitlist: s.waitlist,
     workoutLogs: s.workoutLogs,
     checks: s.checks,
+    trainerUsername: s.trainerUsername,
   };
 }
 
@@ -247,6 +251,7 @@ export const useStudio = create<State>((set, get) => ({
   waitlist: [],
   workoutLogs: [],
   checks: {},
+  trainerUsername: null,
   toast: null,
 
   hydrate: () => {
@@ -264,6 +269,7 @@ export const useStudio = create<State>((set, get) => ({
     let waitlist: WaitlistEntry[] = [];
     let workoutLogs: WorkoutLog[] = [];
     let checks: Record<string, string[]> = {};
+    let trainerUsername: string | null = null;
     try {
       const raw = readPersist();
       if (raw) {
@@ -312,6 +318,7 @@ export const useStudio = create<State>((set, get) => ({
         waitlist = parsed.waitlist ?? [];
         workoutLogs = parsed.workoutLogs ?? [];
         checks = parsed.checks ?? {};
+        trainerUsername = parsed.trainerUsername ?? null;
       }
     } catch {
       /* keep defaults */
@@ -321,6 +328,10 @@ export const useStudio = create<State>((set, get) => ({
     activeClientId = identified.activeClientId;
     role = identified.role;
     notices = identified.notices;
+    if (role === "trainer") {
+      const handle = getTelegramUser()?.username;
+      if (handle) trainerUsername = handle;
+    }
     const selectedDate = role === "trainer" ? todayIso() : firstBookableDate();
     set({
       ready: true,
@@ -341,6 +352,7 @@ export const useStudio = create<State>((set, get) => ({
       waitlist,
       workoutLogs,
       checks,
+      trainerUsername,
       tab: role === "trainer" ? "clients" : "slots",
     });
     void syncFromCloud().then((cloud) => {
@@ -365,6 +377,7 @@ export const useStudio = create<State>((set, get) => ({
         waitlist: payload.waitlist,
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
+        trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         slots: mergeSlots(extra),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });

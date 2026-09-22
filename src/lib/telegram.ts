@@ -22,6 +22,8 @@ export type TelegramWebApp = {
   initDataUnsafe?: { user?: TelegramUser };
   onEvent?: (event: string, cb: () => void) => void;
   offEvent?: (event: string, cb: () => void) => void;
+  openTelegramLink?: (url: string) => void;
+  openLink?: (url: string) => void;
   HapticFeedback?: {
     impactOccurred: (style: HapticStyle) => void;
     notificationOccurred: (type: HapticNotify) => void;
@@ -42,6 +44,26 @@ export function getTelegramUser(): TelegramUser | undefined {
 
 export function getTelegramInitData(): string {
   return getTelegram()?.initData ?? "";
+}
+
+export function openTelegramUrl(url: string) {
+  const tg = getTelegram();
+  if (url.startsWith("https://t.me/") && tg?.openTelegramLink) {
+    tg.openTelegramLink(url);
+    return;
+  }
+  if (tg?.openLink) {
+    tg.openLink(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+export function openTrainerChat(username: string | null | undefined) {
+  const handle = (username ?? "").replace(/^@/, "").trim();
+  if (!handle) return false;
+  openTelegramUrl(`https://t.me/${handle}`);
+  return true;
 }
 
 function bindVisualViewport() {

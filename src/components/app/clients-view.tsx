@@ -19,6 +19,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
+import { openTrainerChat } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -460,7 +461,11 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
               <button
                 type="button"
                 className="pressable h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                onClick={() => showToast("В боте откроется чат с клиентом.")}
+                onClick={() => {
+                  if (!openTrainerChat(client.telegramUsername)) {
+                    showToast("Нет @username. Клиент откроет бота — тогда появится чат.");
+                  }
+                }}
               >
                 Написать
               </button>
