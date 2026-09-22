@@ -1,3 +1,5 @@
+export const TRAINER_TG_ID = "8144320404";
+
 export const STUDIO = {
   name: "Ruksha",
   brand: "RUKSHA DISCIPLINE",
@@ -249,6 +251,8 @@ export type Client = {
   ledger: SessionTxn[];
   frozenUntil?: string | null;
   packExpiresAt?: string | null;
+  telegramId?: string | null;
+  telegramUsername?: string | null;
 };
 
 export type MachineEx = {
