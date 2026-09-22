@@ -31,6 +31,7 @@ export type StudioPayload = {
   checks: Record<string, string[]>;
   trainerUsername: string | null;
   joinRequests: JoinRequest[];
+  removedClientIds: string[];
 };
 
 const STUDIO_ID = "ruksha";
@@ -66,6 +67,7 @@ export function emptyPayload(): StudioPayload {
     checks: {},
     trainerUsername: null,
     joinRequests: [],
+    removedClientIds: [],
   };
 }
 
@@ -88,6 +90,8 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     checks: raw.checks ?? {},
     trainerUsername: raw.trainerUsername ?? null,
     joinRequests: raw.joinRequests ?? [],
+    removedClientIds: raw.removedClientIds ?? [],
+    clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, raw.removedClientIds ?? [])),
   };
 }
 
@@ -165,6 +169,33 @@ export function mergeClients(primary: Client[], secondary: Client[]): Client[] {
   return [...map.values()];
 }
 
+export function isRemovedClient(c: Client, removed: string[]) {
+  if (!removed.length) return false;
+  const dead = new Set(removed);
+  if (dead.has(c.id)) return true;
+  if (c.telegramId && (dead.has(c.telegramId) || dead.has(`tg:${c.telegramId}`))) return true;
+  const u = (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+  if (u && dead.has(`u:${u}`)) return true;
+  const p = (c.phone ?? "").replace(/\D/g, "");
+  if (p.length >= 10 && dead.has(`p:${p}`)) return true;
+  return dead.has(clientKey(c));
+}
+
+export function tombstonesFor(c: Client) {
+  const keys = [c.id, clientKey(c)];
+  if (c.telegramId) keys.push(c.telegramId, `tg:${c.telegramId}`);
+  const u = (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+  if (u) keys.push(`u:${u}`);
+  const p = (c.phone ?? "").replace(/\D/g, "");
+  if (p.length >= 10) keys.push(`p:${p}`);
+  return [...new Set(keys)];
+}
+
+export function dropTombstones(removed: string[], keys: string[]) {
+  const drop = new Set(keys);
+  return removed.filter((x) => !drop.has(x));
+}
+
 function mergeById<T extends { id: string }>(base: T[], incoming: T[]): T[] {
   const map = new Map(base.map((x) => [x.id, x]));
   for (const x of incoming) map.set(x.id, x);
@@ -172,15 +203,21 @@ function mergeById<T extends { id: string }>(base: T[], incoming: T[]): T[] {
 }
 
 function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): StudioPayload {
+  const removedClientIds = [...new Set([...(current.removedClientIds ?? []), ...(incoming.removedClientIds ?? [])])];
+  const aliveIncoming = new Set(incoming.clients.flatMap((c) => tombstonesFor(c)));
+  const removed = removedClientIds.filter((id) => !aliveIncoming.has(id));
+  const clients = mergeClients(current.clients, incoming.clients).filter((c) => !isRemovedClient(c, removed));
+  const live = new Set(clients.map((c) => c.id));
   return {
     ...incoming,
-    clients: mergeClients(current.clients, incoming.clients),
-    bookings: mergeById(current.bookings, incoming.bookings),
-    food: mergeById(current.food, incoming.food),
-    lifts: mergeById(current.lifts, incoming.lifts),
-    notices: mergeById(current.notices, incoming.notices).slice(0, 40),
-    waitlist: mergeById(current.waitlist, incoming.waitlist),
-    workoutLogs: mergeById(current.workoutLogs, incoming.workoutLogs),
+    removedClientIds: removed,
+    clients,
+    bookings: mergeById(current.bookings, incoming.bookings).filter((b) => live.has(b.clientId)),
+    food: mergeById(current.food, incoming.food).filter((f) => live.has(f.clientId)),
+    lifts: mergeById(current.lifts, incoming.lifts).filter((l) => live.has(l.clientId)),
+    notices: mergeById(current.notices, incoming.notices).filter((n) => !n.clientId || live.has(n.clientId) || n.audience === "trainer").slice(0, 40),
+    waitlist: mergeById(current.waitlist, incoming.waitlist).filter((w) => live.has(w.clientId)),
+    workoutLogs: mergeById(current.workoutLogs, incoming.workoutLogs).filter((w) => live.has(w.clientId)),
     extraSlots: mergeById(current.extraSlots, incoming.extraSlots),
     closedSlotIds: [...new Set([...current.closedSlotIds, ...incoming.closedSlotIds])],
     trainerUsername: incoming.trainerUsername || current.trainerUsername,

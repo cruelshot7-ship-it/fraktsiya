@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest, type Notice } from "@/data/studio";
-import { emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
+import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
 
@@ -149,6 +149,12 @@ export async function decideJoin(telegramId: string, approve: boolean) {
       joinRequests: (payload.joinRequests ?? []).map((r) =>
         r.telegramId === telegramId ? { ...r, status: "approved" as const } : r,
       ),
+      removedClientIds: dropTombstones(payload.removedClientIds ?? [], [
+        telegramId,
+        `tg:${telegramId}`,
+        ...(req?.telegramUsername ? [`u:${req.telegramUsername.replace(/^@/, "").toLowerCase()}`] : []),
+        fresh?.id ?? "",
+      ].filter(Boolean)),
     };
     await saveStudioState(payload);
     await tg("sendMessage", {

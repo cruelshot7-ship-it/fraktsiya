@@ -40,7 +40,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { decideJoinFn, mergeClients, requestJoin } from "@/lib/studio-sync";
+import { decideJoinFn, dropTombstones, isRemovedClient, mergeClients, requestJoin, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
@@ -65,6 +65,7 @@ type PersistShape = {
   checks: Record<string, string[]>;
   trainerUsername?: string | null;
   joinRequests?: JoinRequest[];
+  removedClientIds?: string[];
 };
 
 type State = {
@@ -92,6 +93,7 @@ type State = {
   checks: Record<string, string[]>;
   trainerUsername: string | null;
   joinRequests: JoinRequest[];
+  removedClientIds: string[];
   inviteBlocked: boolean;
   toast: string | null;
   hydrate: () => void;
@@ -186,6 +188,7 @@ function snap(s: State): PersistShape {
     checks: s.checks,
     trainerUsername: s.trainerUsername,
     joinRequests: s.joinRequests,
+    removedClientIds: s.removedClientIds,
   };
 }
 
@@ -272,6 +275,7 @@ export const useStudio = create<State>((set, get) => ({
   checks: {},
   trainerUsername: null,
   joinRequests: [],
+  removedClientIds: [],
   inviteBlocked: false,
   toast: null,
 
@@ -292,6 +296,7 @@ export const useStudio = create<State>((set, get) => ({
     let checks: Record<string, string[]> = {};
     let trainerUsername: string | null = null;
     let joinRequests: JoinRequest[] = [];
+    let removedClientIds: string[] = [];
     try {
       const raw = readPersist();
       if (raw) {
@@ -322,6 +327,7 @@ export const useStudio = create<State>((set, get) => ({
         checks = parsed.checks ?? {};
         trainerUsername = parsed.trainerUsername ?? null;
         joinRequests = parsed.joinRequests ?? [];
+        removedClientIds = parsed.removedClientIds ?? [];
         const cleaned = stripDemoData({
           clients,
           bookings,
@@ -338,6 +344,7 @@ export const useStudio = create<State>((set, get) => ({
         notices = cleaned.notices;
         waitlist = cleaned.waitlist;
         workoutLogs = cleaned.workoutLogs;
+        clients = clients.filter((c) => !isRemovedClient(c, removedClientIds));
         activeClientId =
           parsed.activeClientId && clients.some((c) => c.id === parsed.activeClientId)
             ? parsed.activeClientId
@@ -378,6 +385,7 @@ export const useStudio = create<State>((set, get) => ({
       checks,
       trainerUsername,
       joinRequests,
+      removedClientIds,
       inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
@@ -385,10 +393,15 @@ export const useStudio = create<State>((set, get) => ({
       if (!cloud) return;
       const payload = cloud.payload;
       const extra = payload.extraSlots ?? [];
+      const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
+      const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
+        (c) => !isRemovedClient(c, removed),
+      );
       set({
         role: cloud.role,
         inviteBlocked: Boolean(cloud.blocked),
-        clients: cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients),
+        removedClientIds: removed,
+        clients: merged,
         activeClientId:
           cloud.role === "client" && payload.clients[0]
             ? payload.clients[0].id
@@ -421,10 +434,15 @@ export const useStudio = create<State>((set, get) => ({
       if (!cloud) return;
       const payload = cloud.payload;
       const extra = payload.extraSlots ?? get().extraSlots;
+      const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
+      const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
+        (c) => !isRemovedClient(c, removed),
+      );
       set({
         role: cloud.role,
         inviteBlocked: Boolean(cloud.blocked),
-        clients: cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients),
+        removedClientIds: removed,
+        clients: merged,
         food: payload.food.length ? payload.food : get().food,
         lifts: payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
@@ -488,6 +506,12 @@ export const useStudio = create<State>((set, get) => ({
       clients: fresh ? [...get().clients, fresh] : get().clients,
       joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r)),
       notices: [notice, ...get().notices].slice(0, 40),
+      removedClientIds: dropTombstones(get().removedClientIds ?? [], [
+        req.telegramId,
+        `tg:${req.telegramId}`,
+        ...(req.telegramUsername ? [`u:${req.telegramUsername.replace(/^@/, "").toLowerCase()}`] : []),
+        fresh?.id ?? "",
+      ].filter(Boolean)),
     });
     persist(snap(get()));
     get().showToast(`${req.firstName} в зале.`);
@@ -1160,7 +1184,12 @@ export const useStudio = create<State>((set, get) => ({
       phone: phone || null,
     };
     const clients = [...get().clients, client];
-    set({ clients, activeClientId: client.id, sheetClientId: client.id });
+    set({
+      clients,
+      activeClientId: client.id,
+      sheetClientId: client.id,
+      removedClientIds: dropTombstones(get().removedClientIds ?? [], tombstonesFor(client)),
+    });
     persist(snap(get()));
     get().showToast("Клиент добавлен. Назначьте пакет и программу.");
     return client.id;
@@ -1219,6 +1248,7 @@ export const useStudio = create<State>((set, get) => ({
   },
 
   removeClient: (id) => {
+    const who = get().clients.find((c) => c.id === id);
     const clients = get().clients.filter((c) => c.id !== id);
     const activeClientId = get().activeClientId === id ? clients[0]?.id ?? "" : get().activeClientId;
     const bookings = get().bookings.filter((b) => b.clientId !== id);
@@ -1226,6 +1256,7 @@ export const useStudio = create<State>((set, get) => ({
     const lifts = get().lifts.filter((l) => l.clientId !== id);
     const notices = get().notices.filter((n) => n.clientId !== id);
     const waitlist = get().waitlist.filter((w) => w.clientId !== id);
+    const removedClientIds = [...new Set([...(get().removedClientIds ?? []), ...(who ? tombstonesFor(who) : [id])])];
     set({
       clients,
       activeClientId,
@@ -1234,6 +1265,7 @@ export const useStudio = create<State>((set, get) => ({
       lifts,
       notices,
       waitlist,
+      removedClientIds,
       sheetClientId: get().sheetClientId === id ? null : get().sheetClientId,
     });
     persist(snap(get()));
