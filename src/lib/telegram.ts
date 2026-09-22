@@ -78,8 +78,7 @@ export function openTelegramUrl(url: string) {
 }
 
 export function openTrainerChat(username: string | null | undefined) {
-  const handle = (username ?? "").replace(/^@/, "").trim();
-  if (!handle) return false;
+  const handle = (username ?? "").replace(/^@/, "").trim() || "ruksha_discipline_bot";
   openTelegramUrl(`https://t.me/${handle}`);
   return true;
 }

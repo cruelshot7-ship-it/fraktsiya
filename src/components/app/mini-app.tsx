@@ -161,9 +161,7 @@ export function MiniApp() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!openTrainerChat(trainerUsername)) {
-                        showToast("Напишите тренеру в Telegram — он пришлёт ссылку на бота.");
-                      }
+                      openTrainerChat(trainerUsername);
                     }}
                     className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok"
                     aria-label="Написать тренеру"
