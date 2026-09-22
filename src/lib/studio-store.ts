@@ -127,6 +127,7 @@ type State = {
   openSlot: (id: string) => void;
   deleteSlot: (id: string) => void;
   addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string; phone?: string }) => string;
+  claimByPhone: (phone: string) => Promise<boolean>;
   removeClient: (id: string) => void;
   updateClient: (id: string, patch: Partial<Client>) => void;
   dismissSignal: (id: string) => void;
@@ -701,6 +702,39 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     get().showToast("Клиент добавлен. Назначьте пакет и программу.");
     return c.id;
+  },
+  claimByPhone: async (raw) => {
+    const phone = raw.replace(/\D/g, "");
+    if (phone.length < 10) {
+      get().showToast("Введите номер телефона.");
+      return false;
+    }
+    const local = get().clients.find((c) => (c.phone ?? "").replace(/\D/g, "").endsWith(phone.slice(-10)));
+    if (local) {
+      set({ inviteBlocked: false, activeClientId: local.id, role: "client" });
+      persist(snap(get()));
+      get().showToast("Вы в зале.");
+      return true;
+    }
+    const cloud = await syncFromCloud(raw);
+    if (cloud && !cloud.blocked && cloud.payload.clients[0]) {
+      const extra = cloud.payload.extraSlots ?? get().extraSlots;
+      set({
+        role: "client",
+        inviteBlocked: false,
+        clients: mergeClients(get().clients, cloud.payload.clients),
+        activeClientId: cloud.payload.clients[0].id,
+        trainerUsername: cloud.payload.trainerUsername ?? get().trainerUsername,
+        extraSlots: extra,
+        slots: mergeSlots(extra),
+        food: cloud.payload.food.length ? cloud.payload.food : get().food,
+      });
+      persist(snap(get()));
+      get().showToast("Вы в зале.");
+      return true;
+    }
+    get().showToast("Этот номер тренер ещё не занёс. Напишите ему в личку.");
+    return false;
   },
   creditSessions: (clientId, amount) => {
     if (!amount) return;

@@ -1,3 +1,5 @@
+import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
+
 export type HapticStyle = "light" | "medium" | "heavy" | "rigid" | "soft";
 export type HapticNotify = "error" | "success" | "warning";
 
@@ -78,8 +80,18 @@ export function openTelegramUrl(url: string) {
 }
 
 export function openTrainerChat(username: string | null | undefined) {
-  const handle = (username ?? "").replace(/^@/, "").trim() || "ruksha_discipline_bot";
-  openTelegramUrl(`https://t.me/${handle}`);
+  const handle = (username ?? "").replace(/^@/, "").trim();
+  if (handle && handle.toLowerCase() !== BOT_USERNAME.toLowerCase()) {
+    openTelegramUrl(`https://t.me/${handle}`);
+    return true;
+  }
+  const deep = `tg://user?id=${TRAINER_TG_ID}`;
+  const tg = getTelegram();
+  if (tg?.openLink) {
+    tg.openLink(deep);
+    return true;
+  }
+  window.location.href = deep;
   return true;
 }
 

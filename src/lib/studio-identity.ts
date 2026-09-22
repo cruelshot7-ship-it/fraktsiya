@@ -55,7 +55,7 @@ export function scheduleCloudPush(payload: StudioPayload) {
   }, 700);
 }
 
-export async function syncFromCloud(): Promise<null | {
+export async function syncFromCloud(phone?: string): Promise<null | {
   role: Role;
   payload: StudioPayload;
   created: boolean;
@@ -64,7 +64,7 @@ export async function syncFromCloud(): Promise<null | {
   const initData = getTelegramInitData();
   if (!initData) return null;
   try {
-    const res = await pullStudio({ data: { initData } });
+    const res = await pullStudio({ data: { initData, phone } });
     if (!res.ok || !res.payload || !res.role) return null;
     return { role: res.role, payload: res.payload, created: Boolean(res.created), blocked: Boolean(res.blocked) };
   } catch {

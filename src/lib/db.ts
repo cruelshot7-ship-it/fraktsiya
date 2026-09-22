@@ -7,8 +7,19 @@ export type DbSource = "neon" | "pglite";
 // "unset" — otherwise production would silently run on the PGLite fallback.
 const rawDatabaseUrl =
   typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
-const databaseUrl =
-  rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
+
+function resolveDatabaseUrl(raw?: string) {
+  if (!raw?.trim()) return undefined;
+  try {
+    const host = new URL(raw.trim()).hostname;
+    if (!host || host === "base") return undefined;
+    return raw.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+const databaseUrl = resolveDatabaseUrl(rawDatabaseUrl);
 
 /**
  * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   emptyClient,
   hoursAgoIso,
+  digitsPhone,
   type Booking,
   type Client,
   type FoodLog,
@@ -36,6 +37,7 @@ const STUDIO_ID = "ruksha";
 
 const PullInput = z.object({
   initData: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 const PushInput = z.object({
@@ -243,11 +245,17 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byName = uname
         ? payload.clients.find((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
         : undefined;
-      if (!byId && byName) {
+      const wantPhone = digitsPhone(data.phone);
+      const byPhone =
+        wantPhone.length >= 10
+          ? payload.clients.find((c) => digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
+          : undefined;
+      const match = byName ?? byPhone;
+      if (!byId && match) {
         payload = {
           ...payload,
           clients: payload.clients.map((c) =>
-            c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
+            c.id === match.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
           ),
         };
         await sql.query(
