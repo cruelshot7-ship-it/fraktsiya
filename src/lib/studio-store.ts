@@ -412,6 +412,175 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast(`Тренировка закрыта \u00b7 ${kcal} ккал`);
   },
 
+
+  bookSlot: (slotId, forClientId) => {
+    const { slots, bookings, activeClientId, clients, waitlist } = get();
+    const slot = slots.find((s) => s.id === slotId);
+    const client = clients.find((c) => c.id === (forClientId ?? activeClientId));
+    if (!slot || !client) return false;
+    if (isSlotPast(slot.date, slot.time) || isFrozen(client) || (client.sessionsLeft ?? 0) <= 0) {
+      get().showToast("Сейчас записаться нельзя.");
+      return false;
+    }
+    if (slotTaken(slot, bookings) >= slot.capacity) {
+      get().showToast("Слот занят.");
+      return false;
+    }
+    const booking = {
+      id: `bk_${slot.id}_${client.id}_${Date.now()}`,
+      slotId: slot.id,
+      clientId: client.id,
+      date: slot.date,
+      time: slot.time,
+      duration: slot.duration,
+      held: true,
+    };
+    const hold = makeTxn(client.id, "hold", -1, `Запись ${slot.date} ${slot.time}`, booking.id);
+    set({
+      bookings: [...bookings, booking],
+      clients: withTxn(clients, hold),
+      waitlist: waitlist.filter((w) => !(w.slotId === slot.id && w.clientId === client.id)),
+    });
+    persist(snap(get()));
+    get().showToast(`Готово. ${slot.time}.`);
+    return true;
+  },
+  joinWaitlist: (slotId) => {
+    const { waitlist, activeClientId } = get();
+    if (waitlist.some((w) => w.slotId === slotId && w.clientId === activeClientId)) return;
+    set({ waitlist: [...waitlist, { id: `wl_${slotId}_${activeClientId}`, slotId, clientId: activeClientId, at: new Date().toISOString() }] });
+    persist(snap(get()));
+    get().showToast("В листе ожидания.");
+  },
+  leaveWaitlist: (slotId) => {
+    const id = get().activeClientId;
+    set({ waitlist: get().waitlist.filter((w) => !(w.slotId === slotId && w.clientId === id)) });
+    persist(snap(get()));
+  },
+  cancelBooking: (id) => {
+    const { bookings, clients } = get();
+    const booking = bookings.find((b) => b.id === id);
+    if (!booking) return;
+    const refund = makeTxn(booking.clientId, "refund", 1, "Отмена", booking.id);
+    set({ bookings: bookings.filter((b) => b.id !== id), clients: withTxn(clients, refund) });
+    persist(snap(get()));
+    get().showToast("Запись снята.");
+  },
+  addFood: (mealId) => {
+    const meal = MEALS.find((m) => m.id === mealId);
+    if (!meal) return;
+    const log = { ...meal, logId: `f_${Date.now()}`, date: todayIso(), clientId: get().activeClientId };
+    set({ food: [...get().food, log] });
+    persist(snap(get()));
+  },
+  addCustomFood: (meal) => {
+    const log = { ...meal, id: `c_${Date.now()}`, logId: `f_${Date.now()}`, date: todayIso(), clientId: get().activeClientId };
+    set({ food: [...get().food, log] });
+    persist(snap(get()));
+  },
+  removeFood: (logId) => {
+    set({ food: get().food.filter((f) => f.logId !== logId) });
+    persist(snap(get()));
+  },
+  markNoShow: (bookingId) => {
+    set({ bookings: get().bookings.map((b) => (b.id === bookingId ? { ...b, noShow: true } : b)) });
+    persist(snap(get()));
+  },
+  dismissSignal: (id) => {
+    set({ dismissedSignalIds: [...get().dismissedSignalIds, id] });
+    persist(snap(get()));
+  },
+  setNotifyPrefs: (patch) => {
+    set({ notifyPrefs: { ...get().notifyPrefs, ...patch } });
+    persist(snap(get()));
+  },
+  addClient: () => {
+    const c = emptyClient();
+    set({ clients: [...get().clients, c] });
+    persist(snap(get()));
+    return c.id;
+  },
+  creditSessions: (clientId, amount) => {
+    const txn = makeTxn(clientId, "credit", amount, `Пакет +${amount}`);
+    set({ clients: withTxn(get().clients, txn) });
+    persist(snap(get()));
+  },
+  freezeClient: (clientId, days) => {
+    set({
+      clients: get().clients.map((c) =>
+        c.id === clientId ? { ...c, frozenUntil: isoDate(addDays(new Date(), days)) } : c,
+      ),
+    });
+    persist(snap(get()));
+  },
+  unfreezeClient: (clientId) => {
+    set({ clients: get().clients.map((c) => (c.id === clientId ? { ...c, frozenUntil: null } : c)) });
+    persist(snap(get()));
+  },
+  updateClient: (id, patch) => {
+    set({ clients: get().clients.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+    persist(snap(get()));
+  },
+  checkIn: (bookingId) => {
+    set({ bookings: get().bookings.map((b) => (b.id === bookingId ? { ...b, checkedIn: true, noShow: false } : b)) });
+    persist(snap(get()));
+    get().showToast("Отметили: вы в зале.");
+  },
+  addLift: (exercise, weight, reps, sets) => {
+    set({
+      lifts: [...get().lifts, { id: `lift_${Date.now()}`, date: todayIso(), exercise, weight, reps, sets, clientId: get().activeClientId }],
+    });
+    persist(snap(get()));
+  },
+  setWeight: (kg) => {
+    const id = get().activeClientId;
+    const today = todayIso();
+    set({
+      clients: get().clients.map((c) =>
+        c.id === id ? { ...c, weight: kg, weightHistory: [...c.weightHistory, { date: today, kg }] } : c,
+      ),
+    });
+    persist(snap(get()));
+  },
+  addSlot: (date, time, capacity) => {
+    const slot = { id: `ex_${date}_${time}_${Date.now()}`, date, time, duration: 60, capacity };
+    set({ extraSlots: [...get().extraSlots, slot], slots: [...get().slots, slot] });
+    persist(snap(get()));
+  },
+  closeSlot: (id) => {
+    set({ closedSlotIds: [...new Set([...get().closedSlotIds, id])] });
+    persist(snap(get()));
+  },
+  openSlot: (id) => {
+    set({ closedSlotIds: get().closedSlotIds.filter((x) => x !== id) });
+    persist(snap(get()));
+  },
+  removeClient: (id) => {
+    set({
+      clients: get().clients.filter((c) => c.id !== id),
+      sheetClientId: get().sheetClientId === id ? null : get().sheetClientId,
+    });
+    persist(snap(get()));
+  },
+  cancelSlotBookings: (slotId) => {
+    for (const b of get().bookings.filter((x) => x.slotId === slotId && !isSlotPast(x.date, x.time))) {
+      get().cancelBooking(b.id, "trainer");
+    }
+  },
+  rescheduleBooking: (id, newSlotId) => {
+    const { bookings, slots } = get();
+    const booking = bookings.find((b) => b.id === id);
+    const slot = slots.find((s) => s.id === newSlotId);
+    if (!booking || !slot) return false;
+    set({
+      bookings: bookings.map((b) =>
+        b.id === id ? { ...b, slotId: slot.id, date: slot.date, time: slot.time, duration: slot.duration } : b,
+      ),
+    });
+    persist(snap(get()));
+    return true;
+  },
+
   showToast: (toast) => {
     set({ toast });
     window.setTimeout(() => {
