@@ -408,7 +408,7 @@ export const useStudio = create<State>((set, get) => ({
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
       persist(snap(get()));
-      if (cloud.created) get().showToast("Заявка у тренера.");
+      if (cloud.created) get().showToast("Вы в зале. Ждите пакет занятий.");
     });
   },
 

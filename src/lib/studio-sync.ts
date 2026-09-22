@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   emptyClient,
   hoursAgoIso,
+  INVITE_CODE,
   type Booking,
   type Client,
   type FoodLog,
@@ -252,34 +253,35 @@ export const pullStudio = createServerFn({ method: "POST" })
           "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
           [STUDIO_ID, JSON.stringify(payload)],
         );
+      } else if (!byId && session.startParam.trim().toLowerCase() === INVITE_CODE.toLowerCase()) {
+        const fresh = clientFromTelegram(session.user);
+        const notice: Notice = {
+          id: `nt_new_${session.user.id}`,
+          audience: "trainer",
+          clientId: fresh.id,
+          kind: "alert",
+          title: `Новый клиент: ${fresh.firstName} ${fresh.lastName}`.trim(),
+          body: session.user.username
+            ? `@${session.user.username} пришёл по вашей ссылке. Назначьте пакет.`
+            : "Пришёл по ссылке. Назначьте пакет и программу.",
+          at: hoursAgoIso(0),
+        };
+        payload = {
+          ...payload,
+          clients: [...payload.clients, fresh],
+          joinRequests: payload.joinRequests.filter((r) => r.telegramId !== session.user.id),
+          notices: [notice, ...payload.notices].slice(0, 40),
+        };
+        created = true;
+        await sql.query(
+          "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+          [STUDIO_ID, JSON.stringify(payload)],
+        );
       } else if (!byId) {
-        const prev = payload.joinRequests.find((r) => r.telegramId === session.user.id);
-        if (!prev || prev.status === "rejected") {
-          const saved = pendingVisit(session.user, prev?.message);
-          const notice: Notice = {
-            id: `nt_join_${session.user.id}`,
-            audience: "trainer",
-            clientId: saved.id,
-            kind: "join",
-            title: `Заявка: ${saved.firstName} ${saved.lastName}`.trim(),
-            body: session.user.username ? `@${session.user.username} открыл Mini App` : saved.message,
-            at: saved.at,
-          };
-          payload = {
-            ...payload,
-            joinRequests: [saved, ...payload.joinRequests.filter((r) => r.telegramId !== session.user.id)],
-            notices: [notice, ...payload.notices].slice(0, 40),
-          };
-          created = true;
-          await sql.query(
-            "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-            [STUDIO_ID, JSON.stringify(payload)],
-          );
-        }
         return {
           ok: true,
           role: "client",
-          created,
+          created: false,
           blocked: true,
           payload: scopePayload(payload, session.user.id),
         };
