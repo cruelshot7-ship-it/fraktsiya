@@ -1,6 +1,13 @@
 export type HapticStyle = "light" | "medium" | "heavy" | "rigid" | "soft";
 export type HapticNotify = "error" | "success" | "warning";
 
+export type TelegramUser = {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+};
+
 export type TelegramWebApp = {
   ready: () => void;
   expand: () => void;
@@ -11,6 +18,8 @@ export type TelegramWebApp = {
   isExpanded?: boolean;
   viewportHeight?: number;
   viewportStableHeight?: number;
+  initData?: string;
+  initDataUnsafe?: { user?: TelegramUser };
   onEvent?: (event: string, cb: () => void) => void;
   offEvent?: (event: string, cb: () => void) => void;
   HapticFeedback?: {
@@ -25,6 +34,14 @@ export type TelegramWebApp = {
 export function getTelegram(): TelegramWebApp | undefined {
   if (typeof window === "undefined") return undefined;
   return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp;
+}
+
+export function getTelegramUser(): TelegramUser | undefined {
+  return getTelegram()?.initDataUnsafe?.user;
+}
+
+export function getTelegramInitData(): string {
+  return getTelegram()?.initData ?? "";
 }
 
 function bindVisualViewport() {
