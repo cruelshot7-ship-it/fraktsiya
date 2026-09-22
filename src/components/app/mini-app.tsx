@@ -12,10 +12,11 @@ import { NutritionView } from "@/components/app/nutrition-view";
 import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { JoinGate } from "@/components/app/join-gate";
+import { TrainerNote } from "@/components/app/trainer-note";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
-import { initTelegram, getTelegramUser, openTrainerChat } from "@/lib/telegram";
+import { initTelegram, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
@@ -57,9 +58,8 @@ export function MiniApp() {
   const dismissSignal = useStudio((s) => s.dismissSignal);
   const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
-  const trainerUsername = useStudio((s) => s.trainerUsername);
   const inviteBlocked = useStudio((s) => s.inviteBlocked);
-  const showToast = useStudio((s) => s.showToast);
+  const openNote = useStudio((s) => s.openNote);
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [tgLocked, setTgLocked] = useState(false);
@@ -159,14 +159,11 @@ export function MiniApp() {
             <>
               <div className="flex items-center justify-between gap-3">
                 <BrandLockup />
-                {inviteBlocked ? null : (
                 <div className="flex items-center gap-1.5">
-                  {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} />}
+                  {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
                   <button
                     type="button"
-                    onClick={() => {
-                      openTrainerChat(trainerUsername);
-                    }}
+                    onClick={() => openNote()}
                     className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok"
                     aria-label="Написать тренеру"
                   >
@@ -184,7 +181,6 @@ export function MiniApp() {
                     ) : null}
                   </button>
                 </div>
-                )}
               </div>
               {inviteBlocked ? null : (
               <>
@@ -299,6 +295,7 @@ export function MiniApp() {
             }}
           />
         ) : null}
+        <TrainerNote />
       </div>
     </div>
   );

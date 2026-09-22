@@ -244,6 +244,24 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   }
 }
 
+export async function sendTrainerNote(
+  from: { id: string; firstName: string; lastName: string; username: string | null },
+  text: string,
+) {
+  const who = [from.firstName, from.lastName].filter(Boolean).join(" ") || "Клиент";
+  const handle = from.username ? `@${from.username}` : `id ${from.id}`;
+  const body = text.trim().slice(0, 1000);
+  if (!body) return { ok: false as const };
+  const rows: { text: string; url?: string; web_app?: { url: string } }[][] = [];
+  if (from.username) rows.push([{ text: "Ответить в Telegram", url: `https://t.me/${from.username}` }]);
+  rows.push([{ text: "Кабинет", web_app: { url: APP_URL } }]);
+  return tg("sendMessage", {
+    chat_id: TRAINER_TG_ID,
+    text: `Сообщение из зала\n${who}\n${handle}\n\n${body}`,
+    reply_markup: { inline_keyboard: rows },
+  });
+}
+
 export async function sendBotLink(telegramId: string, text: string) {
   return tg("sendMessage", {
     chat_id: telegramId,

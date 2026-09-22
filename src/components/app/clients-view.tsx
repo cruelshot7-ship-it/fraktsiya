@@ -4,7 +4,6 @@ import {
   clientFlag,
   daysAgoPhrase,
   dayKbju,
-  exportClientPass,
   formatDayMonth,
   formatPhone,
   FREEZE_OPTIONS,
@@ -221,7 +220,6 @@ export function ClientsView() {
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
                 if (!addClient({ firstName, lastName, telegramUsername: tgUser, phone })) return;
-                const handle = tgUser.replace(/^@/, "").trim();
                 const link = "https://t.me/ruksha_discipline_bot";
                 openTelegramUrl(
                   `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Привет! Зал Ruksha: ${link} — нажми Старт`)}`,
@@ -542,23 +540,6 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
               </button>
               <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("measures")}>
                 Фото и замеры
-              </button>
-              <button
-                type="button"
-                className="pressable h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                onClick={async () => {
-                  const code = exportClientPass(client);
-                  try {
-                    await navigator.clipboard.writeText(code);
-                  } catch {
-                    /* ignore */
-                  }
-                  const share = `https://t.me/share/url?url=${encodeURIComponent("https://t.me/ruksha_discipline_bot")}&text=${encodeURIComponent(code)}`;
-                  openTelegramUrl(share);
-                  showToast("Код скопирован. Перешлите его клиенту.");
-                }}
-              >
-                Код доступа
               </button>
               <button
                 type="button"

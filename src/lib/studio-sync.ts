@@ -402,6 +402,25 @@ export const decideJoinFn = createServerFn({ method: "POST" })
     return bot.decideJoin(data.telegramId, data.approve);
   });
 
+export const sendTrainerNoteFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), text: z.string() }))
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session) return { ok: false };
+    const bot = await import("@/lib/telegram-bot.server");
+    const res = await bot.sendTrainerNote(
+      {
+        id: session.user.id,
+        firstName: session.user.firstName,
+        lastName: session.user.lastName,
+        username: session.user.username,
+      },
+      data.text,
+    );
+    return { ok: Boolean(res.ok) };
+  });
+
 export const sendBotLinkFn = createServerFn({ method: "POST" })
   .validator(z.object({ initData: z.string().optional(), telegramId: z.string(), text: z.string() }))
   .handler(async ({ data }): Promise<{ ok: boolean }> => {

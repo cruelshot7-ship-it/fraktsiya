@@ -1,4 +1,4 @@
-import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
+import { BOT_USERNAME } from "@/data/studio";
 
 export type HapticStyle = "light" | "medium" | "heavy" | "rigid" | "soft";
 export type HapticNotify = "error" | "success" | "warning";
@@ -85,14 +85,7 @@ export function openTrainerChat(username: string | null | undefined) {
     openTelegramUrl(`https://t.me/${handle}`);
     return true;
   }
-  const deep = `tg://user?id=${TRAINER_TG_ID}`;
-  const tg = getTelegram();
-  if (tg?.openLink) {
-    tg.openLink(deep);
-    return true;
-  }
-  window.location.href = deep;
-  return true;
+  return false;
 }
 
 export function openPhone(phone: string | null | undefined) {

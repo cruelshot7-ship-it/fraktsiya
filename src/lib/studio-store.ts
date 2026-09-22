@@ -96,6 +96,7 @@ type State = {
   joinRequests: JoinRequest[];
   removedClientIds: string[];
   inviteBlocked: boolean;
+  noteOpen: boolean;
   toast: string | null;
   hydrate: () => void;
   refreshCloud: () => void;
@@ -139,6 +140,8 @@ type State = {
   setNotifyPrefs: (patch: Partial<NotifyPrefs>) => void;
   showToast: (msg: string) => void;
   clearToast: () => void;
+  openNote: () => void;
+  closeNote: () => void;
 };
 
 const KEY = "ruksha:v8";
@@ -296,6 +299,7 @@ export const useStudio = create<State>((set, get) => ({
   joinRequests: [],
   removedClientIds: [],
   inviteBlocked: false,
+  noteOpen: false,
   toast: null,
 
   hydrate: () => {
@@ -1357,4 +1361,6 @@ export const useStudio = create<State>((set, get) => ({
     }, 2200);
   },
   clearToast: () => set({ toast: null }),
+  openNote: () => set({ noteOpen: true }),
+  closeNote: () => set({ noteOpen: false }),
 }));

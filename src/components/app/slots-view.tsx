@@ -66,6 +66,7 @@ function ClientSlots() {
   const leaveWaitlist = useStudio((s) => s.leaveWaitlist);
   const waitlist = useStudio((s) => s.waitlist);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
+  const openNote = useStudio((s) => s.openNote);
   const { start, days, me } = useWeekDays();
   const end = addDays(start, 6);
   const minWeek = isoDate(startOfWeek(new Date()));
@@ -206,7 +207,9 @@ function ClientSlots() {
                           Записаться на {DOW[(parseISODate(slot.date).getDay() + 6) % 7]} {slot.time}?
                         </p>
                         {me.sessionsLeft <= 0 ? (
-                          <p className="mt-1 text-tiny text-primary">На балансе нет занятий — напишите тренеру.</p>
+                          <button type="button" className="mt-1 text-tiny text-primary" onClick={() => openNote()}>
+                            На балансе нет занятий — напишите тренеру.
+                          </button>
                         ) : isFrozen(me) ? (
                           <p className="mt-1 text-tiny text-primary">Пакет заморожен до {formatDayMonth(me.frozenUntil!)}.</p>
                         ) : bookings.some((b) => b.clientId === me.id && b.date === slot.date && b.slotId !== slot.id && !isSlotPast(b.date, b.time)) ? (

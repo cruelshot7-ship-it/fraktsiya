@@ -1,9 +1,8 @@
 import { useStudio } from "@/lib/studio-store";
-import { openTrainerChat } from "@/lib/telegram";
 
 export function JoinGate() {
   const joinRequests = useStudio((s) => s.joinRequests);
-  const trainerUsername = useStudio((s) => s.trainerUsername);
+  const openNote = useStudio((s) => s.openNote);
   const pending = joinRequests.some((r) => r.status === "pending");
   const rejected = joinRequests.some((r) => r.status === "rejected");
 
@@ -20,7 +19,7 @@ export function JoinGate() {
       <button
         type="button"
         className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-        onClick={() => openTrainerChat(trainerUsername)}
+        onClick={() => openNote()}
       >
         Написать тренеру
       </button>
