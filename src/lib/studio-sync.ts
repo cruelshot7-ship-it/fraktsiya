@@ -74,13 +74,13 @@ export function emptyPayload(): StudioPayload {
 function normalizePayload(raw: Partial<StudioPayload> | null | undefined): StudioPayload {
   const empty = emptyPayload();
   if (!raw || typeof raw !== "object") return empty;
-  return {
+  const removed = raw.removedClientIds ?? [];
+  return ensureApprovedClients({
     ...empty,
     ...raw,
     bookings: raw.bookings ?? [],
     food: raw.food ?? [],
     lifts: raw.lifts ?? [],
-    clients: raw.clients ?? [],
     extraSlots: raw.extraSlots ?? [],
     closedSlotIds: raw.closedSlotIds ?? [],
     dismissedSignalIds: raw.dismissedSignalIds ?? [],
@@ -90,9 +90,9 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     checks: raw.checks ?? {},
     trainerUsername: raw.trainerUsername ?? null,
     joinRequests: raw.joinRequests ?? [],
-    removedClientIds: raw.removedClientIds ?? [],
-    clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, raw.removedClientIds ?? [])),
-  };
+    removedClientIds: removed,
+    clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
+  });
 }
 
 function pendingVisit(user: { id: string; firstName: string; lastName: string; username: string | null }, message?: string): JoinRequest {
@@ -196,6 +196,39 @@ export function dropTombstones(removed: string[], keys: string[]) {
   return removed.filter((x) => !drop.has(x));
 }
 
+function clientFromJoin(req: JoinRequest): Client {
+  return {
+    ...emptyClient(),
+    id: `tg_${req.telegramId}`,
+    firstName: req.firstName || "Клиент",
+    lastName: req.lastName || "",
+    telegramId: req.telegramId,
+    telegramUsername: req.telegramUsername ?? null,
+  };
+}
+
+export function ensureApprovedClients(payload: StudioPayload): StudioPayload {
+  const approved = (payload.joinRequests ?? []).filter((r) => r.status === "approved");
+  if (!approved.length) return payload;
+  let clients = payload.clients;
+  let removed = payload.removedClientIds ?? [];
+  for (const req of approved) {
+    const uname = (req.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+    const existing =
+      clients.find((c) => c.telegramId === req.telegramId) ??
+      clients.find((c) => uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname);
+    if (!existing) clients = [...clients, clientFromJoin(req)];
+    else if (!existing.telegramId) {
+      clients = clients.map((c) =>
+        c.id === existing.id ? { ...c, telegramId: req.telegramId, telegramUsername: req.telegramUsername ?? c.telegramUsername } : c,
+      );
+    }
+    const who = existing ? { ...existing, telegramId: req.telegramId, telegramUsername: req.telegramUsername ?? existing.telegramUsername } : clientFromJoin(req);
+    removed = dropTombstones(removed, tombstonesFor(who));
+  }
+  return { ...payload, clients, removedClientIds: removed };
+}
+
 function mergeById<T extends { id: string }>(base: T[], incoming: T[]): T[] {
   const map = new Map(base.map((x) => [x.id, x]));
   for (const x of incoming) map.set(x.id, x);
@@ -208,7 +241,7 @@ function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): S
   const removed = removedClientIds.filter((id) => !aliveIncoming.has(id));
   const clients = mergeClients(current.clients, incoming.clients).filter((c) => !isRemovedClient(c, removed));
   const live = new Set(clients.map((c) => c.id));
-  return {
+  const merged: StudioPayload = {
     ...incoming,
     removedClientIds: removed,
     clients,
@@ -223,6 +256,7 @@ function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): S
     trainerUsername: incoming.trainerUsername || current.trainerUsername,
     joinRequests: mergeById(current.joinRequests ?? [], incoming.joinRequests ?? []),
   };
+  return ensureApprovedClients(merged);
 }
 
 function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, telegramId: string): StudioPayload {

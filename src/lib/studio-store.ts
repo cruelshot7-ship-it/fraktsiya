@@ -41,7 +41,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { decideJoinFn, dropTombstones, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
+import { decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
@@ -412,18 +412,22 @@ export const useStudio = create<State>((set, get) => ({
       if (!cloud) return;
       const payload = cloud.payload;
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
-      const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
-        (c) => !isRemovedClient(c, removed),
-      );
+      const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      const seed = cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients);
+      const next = ensureApprovedClients({
+        ...payload,
+        clients: seed,
+        joinRequests: joined,
+        removedClientIds: get().removedClientIds ?? [],
+      });
       set({
         role: cloud.role,
-        inviteBlocked: Boolean(cloud.blocked),
-        removedClientIds: removed,
-        clients: merged,
+        inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
+        removedClientIds: next.removedClientIds,
+        clients: next.clients,
         activeClientId:
-          cloud.role === "client" && payload.clients[0]
-            ? payload.clients[0].id
+          cloud.role === "client" && next.clients[0]
+            ? next.clients[0].id
             : get().activeClientId,
         bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
         food: payload.food,
@@ -437,7 +441,7 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
-        joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
+        joinRequests: next.joinRequests,
         slots: mergeSlots(extra),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
@@ -453,15 +457,19 @@ export const useStudio = create<State>((set, get) => ({
       if (!cloud) return;
       const payload = cloud.payload;
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
-      const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
-        (c) => !isRemovedClient(c, removed),
-      );
+      const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      const seed = cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients);
+      const next = ensureApprovedClients({
+        ...payload,
+        clients: seed,
+        joinRequests: joined,
+        removedClientIds: get().removedClientIds ?? [],
+      });
       set({
         role: cloud.role,
-        inviteBlocked: Boolean(cloud.blocked),
-        removedClientIds: removed,
-        clients: merged,
+        inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
+        removedClientIds: next.removedClientIds,
+        clients: next.clients,
         food: payload.food.length ? payload.food : get().food,
         lifts: payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
@@ -469,7 +477,7 @@ export const useStudio = create<State>((set, get) => ({
         notices: payload.notices.length ? payload.notices : get().notices,
         workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
-        joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
+        joinRequests: next.joinRequests,
         slots: mergeSlots(extra),
         bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
       });
@@ -502,8 +510,11 @@ export const useStudio = create<State>((set, get) => ({
   approveJoin: (id) => {
     const req = get().joinRequests.find((r) => r.id === id);
     if (!req) return;
-    const exists = get().clients.some((c) => c.telegramId === req.telegramId);
-    const fresh = exists
+    const uname = (req.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+    const existing =
+      get().clients.find((c) => c.telegramId === req.telegramId) ??
+      get().clients.find((c) => uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname);
+    const fresh = existing
       ? null
       : {
           ...emptyClient(),
@@ -513,25 +524,33 @@ export const useStudio = create<State>((set, get) => ({
           telegramId: req.telegramId,
           telegramUsername: req.telegramUsername,
         };
+    const clientId = existing?.id ?? fresh!.id;
     const notice: Notice = {
       id: `nt_ok_${req.telegramId}`,
       audience: "client",
-      clientId: fresh?.id ?? id,
+      clientId,
       kind: "join",
       title: "Вас приняли в зал",
       body: "Можно записываться. Тренер назначит программу и пакет.",
       at: new Date().toISOString(),
     };
+    const nextClients = fresh
+      ? [...get().clients, fresh]
+      : get().clients.map((c) =>
+          c.id === existing!.id ? { ...c, telegramId: req.telegramId, telegramUsername: req.telegramUsername ?? c.telegramUsername } : c,
+        );
     set({
-      clients: fresh ? [...get().clients, fresh] : get().clients,
+      clients: nextClients,
+      activeClientId: get().role === "trainer" ? get().activeClientId : clientId,
+      sheetClientId: get().role === "trainer" ? clientId : get().sheetClientId,
       joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r)),
       notices: [notice, ...get().notices].slice(0, 40),
       removedClientIds: dropTombstones(get().removedClientIds ?? [], [
         req.telegramId,
         `tg:${req.telegramId}`,
-        ...(req.telegramUsername ? [`u:${req.telegramUsername.replace(/^@/, "").toLowerCase()}`] : []),
-        fresh?.id ?? "",
-      ].filter(Boolean)),
+        ...(uname ? [`u:${uname}`] : []),
+        clientId,
+      ]),
     });
     persist(snap(get()));
     get().showToast(`${req.firstName} в зале.`);
@@ -1287,6 +1306,13 @@ export const useStudio = create<State>((set, get) => ({
     const notices = get().notices.filter((n) => n.clientId !== id);
     const waitlist = get().waitlist.filter((w) => w.clientId !== id);
     const removedClientIds = [...new Set([...(get().removedClientIds ?? []), ...(who ? tombstonesFor(who) : [id])])];
+    const joinRequests = get().joinRequests.map((r) => {
+      if (!who) return r;
+      const sameId = who.telegramId && r.telegramId === who.telegramId;
+      const u = (who.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+      const sameUser = u && (r.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === u;
+      return sameId || sameUser ? { ...r, status: "rejected" as const } : r;
+    });
     set({
       clients,
       activeClientId,
@@ -1296,6 +1322,7 @@ export const useStudio = create<State>((set, get) => ({
       notices,
       waitlist,
       removedClientIds,
+      joinRequests,
       sheetClientId: get().sheetClientId === id ? null : get().sheetClientId,
     });
     persist(snap(get()));
