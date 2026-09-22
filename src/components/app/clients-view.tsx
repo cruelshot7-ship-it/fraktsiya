@@ -4,6 +4,7 @@ import {
   clientFlag,
   daysAgoPhrase,
   dayKbju,
+  exportClientPass,
   formatDayMonth,
   formatPhone,
   FREEZE_OPTIONS,
@@ -509,6 +510,21 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
               <button
                 type="button"
                 className="pressable h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+                onClick={async () => {
+                  const code = exportClientPass(client);
+                  try {
+                    await navigator.clipboard.writeText(code);
+                    showToast("Код скопирован. Отправьте клиенту в Telegram.");
+                  } catch {
+                    showToast(code);
+                  }
+                }}
+              >
+                Код доступа
+              </button>
+              <button
+                type="button"
+                className="pressable h-14 rounded-xl bg-secondary text-sm"
                 onClick={() => {
                   if (client.telegramUsername) {
                     openTrainerChat(client.telegramUsername);

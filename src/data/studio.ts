@@ -854,6 +854,75 @@ export function formatPhone(raw: string | null | undefined) {
   return (raw ?? "").trim();
 }
 
+function toB64(s: string) {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  bytes.forEach((b) => {
+    bin += String.fromCharCode(b);
+  });
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromB64(s: string) {
+  const pad = s.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = pad + "=".repeat((4 - (pad.length % 4)) % 4);
+  const bin = atob(padded);
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+export type ClientPass = {
+  v: 1;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  telegramUsername: string | null;
+  sessionsLeft: number;
+  packExpiresAt: string | null;
+  kbju: Kbju;
+  kbjuRest?: Kbju | null;
+  programTitle: string;
+  programWeeks: number;
+  programStart: string;
+  sessions: ProgramSession[];
+  trainDays: number[];
+  trainTimes: string[];
+};
+
+export function exportClientPass(c: Client) {
+  const body: ClientPass = {
+    v: 1,
+    firstName: c.firstName,
+    lastName: c.lastName,
+    phone: c.phone ?? null,
+    telegramUsername: c.telegramUsername ?? null,
+    sessionsLeft: c.sessionsLeft,
+    packExpiresAt: c.packExpiresAt ?? null,
+    kbju: c.kbju,
+    kbjuRest: c.kbjuRest ?? null,
+    programTitle: c.programTitle,
+    programWeeks: c.programWeeks,
+    programStart: c.programStart,
+    sessions: c.sessions,
+    trainDays: c.trainDays,
+    trainTimes: c.trainTimes,
+  };
+  return `ER.${toB64(JSON.stringify(body))}`;
+}
+
+export function importClientPass(raw: string): ClientPass | null {
+  const s = raw.trim().replace(/\s+/g, "");
+  const token = s.startsWith("ER.") ? s.slice(3) : s.includes("ER.") ? s.slice(s.indexOf("ER.") + 3) : "";
+  if (!token) return null;
+  try {
+    const parsed = JSON.parse(fromB64(token)) as ClientPass;
+    if (parsed?.v !== 1 || !parsed.firstName) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export const SEED_CLIENTS: Client[] = [];
 
 export function seedFood(): FoodLog[] {

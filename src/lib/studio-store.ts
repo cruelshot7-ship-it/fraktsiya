@@ -5,6 +5,8 @@ import {
   DOW,
   emptyClient,
   firstBookableDate,
+  digitsPhone,
+  importClientPass,
   formatDayMonth,
   formatLongDate,
   generateWindow,
@@ -704,6 +706,24 @@ export const useStudio = create<State>((set, get) => ({
     return c.id;
   },
   claimByPhone: async (raw) => {
+    const pass = importClientPass(raw);
+    if (pass) {
+      const client = {
+        ...emptyClient(),
+        ...pass,
+        id: `tg_pass_${digitsPhone(pass.phone) || pass.telegramUsername || Date.now()}`,
+      };
+      const others = get().clients.filter((c) => c.id !== client.id);
+      set({
+        role: "client",
+        inviteBlocked: false,
+        clients: [...others, client],
+        activeClientId: client.id,
+      });
+      persist(snap(get()));
+      get().showToast("Вы в зале.");
+      return true;
+    }
     const phone = raw.replace(/\D/g, "");
     if (phone.length < 10) {
       get().showToast("Введите номер телефона.");

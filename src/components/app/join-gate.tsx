@@ -13,16 +13,15 @@ export function JoinGate() {
     <div className="rounded-xl bg-card px-5 py-8 text-center shadow-border">
       <p className="font-display text-xl">Вас ещё нет в зале</p>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Если тренер уже добавил вас — введите тот же номер. Или напишите ему в личку.
+        Тренер в карточке жмёт «Код доступа» и присылает вам строку. Вставьте её сюда. Номер телефона сам список не откроет.
       </p>
       <div className="mt-5 text-left">
-        <Field label="Ваш телефон">
-          <input
-            className={inputClass}
+        <Field label="Код от тренера">
+          <textarea
+            className={`${inputClass} min-h-24`}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="+7 900 000-00-00"
-            inputMode="tel"
+            placeholder="ER.…"
           />
         </Field>
       </div>
