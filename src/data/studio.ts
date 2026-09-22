@@ -103,7 +103,6 @@ export const MET: Record<string, number> = {
   йога: 2.5,
 };
 
-
 export type Slot = {
   id: string;
   date: string;
@@ -473,7 +472,7 @@ export function countdownLabel(date: string, time: string) {
   if (hours < 1) return `через ${Math.max(1, Math.round(hours * 60))} мин`;
   if (hours < 24) return `через ${Math.round(hours)} ${hoursRu(Math.round(hours))}`;
   const days = Math.floor(hours / 24);
-  return `через ${days} ${daysRu(days)}`;
+  return `через ${days} дн`;
 }
 
 export function weekVisitCount(bookings: Booking[], clientId: string, from = new Date()) {
