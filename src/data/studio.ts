@@ -1,4 +1,5 @@
 export const TRAINER_TG_ID = "8144320404";
+export const INVITE_CODE = "erjoin";
 
 export const STUDIO = {
   name: "Ruksha",

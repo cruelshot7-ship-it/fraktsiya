@@ -7,6 +7,7 @@ import {
   formatDayMonth,
   FREEZE_OPTIONS,
   initials,
+  INVITE_CODE,
   isoDate,
   isFrozen,
   PACK_VALID_DAYS,
@@ -20,7 +21,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
-import { openTrainerChat } from "@/lib/telegram";
+import { openTrainerChat, inviteUrl } from "@/lib/telegram";
 import { studioHealth } from "@/lib/studio-sync";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -36,14 +37,21 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
+  const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
   const [health, setHealth] = useState<{ bot: boolean; db: "neon" | "pglite" } | null>(null);
+  const [botName, setBotName] = useState("");
 
   useEffect(() => {
+    try {
+      setBotName(localStorage.getItem("ruksha:bot") ?? "");
+    } catch {
+      /* ignore */
+    }
     void studioHealth()
       .then(setHealth)
       .catch(() => setHealth({ bot: false, db: "pglite" }));
@@ -86,6 +94,42 @@ export function ClientsView() {
           Клиенты с другого телефона сюда не доходят: в Vercel нет { !health.bot ? "BOT_TOKEN" : "DATABASE_URL (Neon)" }.
         </p>
       ) : null}
+
+      <div className="rounded-xl bg-card px-4 py-3 shadow-border">
+        <p className="text-tiny text-muted-foreground">Временно вход только по ссылке</p>
+        <Field label="@username бота">
+          <input
+            className={inputClass}
+            value={botName}
+            placeholder="my_ruksha_bot"
+            onChange={(e) => {
+              const v = e.target.value.replace(/^@/, "");
+              setBotName(v);
+              try {
+                localStorage.setItem("ruksha:bot", v);
+              } catch {
+                /* ignore */
+              }
+            }}
+          />
+        </Field>
+        <button
+          type="button"
+          className="pressable mt-2 h-11 w-full rounded-xl bg-secondary text-sm"
+          onClick={async () => {
+            const url = inviteUrl(botName, INVITE_CODE);
+            const text = url || `startapp=${INVITE_CODE}`;
+            try {
+              await navigator.clipboard.writeText(text);
+              showToast(url ? "Ссылка скопирована" : "Укажи username бота — скопирован код");
+            } catch {
+              showToast(text);
+            }
+          }}
+        >
+          Скопировать приглашение
+        </button>
+      </div>
 
       <div className="grid grid-cols-3 gap-3 px-1 py-1">
         <Kpi value={todayCount} label={"тренировки\nсегодня"} tone="ok" />

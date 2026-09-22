@@ -19,7 +19,7 @@ export type TelegramWebApp = {
   viewportHeight?: number;
   viewportStableHeight?: number;
   initData?: string;
-  initDataUnsafe?: { user?: TelegramUser };
+  initDataUnsafe?: { user?: TelegramUser; start_param?: string };
   onEvent?: (event: string, cb: () => void) => void;
   offEvent?: (event: string, cb: () => void) => void;
   openTelegramLink?: (url: string) => void;
@@ -44,6 +44,25 @@ export function getTelegramUser(): TelegramUser | undefined {
 
 export function getTelegramInitData(): string {
   return getTelegram()?.initData ?? "";
+}
+
+export function getStartParam(): string {
+  const fromTg = getTelegram()?.initDataUnsafe?.start_param?.trim();
+  if (fromTg) return fromTg;
+  if (typeof window === "undefined") return "";
+  try {
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, "").replace(/^tgWebAppData=/, ""));
+    return (query.get("startapp") || query.get("start_param") || hash.get("startapp") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+export function inviteUrl(botUsername: string | null | undefined, code: string) {
+  const bot = (botUsername ?? "").replace(/^@/, "").trim();
+  if (!bot) return "";
+  return `https://t.me/${bot}?startapp=${encodeURIComponent(code)}`;
 }
 
 export function openTelegramUrl(url: string) {

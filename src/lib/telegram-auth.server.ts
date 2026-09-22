@@ -12,6 +12,7 @@ export type TelegramAuthUser = {
 export type TelegramSession = {
   user: TelegramAuthUser;
   role: "trainer" | "client";
+  startParam: string;
 };
 
 function trainerId() {
@@ -58,5 +59,6 @@ export function verifyTelegramInitData(initData: string | undefined): TelegramSe
       username: parsed.username?.trim() || null,
     },
     role: id === trainerId() ? "trainer" : "client",
+    startParam: (params.get("start_param") || "").trim(),
   };
 }

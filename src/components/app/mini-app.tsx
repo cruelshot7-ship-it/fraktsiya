@@ -57,6 +57,7 @@ export function MiniApp() {
   const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const trainerUsername = useStudio((s) => s.trainerUsername);
+  const inviteBlocked = useStudio((s) => s.inviteBlocked);
   const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -185,7 +186,9 @@ export function MiniApp() {
               </h1>
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
-                  ? "Профиль появится, когда тренер добавит вас в зал"
+                  ? inviteBlocked
+                    ? "Нужна ссылка от тренера"
+                    : "Профиль появится, когда тренер добавит вас в зал"
                   : isFrozen(client)
                   ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
                   : soon !== null && soon > 0 && soon < 24
@@ -197,7 +200,7 @@ export function MiniApp() {
         </header>
         )}
 
-        {role === "client" && !sheetClientId ? (
+        {role === "client" && !sheetClientId && !inviteBlocked ? (
           <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
@@ -225,6 +228,24 @@ export function MiniApp() {
           )}
         >
           <div key={`${role}-${tab}`} className="pt-4">
+            {inviteBlocked && role === "client" ? (
+              <div className="rounded-xl bg-card px-5 py-10 text-center shadow-border">
+                <p className="font-display text-xl">Вход только по ссылке</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  Сейчас в зал нельзя зайти самостоятельно. Напишите тренеру — он пришлёт приглашение.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!openTrainerChat(trainerUsername)) showToast("Напишите тренеру в Telegram.");
+                  }}
+                  className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+                >
+                  Написать тренеру
+                </button>
+              </div>
+            ) : (
+              <>
             {tab === "slots" ? <SlotsView /> : null}
             {tab === "bookings" ? <BookingsView /> : null}
             {tab === "program" ? <ProgramView /> : null}
@@ -232,6 +253,8 @@ export function MiniApp() {
             {tab === "hall" ? <HallView /> : null}
             {tab === "clients" ? <ClientsView /> : null}
             {tab === "signals" ? <SignalsView /> : null}
+              </>
+            )}
           </div>
         </main>
 

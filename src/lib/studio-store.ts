@@ -87,6 +87,7 @@ type State = {
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
   trainerUsername: string | null;
+  inviteBlocked: boolean;
   toast: string | null;
   hydrate: () => void;
   refreshCloud: () => void;
@@ -254,6 +255,7 @@ export const useStudio = create<State>((set, get) => ({
   workoutLogs: [],
   checks: {},
   trainerUsername: null,
+  inviteBlocked: false,
   toast: null,
 
   hydrate: () => {
@@ -330,6 +332,7 @@ export const useStudio = create<State>((set, get) => ({
     activeClientId = identified.activeClientId;
     role = identified.role;
     notices = identified.notices;
+    const inviteBlocked = identified.inviteBlocked;
     if (role === "trainer") {
       const handle = getTelegramUser()?.username;
       if (handle) trainerUsername = handle;
@@ -355,6 +358,7 @@ export const useStudio = create<State>((set, get) => ({
       workoutLogs,
       checks,
       trainerUsername,
+      inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
     void syncFromCloud().then((cloud) => {
@@ -363,7 +367,8 @@ export const useStudio = create<State>((set, get) => ({
       const extra = payload.extraSlots ?? [];
       set({
         role: cloud.role,
-        clients: mergeClients(get().clients, payload.clients),
+        inviteBlocked: Boolean(cloud.blocked),
+        clients: cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients),
         activeClientId:
           cloud.role === "client" && payload.clients[0]
             ? payload.clients[0].id
@@ -395,7 +400,8 @@ export const useStudio = create<State>((set, get) => ({
       const extra = payload.extraSlots ?? get().extraSlots;
       set({
         role: cloud.role,
-        clients: mergeClients(get().clients, payload.clients),
+        inviteBlocked: Boolean(cloud.blocked),
+        clients: cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients),
         bookings: payload.bookings.length ? payload.bookings : get().bookings,
         food: payload.food.length ? payload.food : get().food,
         lifts: payload.lifts.length ? payload.lifts : get().lifts,

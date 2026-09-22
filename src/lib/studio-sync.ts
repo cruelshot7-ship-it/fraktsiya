@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   emptyClient,
   hoursAgoIso,
+  INVITE_CODE,
   type Booking,
   type Client,
   type FoodLog,
@@ -184,7 +185,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
 
 export const pullStudio = createServerFn({ method: "POST" })
   .validator(PullInput)
-  .handler(async ({ data }): Promise<{ ok: boolean; role?: "trainer" | "client"; payload?: StudioPayload; created?: boolean; reason?: string }> => {
+  .handler(async ({ data }): Promise<{ ok: boolean; role?: "trainer" | "client"; payload?: StudioPayload; created?: boolean; blocked?: boolean; reason?: string }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
@@ -201,6 +202,7 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byName = uname
         ? payload.clients.find((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
         : undefined;
+      const invited = session.startParam.trim().toLowerCase() === INVITE_CODE.toLowerCase();
       if (!byId && byName) {
         payload = {
           ...payload,
@@ -212,7 +214,7 @@ export const pullStudio = createServerFn({ method: "POST" })
           "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
           [STUDIO_ID, JSON.stringify(payload)],
         );
-      } else if (!byId) {
+      } else if (!byId && invited) {
         const fresh = clientFromTelegram(session.user);
         const notice: Notice = {
           id: `nt_new_${session.user.id}`,
@@ -221,8 +223,8 @@ export const pullStudio = createServerFn({ method: "POST" })
           kind: "alert",
           title: `Новый клиент: ${fresh.firstName} ${fresh.lastName}`.trim(),
           body: session.user.username
-            ? `@${session.user.username} открыл Mini App. Начислите пакет.`
-            : "Открыл Mini App. Начислите пакет и заполните программу.",
+            ? `@${session.user.username} открыл Mini App по ссылке. Начислите пакет.`
+            : "Открыл Mini App по ссылке. Начислите пакет и заполните программу.",
           at: hoursAgoIso(0),
         };
         payload = {
@@ -235,6 +237,8 @@ export const pullStudio = createServerFn({ method: "POST" })
           "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
           [STUDIO_ID, JSON.stringify(payload)],
         );
+      } else if (!byId) {
+        return { ok: true, role: "client", created: false, blocked: true, payload: scopePayload(emptyPayload(), session.user.id) };
       }
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
     }
