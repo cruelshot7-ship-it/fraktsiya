@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   clientFlag,
@@ -7,8 +7,6 @@ import {
   formatDayMonth,
   FREEZE_OPTIONS,
   initials,
-  INVITE_CODE,
-  BOT_USERNAME,
   isoDate,
   isFrozen,
   PACK_VALID_DAYS,
@@ -22,8 +20,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
-import { openTrainerChat, inviteUrl } from "@/lib/telegram";
-import { studioHealth } from "@/lib/studio-sync";
+import { openTrainerChat } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -38,28 +35,11 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
-  const showToast = useStudio((s) => s.showToast);
-  const joinRequests = useStudio((s) => s.joinRequests);
-  const approveJoin = useStudio((s) => s.approveJoin);
-  const rejectJoin = useStudio((s) => s.rejectJoin);
   const today = isoDate(new Date());
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
-  const [health, setHealth] = useState<{ bot: boolean; db: "neon" | "pglite" } | null>(null);
-  const [botName, setBotName] = useState("");
-
-  useEffect(() => {
-    try {
-      setBotName(localStorage.getItem("ruksha:bot") || BOT_USERNAME);
-    } catch {
-      /* ignore */
-    }
-    void studioHealth()
-      .then(setHealth)
-      .catch(() => setHealth({ bot: false, db: "pglite" }));
-  }, []);
 
   const rows = useMemo(
     () =>
@@ -85,7 +65,6 @@ export function ClientsView() {
     return d >= start && d < end;
   }).length;
 
-  const pendingJoins = joinRequests.filter((r) => r.status === "pending");
   const visible = rows.filter((r) => {
     if (clientFilter === "attention") return r.flag.attention;
     if (clientFilter === "today") return r.flag.today;
@@ -94,75 +73,6 @@ export function ClientsView() {
 
   return (
     <div className="flex flex-col gap-3">
-      {health && (!health.bot || health.db !== "neon") ? (
-        <p className="rounded-xl bg-primary-dim px-4 py-3 text-sm leading-relaxed text-primary">
-          Клиенты с другого телефона сюда не доходят: в Vercel нет { !health.bot ? "BOT_TOKEN" : "DATABASE_URL (Neon)" }.
-        </p>
-      ) : null}
-
-      {pendingJoins.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {pendingJoins.map((req) => (
-            <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
-              <p className="font-display text-base">
-                {req.firstName} {req.lastName}
-              </p>
-              {req.telegramUsername ? (
-                <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p>
-              ) : null}
-              <p className="mt-2 text-sm leading-relaxed">{req.message}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={() => approveJoin(req.id)}
-                >
-                  Принять
-                </button>
-                <button type="button" className="pressable h-11 rounded-xl bg-secondary text-sm" onClick={() => rejectJoin(req.id)}>
-                  Отклонить
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="rounded-xl bg-card px-4 py-3 shadow-border">
-        <p className="text-tiny text-muted-foreground">Временно вход только по ссылке</p>
-        <Field label="@username бота">
-          <input
-            className={inputClass}
-            value={botName}
-            placeholder="my_ruksha_bot"
-            onChange={(e) => {
-              const v = e.target.value.replace(/^@/, "");
-              setBotName(v);
-              try {
-                localStorage.setItem("ruksha:bot", v);
-              } catch {
-                /* ignore */
-              }
-            }}
-          />
-        </Field>
-        <button
-          type="button"
-          className="pressable mt-2 h-11 w-full rounded-xl bg-secondary text-sm"
-          onClick={async () => {
-            const url = inviteUrl(botName || BOT_USERNAME, INVITE_CODE);
-            try {
-              await navigator.clipboard.writeText(url);
-              showToast("Ссылка скопирована");
-            } catch {
-              showToast(url);
-            }
-          }}
-        >
-          Скопировать приглашение
-        </button>
-      </div>
-
       <div className="grid grid-cols-3 gap-3 px-1 py-1">
         <Kpi value={todayCount} label={"тренировки\nсегодня"} tone="ok" />
         <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />
@@ -187,7 +97,7 @@ export function ClientsView() {
       <div className="stagger-in flex flex-col gap-2">
         {visible.length === 0 ? (
           <p className="rounded-xl bg-card px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground shadow-border">
-            Пока никого. Клиент открывает вашего бота — появится здесь. Или добавьте имя вручную.
+            Пока никого. Добавьте клиента: имя и @username.
           </p>
         ) : (
           visible.map(({ client, flag, week }) => (

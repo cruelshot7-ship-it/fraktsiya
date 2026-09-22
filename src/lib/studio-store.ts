@@ -674,6 +674,11 @@ export const useStudio = create<State>((set, get) => ({
       get().showToast("Напишите имя.");
       return "";
     }
+    const handle = draft.telegramUsername?.replace(/^@/, "").trim().toLowerCase() || "";
+    if (handle && get().clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === handle)) {
+      get().showToast("Этот @username уже в зале.");
+      return "";
+    }
     const c = {
       ...emptyClient(),
       firstName,

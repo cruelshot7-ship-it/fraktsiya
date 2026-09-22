@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   emptyClient,
   hoursAgoIso,
-  INVITE_CODE,
   type Booking,
   type Client,
   type FoodLog,
@@ -253,30 +252,6 @@ export const pullStudio = createServerFn({ method: "POST" })
           "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
           [STUDIO_ID, JSON.stringify(payload)],
         );
-      } else if (!byId && session.startParam.trim().toLowerCase() === INVITE_CODE.toLowerCase()) {
-        const fresh = clientFromTelegram(session.user);
-        const notice: Notice = {
-          id: `nt_new_${session.user.id}`,
-          audience: "trainer",
-          clientId: fresh.id,
-          kind: "alert",
-          title: `Новый клиент: ${fresh.firstName} ${fresh.lastName}`.trim(),
-          body: session.user.username
-            ? `@${session.user.username} пришёл по вашей ссылке. Назначьте пакет.`
-            : "Пришёл по ссылке. Назначьте пакет и программу.",
-          at: hoursAgoIso(0),
-        };
-        payload = {
-          ...payload,
-          clients: [...payload.clients, fresh],
-          joinRequests: payload.joinRequests.filter((r) => r.telegramId !== session.user.id),
-          notices: [notice, ...payload.notices].slice(0, 40),
-        };
-        created = true;
-        await sql.query(
-          "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-          [STUDIO_ID, JSON.stringify(payload)],
-        );
       } else if (!byId) {
         return {
           ok: true,
@@ -312,33 +287,35 @@ export const pushStudio = createServerFn({ method: "POST" })
     const sql = await getSql();
     const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
     const current = normalizePayload(rows[0]?.payload);
+    const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
     const known =
       session.role === "trainer" ||
-      current.clients.some((c) => c.telegramId === session.user.id);
+      current.clients.some((c) => c.telegramId === session.user.id) ||
+      Boolean(
+        uname &&
+          current.clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
+      );
     let next: StudioPayload;
     if (session.role === "trainer") {
       next = mergeTrainerPayload(current, normalizePayload(incoming));
     } else if (!known) {
-      const req = (incoming.joinRequests ?? []).find((r) => r.telegramId === session.user.id);
-      const prev = current.joinRequests.find((r) => r.telegramId === session.user.id);
-      if (prev?.status === "approved") return { ok: true };
-      const saved = pendingVisit(session.user, req?.message || prev?.message);
-      const notice: Notice = {
-        id: `nt_join_${session.user.id}`,
-        audience: "trainer",
-        clientId: saved.id,
-        kind: "join",
-        title: `Заявка: ${saved.firstName} ${saved.lastName}`.trim(),
-        body: saved.message,
-        at: saved.at,
-      };
-      next = {
-        ...current,
-        joinRequests: [saved, ...current.joinRequests.filter((r) => r.telegramId !== session.user.id)],
-        notices: prev ? current.notices : [notice, ...current.notices].slice(0, 40),
-      };
+      return { ok: true };
     } else {
-      next = mergeClientWrite(current, incoming, session.user.id);
+      let bound = current;
+      if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
+        const byName = current.clients.find(
+          (c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
+        );
+        if (byName) {
+          bound = {
+            ...current,
+            clients: current.clients.map((c) =>
+              c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
+            ),
+          };
+        }
+      }
+      next = mergeClientWrite(bound, incoming, session.user.id);
     }
 
     await sql.query(

@@ -187,7 +187,7 @@ export function MiniApp() {
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
                   ? inviteBlocked
-                    ? "Вход только по ссылке тренера"
+                    ? "Тренер добавит вас в зал"
                     : "Профиль появится, когда тренер добавит вас в зал"
                   : isFrozen(client)
                   ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
