@@ -889,35 +889,60 @@ export type ClientPass = {
   trainTimes: string[];
 };
 
+function kbjuFromTuple(t: number[] | undefined): Kbju {
+  return {
+    calories: t?.[0] ?? 0,
+    protein: t?.[1] ?? 0,
+    fat: t?.[2] ?? 0,
+    carbs: t?.[3] ?? 0,
+  };
+}
+
 export function exportClientPass(c: Client) {
-  const body: ClientPass = {
-    v: 1,
-    firstName: c.firstName,
-    lastName: c.lastName,
-    phone: c.phone ?? null,
-    telegramUsername: c.telegramUsername ?? null,
-    sessionsLeft: c.sessionsLeft,
-    packExpiresAt: c.packExpiresAt ?? null,
-    kbju: c.kbju,
-    kbjuRest: c.kbjuRest ?? null,
-    programTitle: c.programTitle,
-    programWeeks: c.programWeeks,
-    programStart: c.programStart,
-    sessions: c.sessions,
-    trainDays: c.trainDays,
-    trainTimes: c.trainTimes,
+  const body = {
+    v: 2,
+    n: c.firstName,
+    l: c.lastName || "",
+    u: c.telegramUsername || "",
+    p: c.phone || "",
+    s: c.sessionsLeft,
+    e: c.packExpiresAt || "",
+    k: [c.kbju.calories, c.kbju.protein, c.kbju.fat, c.kbju.carbs],
+    r: c.kbjuRest ? [c.kbjuRest.calories, c.kbjuRest.protein, c.kbjuRest.fat, c.kbjuRest.carbs] : null,
   };
   return `ER.${toB64(JSON.stringify(body))}`;
 }
 
 export function importClientPass(raw: string): ClientPass | null {
   const s = raw.trim().replace(/\s+/g, "");
-  const token = s.startsWith("ER.") ? s.slice(3) : s.includes("ER.") ? s.slice(s.indexOf("ER.") + 3) : "";
+  const at = s.indexOf("ER.");
+  const token = at >= 0 ? s.slice(at + 3) : "";
   if (!token) return null;
   try {
-    const parsed = JSON.parse(fromB64(token)) as ClientPass;
-    if (parsed?.v !== 1 || !parsed.firstName) return null;
-    return parsed;
+    const parsed = JSON.parse(fromB64(token)) as Record<string, unknown>;
+    if (parsed?.v === 2) {
+      const n = String(parsed.n ?? "");
+      if (!n) return null;
+      return {
+        v: 1,
+        firstName: n,
+        lastName: String(parsed.l ?? ""),
+        phone: String(parsed.p || "") || null,
+        telegramUsername: String(parsed.u || "") || null,
+        sessionsLeft: Number(parsed.s) || 0,
+        packExpiresAt: String(parsed.e || "") || null,
+        kbju: kbjuFromTuple(parsed.k as number[]),
+        kbjuRest: parsed.r ? kbjuFromTuple(parsed.r as number[]) : null,
+        programTitle: "",
+        programWeeks: 8,
+        programStart: isoDate(new Date()),
+        sessions: [],
+        trainDays: [],
+        trainTimes: [],
+      };
+    }
+    if (parsed?.v === 1 && parsed.firstName) return parsed as unknown as ClientPass;
+    return null;
   } catch {
     return null;
   }

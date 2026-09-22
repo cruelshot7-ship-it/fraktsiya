@@ -22,7 +22,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
-import { openPhone, openTrainerChat } from "@/lib/telegram";
+import { openPhone, openTelegramUrl, openTrainerChat } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -514,10 +514,12 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
                   const code = exportClientPass(client);
                   try {
                     await navigator.clipboard.writeText(code);
-                    showToast("Код скопирован. Отправьте клиенту в Telegram.");
                   } catch {
-                    showToast(code);
+                    /* ignore */
                   }
+                  const share = `https://t.me/share/url?url=${encodeURIComponent("https://t.me/ruksha_discipline_bot")}&text=${encodeURIComponent(code)}`;
+                  openTelegramUrl(share);
+                  showToast("Код скопирован. Перешлите его клиенту.");
                 }}
               >
                 Код доступа

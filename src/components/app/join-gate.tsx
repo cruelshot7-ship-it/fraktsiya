@@ -13,7 +13,7 @@ export function JoinGate() {
     <div className="rounded-xl bg-card px-5 py-8 text-center shadow-border">
       <p className="font-display text-xl">Вас ещё нет в зале</p>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Тренер в карточке жмёт «Код доступа» и присылает вам строку. Вставьте её сюда. Номер телефона сам список не откроет.
+        Тренер жмёт «Код доступа» и присылает короткую строку ER.… Вставьте её целиком.
       </p>
       <div className="mt-5 text-left">
         <Field label="Код от тренера">
