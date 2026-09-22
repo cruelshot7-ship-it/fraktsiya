@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ScanLine } from "lucide-react";
-import { isoDate, MEALS, sumFood } from "@/data/studio";
+import { dayKbju, isoDate, MEALS, sumFood } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
@@ -13,6 +13,7 @@ export function NutritionView() {
   const removeFood = useStudio((s) => s.removeFood);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
+  const bookings = useStudio((s) => s.bookings);
   const client = activeClient({ clients, activeClientId });
   const [query, setQuery] = useState("");
   const [customOpen, setCustomOpen] = useState(false);
@@ -28,9 +29,10 @@ export function NutritionView() {
   const today = isoDate(new Date());
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
   const totals = sumFood(todayFood);
+  const goal = dayKbju(client, today, bookings);
 
   const filtered = MEALS.filter((m) => m.name.toLowerCase().includes(query.trim().toLowerCase()));
-  const low = totals.calories > 0 && totals.calories < client.kbju.calories * 0.72;
+  const low = totals.calories > 0 && goal.kbju.calories > 0 && totals.calories < goal.kbju.calories * 0.72;
 
   function addScanned(product: ScanProduct, grams: number) {
     const macros = scaleKbju(product.per100, grams);
@@ -47,18 +49,18 @@ export function NutritionView() {
   return (
     <div className="stagger-in relative flex flex-col gap-3">
       <Surface glow={low ? "alert" : "ok"}>
-        <SectionLabel>Сегодня · цель {client.firstName}</SectionLabel>
+        <SectionLabel>Сегодня · {goal.train ? "тренировка" : "отдых"}</SectionLabel>
         <p className="font-display mt-2 text-3xl tabular-nums">
           {totals.calories}
-          <span className="ml-1 text-base text-muted-foreground">/ {client.kbju.calories} ккал</span>
+          <span className="ml-1 text-base text-muted-foreground">/ {goal.kbju.calories} ккал</span>
         </p>
         <div className="mt-3">
-          <ProgressRail value={totals.calories} max={client.kbju.calories} tone={low ? "alert" : "ok"} />
+          <ProgressRail value={totals.calories} max={goal.kbju.calories} tone={low ? "alert" : "ok"} />
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-tiny text-muted-foreground">
-          <span>Б {totals.protein}/{client.kbju.protein}</span>
-          <span>Ж {totals.fat}/{client.kbju.fat}</span>
-          <span>У {totals.carbs}/{client.kbju.carbs}</span>
+          <span>Б {totals.protein}/{goal.kbju.protein}</span>
+          <span>Ж {totals.fat}/{goal.kbju.fat}</span>
+          <span>У {totals.carbs}/{goal.kbju.carbs}</span>
         </div>
       </Surface>
 

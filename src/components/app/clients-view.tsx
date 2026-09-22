@@ -3,6 +3,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   clientFlag,
   daysAgoPhrase,
+  dayKbju,
   formatDayMonth,
   FREEZE_OPTIONS,
   initials,
@@ -129,11 +130,11 @@ export function ClientsView() {
                 <div className="mt-2.5">
                   <ProgressRail
                     value={flag.eaten.calories}
-                    max={client.kbju.calories}
+                    max={dayKbju(client, today, bookings).kbju.calories}
                     tone={flag.tone === "alert" ? "alert" : "ok"}
                   />
                   <p className="mt-1 text-tiny text-muted-foreground">
-                    {flag.eaten.calories} из {client.kbju.calories} ккал · серия {client.streak}
+                    {flag.eaten.calories} из {dayKbju(client, today, bookings).kbju.calories} ккал · серия {client.streak}
                   </p>
                 </div>
               </div>
@@ -222,6 +223,7 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
   const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const flag = clientFlag(client, today, food, bookings);
+  const todayGoal = dayKbju(client, today, bookings);
   const week = programWeek(client, today);
   const session = visitSession(client, today, bookings);
   const delta = weightDelta(client.weightHistory);
@@ -390,21 +392,22 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
             </Surface>
 
             <Surface>
+              <p className="text-tiny text-muted-foreground">{todayGoal.train ? "Тренировочный день" : "День отдыха"}</p>
               <p className="font-display mt-2 text-3xl tabular-nums">
                 {flag.eaten.calories}
-                <span className="ml-2 text-base text-muted-foreground">из {client.kbju.calories} ккал</span>
+                <span className="ml-2 text-base text-muted-foreground">из {todayGoal.kbju.calories} ккал</span>
               </p>
               <div className="mt-2">
                 <ProgressRail
                   value={flag.eaten.calories}
-                  max={client.kbju.calories}
+                  max={todayGoal.kbju.calories}
                   tone={flag.tone === "alert" ? "alert" : "ok"}
                 />
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2">
-                <MacroMini label="белки" now={flag.eaten.protein} max={client.kbju.protein} />
-                <MacroMini label="жиры" now={flag.eaten.fat} max={client.kbju.fat} />
-                <MacroMini label="углеводы" now={flag.eaten.carbs} max={client.kbju.carbs} />
+                <MacroMini label="белки" now={flag.eaten.protein} max={todayGoal.kbju.protein} />
+                <MacroMini label="жиры" now={flag.eaten.fat} max={todayGoal.kbju.fat} />
+                <MacroMini label="углеводы" now={flag.eaten.carbs} max={todayGoal.kbju.carbs} />
               </div>
             </Surface>
 
@@ -488,9 +491,9 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
           <FoodEditor
             client={client}
             onBack={() => setMode("view")}
-            onSave={(kbju) => {
-              updateClient(client.id, { kbju });
-              showToast("КБЖУ обновлено.");
+            onSave={(patch) => {
+              updateClient(client.id, patch);
+              showToast("КБЖУ: тренировка и день отдыха.");
               setMode("view");
             }}
           />

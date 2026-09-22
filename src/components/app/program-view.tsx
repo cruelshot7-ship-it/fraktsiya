@@ -3,6 +3,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import {
   countdownLabel,
   dayRitual,
+  dayKbju,
   DOW,
   dowIndex,
   EXERCISES,
@@ -69,7 +70,7 @@ export function ProgramView() {
   const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
 
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
-  const t = client.kbju;
+  const t = dayKbju(client, today, bookings).kbju;
   const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today) ?? null;
   const shown = session ?? nextSession;
   const checked = checks[`${client.id}:${today}`] ?? [];

@@ -2,8 +2,11 @@ import { useState, type ReactNode } from "react";
 import {
   DOW,
   isoDate,
+  SAMPLE_KBJU_REST,
+  SAMPLE_KBJU_TRAIN,
   WEEKDAY_TIMES,
   type Client,
+  type Kbju,
   type ProgramSession,
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
@@ -238,41 +241,51 @@ export function FoodEditor({
 }: {
   client: Client;
   onBack: () => void;
-  onSave: (kbju: Client["kbju"]) => void;
+  onSave: (patch: { kbju: Kbju; kbjuRest: Kbju }) => void;
 }) {
-  const [kbju, setKbju] = useState(client.kbju);
+  const [train, setTrain] = useState(client.kbju.calories ? client.kbju : SAMPLE_KBJU_TRAIN);
+  const [rest, setRest] = useState(client.kbjuRest?.calories ? client.kbjuRest : SAMPLE_KBJU_REST);
   return (
     <div className="flex flex-col gap-3">
       <button type="button" onClick={onBack} className="self-start text-xs text-muted-foreground">
         ← к карточке
       </button>
-      <SectionLabel>Цель КБЖУ</SectionLabel>
-      <div className="grid grid-cols-2 gap-2">
-        {(
-          [
-            ["calories", "ккал"],
-            ["protein", "белки, г"],
-            ["fat", "жиры, г"],
-            ["carbs", "углеводы, г"],
-          ] as const
-        ).map(([key, label]) => (
-          <Field key={key} label={label}>
-            <input
-              className={inputClass}
-              inputMode="numeric"
-              value={kbju[key]}
-              onChange={(e) => setKbju({ ...kbju, [key]: Number(e.target.value) || 0 })}
-            />
-          </Field>
-        ))}
-      </div>
+      <SectionLabel>Тренировочный день</SectionLabel>
+      <KbjuFields value={train} onChange={setTrain} />
+      <SectionLabel>День отдыха</SectionLabel>
+      <KbjuFields value={rest} onChange={setRest} />
+      <p className="text-tiny text-muted-foreground">Клиент видит тренировочные цифры в дни записи или своих train days, иначе — день отдыха.</p>
       <button
         type="button"
         className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-        onClick={() => onSave(kbju)}
+        onClick={() => onSave({ kbju: train, kbjuRest: rest })}
       >
         Сохранить питание
       </button>
+    </div>
+  );
+}
+
+function KbjuFields({ value, onChange }: { value: Kbju; onChange: (k: Kbju) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {(
+        [
+          ["calories", "ккал"],
+          ["protein", "белки, г"],
+          ["fat", "жиры, г"],
+          ["carbs", "углеводы, г"],
+        ] as const
+      ).map(([key, label]) => (
+        <Field key={key} label={label}>
+          <input
+            className={inputClass}
+            inputMode="numeric"
+            value={value[key]}
+            onChange={(e) => onChange({ ...value, [key]: Number(e.target.value) || 0 })}
+          />
+        </Field>
+      ))}
     </div>
   );
 }

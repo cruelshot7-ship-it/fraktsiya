@@ -191,6 +191,9 @@ export type Kbju = {
   carbs: number;
 };
 
+export const SAMPLE_KBJU_TRAIN: Kbju = { calories: 1750, protein: 135, fat: 55, carbs: 180 };
+export const SAMPLE_KBJU_REST: Kbju = { calories: 1600, protein: 135, fat: 55, carbs: 140 };
+
 export type ProgramSession = {
   id: string;
   name: string;
@@ -237,6 +240,7 @@ export type Client = {
   lastName: string;
   weight: number;
   kbju: Kbju;
+  kbjuRest?: Kbju | null;
   programTitle: string;
   programWeeks: number;
   programStart: string;

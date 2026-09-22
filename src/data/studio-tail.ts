@@ -116,6 +116,16 @@ export function dowIndex(iso: string) {
   return (parseISODate(iso).getDay() + 6) % 7;
 }
 
+export function isTrainDay(client: Client, iso: string, bookings: Booking[] = []) {
+  return bookings.some((b) => b.clientId === client.id && b.date === iso) || client.trainDays.includes(dowIndex(iso));
+}
+
+export function dayKbju(client: Client, iso: string, bookings: Booking[] = []): { kbju: Kbju; train: boolean } {
+  const train = isTrainDay(client, iso, bookings);
+  if (train) return { kbju: client.kbju, train: true };
+  return { kbju: client.kbjuRest?.calories ? client.kbjuRest : client.kbju, train: false };
+}
+
 export function initials(client: Pick<Client, "firstName" | "lastName">) {
   const a = client.firstName.trim().charAt(0);
   const b = client.lastName.trim().charAt(0);
@@ -238,6 +248,7 @@ export function emptyClient(): Client {
     lastName: "",
     weight: 0,
     kbju: { calories: 0, protein: 0, fat: 0, carbs: 0 },
+    kbjuRest: { calories: 0, protein: 0, fat: 0, carbs: 0 },
     programTitle: "",
     programWeeks: 8,
     programStart: today,
@@ -290,8 +301,8 @@ export function clientFlag(
 ): ClientFlag {
   const daysSinceReport = daysSince(client.lastReportAt, today);
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
-  const lowCal =
-    eaten.calories > 0 && eaten.calories < client.kbju.calories * 0.72;
+  const target = dayKbju(client, today, bookings).kbju;
+  const lowCal = eaten.calories > 0 && target.calories > 0 && eaten.calories < target.calories * 0.72;
   const noReport = daysSinceReport >= 3;
   const lateOften = (client.lateCancels ?? 0) >= 2;
   const lowPack = (client.sessionsLeft ?? 0) <= 2;
