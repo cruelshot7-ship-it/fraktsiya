@@ -193,6 +193,12 @@ function mergeSlots(extra: Slot[]) {
   return [...map.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function mergeJoin(base: JoinRequest[], incoming: JoinRequest[]) {
+  const map = new Map(base.map((x) => [x.id, x]));
+  for (const x of incoming) map.set(x.id, x);
+  return [...map.values()];
+}
+
 function makeTxn(
   clientId: string,
   kind: SessionTxn["kind"],
@@ -397,12 +403,12 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
-        joinRequests: payload.joinRequests ?? get().joinRequests,
+        joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
         slots: mergeSlots(extra),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
       persist(snap(get()));
-      if (cloud.created) get().showToast("Заявка у тренера. Ждите пакет занятий.");
+      if (cloud.created) get().showToast("Заявка у тренера.");
     });
   },
 
@@ -423,7 +429,7 @@ export const useStudio = create<State>((set, get) => ({
         notices: payload.notices.length ? payload.notices : get().notices,
         workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
-        joinRequests: payload.joinRequests ?? get().joinRequests,
+        joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
         slots: extra.length ? mergeSlots(extra) : get().slots,
       });
       persist(snap(get()));

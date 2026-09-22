@@ -67,6 +67,41 @@ function emptyPayload(): StudioPayload {
   };
 }
 
+function normalizePayload(raw: Partial<StudioPayload> | null | undefined): StudioPayload {
+  const empty = emptyPayload();
+  if (!raw || typeof raw !== "object") return empty;
+  return {
+    ...empty,
+    ...raw,
+    bookings: raw.bookings ?? [],
+    food: raw.food ?? [],
+    lifts: raw.lifts ?? [],
+    clients: raw.clients ?? [],
+    extraSlots: raw.extraSlots ?? [],
+    closedSlotIds: raw.closedSlotIds ?? [],
+    dismissedSignalIds: raw.dismissedSignalIds ?? [],
+    notices: raw.notices ?? [],
+    waitlist: raw.waitlist ?? [],
+    workoutLogs: raw.workoutLogs ?? [],
+    checks: raw.checks ?? {},
+    trainerUsername: raw.trainerUsername ?? null,
+    joinRequests: raw.joinRequests ?? [],
+  };
+}
+
+function pendingVisit(user: { id: string; firstName: string; lastName: string; username: string | null }, message?: string): JoinRequest {
+  return {
+    id: `jr_${user.id}`,
+    telegramId: user.id,
+    telegramUsername: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    message: (message ?? "Открыл приложение по ссылке").trim().slice(0, 500) || "Открыл приложение по ссылке",
+    at: hoursAgoIso(0),
+    status: "pending",
+  };
+}
+
 function clientFromTelegram(user: {
   id: string;
   firstName: string;
@@ -197,7 +232,7 @@ export const pullStudio = createServerFn({ method: "POST" })
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
-    let payload = rows[0]?.payload ?? emptyPayload();
+    let payload = normalizePayload(rows[0]?.payload);
     let created = false;
 
     if (session.role === "client") {
@@ -218,10 +253,33 @@ export const pullStudio = createServerFn({ method: "POST" })
           [STUDIO_ID, JSON.stringify(payload)],
         );
       } else if (!byId) {
+        const prev = payload.joinRequests.find((r) => r.telegramId === session.user.id);
+        if (!prev || prev.status === "rejected") {
+          const saved = pendingVisit(session.user, prev?.message);
+          const notice: Notice = {
+            id: `nt_join_${session.user.id}`,
+            audience: "trainer",
+            clientId: saved.id,
+            kind: "join",
+            title: `Заявка: ${saved.firstName} ${saved.lastName}`.trim(),
+            body: session.user.username ? `@${session.user.username} открыл Mini App` : saved.message,
+            at: saved.at,
+          };
+          payload = {
+            ...payload,
+            joinRequests: [saved, ...payload.joinRequests.filter((r) => r.telegramId !== session.user.id)],
+            notices: [notice, ...payload.notices].slice(0, 40),
+          };
+          created = true;
+          await sql.query(
+            "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+            [STUDIO_ID, JSON.stringify(payload)],
+          );
+        }
         return {
           ok: true,
           role: "client",
-          created: false,
+          created,
           blocked: true,
           payload: scopePayload(payload, session.user.id),
         };
@@ -251,30 +309,18 @@ export const pushStudio = createServerFn({ method: "POST" })
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
-    const current = rows[0]?.payload ?? emptyPayload();
+    const current = normalizePayload(rows[0]?.payload);
     const known =
       session.role === "trainer" ||
       current.clients.some((c) => c.telegramId === session.user.id);
     let next: StudioPayload;
     if (session.role === "trainer") {
-      next = mergeTrainerPayload(current, incoming);
+      next = mergeTrainerPayload(current, normalizePayload(incoming));
     } else if (!known) {
-      const req = (incoming.joinRequests ?? []).find((r) => r.telegramId === session.user.id && r.message?.trim());
-      if (!req) return { ok: true };
-      const pending = (current.joinRequests ?? []).some(
-        (r) => r.telegramId === session.user.id && r.status === "pending",
-      );
-      if (pending) return { ok: true };
-      const saved: JoinRequest = {
-        id: `jr_${session.user.id}`,
-        telegramId: session.user.id,
-        telegramUsername: session.user.username,
-        firstName: req.firstName || session.user.firstName,
-        lastName: req.lastName || session.user.lastName,
-        message: req.message.trim().slice(0, 500),
-        at: hoursAgoIso(0),
-        status: "pending",
-      };
+      const req = (incoming.joinRequests ?? []).find((r) => r.telegramId === session.user.id);
+      const prev = current.joinRequests.find((r) => r.telegramId === session.user.id);
+      if (prev?.status === "approved") return { ok: true };
+      const saved = pendingVisit(session.user, req?.message || prev?.message);
       const notice: Notice = {
         id: `nt_join_${session.user.id}`,
         audience: "trainer",
@@ -286,8 +332,8 @@ export const pushStudio = createServerFn({ method: "POST" })
       };
       next = {
         ...current,
-        joinRequests: [saved, ...(current.joinRequests ?? [])],
-        notices: [notice, ...current.notices].slice(0, 40),
+        joinRequests: [saved, ...current.joinRequests.filter((r) => r.telegramId !== session.user.id)],
+        notices: prev ? current.notices : [notice, ...current.notices].slice(0, 40),
       };
     } else {
       next = mergeClientWrite(current, incoming, session.user.id);
