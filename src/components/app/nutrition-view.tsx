@@ -3,7 +3,7 @@ import { ScanLine } from "lucide-react";
 import { isoDate, MEALS, sumFood } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
+import { Field, inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
 
 export function NutritionView() {
@@ -14,10 +14,6 @@ export function NutritionView() {
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const client = activeClient({ clients, activeClientId });
-  const today = isoDate(new Date());
-  const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
-  const totals = sumFood(todayFood);
-
   const [query, setQuery] = useState("");
   const [customOpen, setCustomOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -26,6 +22,12 @@ export function NutritionView() {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  if (!client) {
+    return <EmptyHint>Питание откроется, когда тренер заведёт ваш профиль и КБЖУ.</EmptyHint>;
+  }
+  const today = isoDate(new Date());
+  const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
+  const totals = sumFood(todayFood);
 
   const filtered = MEALS.filter((m) => m.name.toLowerCase().includes(query.trim().toLowerCase()));
   const low = totals.calories > 0 && totals.calories < client.kbju.calories * 0.72;

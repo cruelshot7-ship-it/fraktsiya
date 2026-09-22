@@ -12,7 +12,7 @@ import {
   weekVisitCount,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -26,27 +26,31 @@ export function BookingsView() {
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const me = activeClient({ clients, activeClientId });
-  const bookings = role === "trainer" ? all : all.filter((b) => b.clientId === me.id);
-  const inbox = notices.filter((n) => n.audience === "client" && n.clientId === me.id && !dismissed.includes(n.id));
+  const bookings = role === "trainer" ? all : all.filter((b) => b.clientId === me?.id);
+  const inbox = notices.filter((n) => n.audience === "client" && n.clientId === me?.id && !dismissed.includes(n.id));
   const [pendingId, setPendingId] = useState<string | null>(null);
   const upcoming = bookings
     .filter((b) => !isSlotPast(b.date, b.time))
     .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`));
   const past = bookings
     .filter((b) => isSlotPast(b.date, b.time))
-    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
+    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${b.time}`));
   const next = upcoming[0];
-  const weekVisits = weekVisitCount(all, me.id);
+  const weekVisits = weekVisitCount(all, me?.id ?? "");
   const hoursToNext = next ? hoursUntilSlot(next.date, next.time) : null;
+
+  if (role === "client" && !me) {
+    return <EmptyHint>Записи появятся после того, как тренер добавит вас в зал.</EmptyHint>;
+  }
 
   return (
     <div className="stagger-in flex flex-col gap-3">
       {role === "client" ? (
-        <Surface glow={me.sessionsLeft <= 2 ? "alert" : "ok"}>
+        <Surface glow={(me?.sessionsLeft ?? 0) <= 2 ? "alert" : "ok"}>
           <SectionLabel>Баланс занятий</SectionLabel>
           <p className="font-display mt-1 text-3xl tabular-nums">
-            {me.sessionsLeft}
-            <span className="ml-2 text-base font-sans font-normal text-muted-foreground">{sessionsRu(me.sessionsLeft)}</span>
+            {me?.sessionsLeft ?? 0}
+            <span className="ml-2 text-base font-sans font-normal text-muted-foreground">{sessionsRu(me?.sessionsLeft ?? 0)}</span>
           </p>
           <p className="mt-1 text-tiny text-muted-foreground">
             Отмена меньше чем за {notifyPrefs.windowHours} ч — занятие сгорает. Раньше — возвращается на баланс.
@@ -151,7 +155,7 @@ export function BookingsView() {
                     type="button"
                     onClick={() =>
                       downloadIcs(
-                        `fraktsiya-${booking.date}.ics`,
+                        `ruksha-${booking.date}.ics`,
                         bookingIcs(booking),
                       )
                     }

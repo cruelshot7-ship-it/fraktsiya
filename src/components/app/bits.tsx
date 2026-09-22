@@ -134,3 +134,7 @@ export function ProgressRail({
     </div>
   );
 }
+
+export function EmptyHint({ children }: { children: ReactNode }) {
+  return <p className="px-1 py-10 text-center text-sm leading-relaxed text-muted-foreground">{children}</p>;
+}

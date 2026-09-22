@@ -85,7 +85,12 @@ export function ClientsView() {
       </div>
 
       <div className="stagger-in flex flex-col gap-2">
-        {visible.map(({ client, flag, week }) => (
+        {visible.length === 0 ? (
+          <p className="rounded-xl bg-card px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground shadow-border">
+            Пока никого. Добавьте клиента или дождитесь, пока человек откроет бота.
+          </p>
+        ) : (
+          visible.map(({ client, flag, week }) => (
           <button
             key={client.id}
             type="button"
@@ -129,7 +134,7 @@ export function ClientsView() {
               </div>
             </div>
           </button>
-        ))}
+        )))}
       </div>
 
       <button

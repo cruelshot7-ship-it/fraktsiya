@@ -145,7 +145,9 @@ export function MiniApp() {
                 {title}
               </h1>
               <p className="mt-1.5 text-tiny text-muted-foreground">
-                {isFrozen(client)
+                {!client
+                  ? "Профиль появится, когда тренер добавит вас в зал"
+                  : isFrozen(client)
                   ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
                   : soon !== null && soon > 0 && soon < 24
                     ? `Ближайшая ${nextMine!.time} · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`

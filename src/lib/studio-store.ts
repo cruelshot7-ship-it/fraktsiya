@@ -18,11 +18,6 @@ import {
   MEALS,
   PACK_VALID_DAYS,
   parseISODate,
-  SEED_CLIENTS,
-  SEED_LIFTS,
-  seedBookings,
-  seedFood,
-  seedNotices,
   sessionsRu,
   shortName,
   startOfWeek,
@@ -42,6 +37,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
+import { stripDemoData } from "@/lib/studio-clean";
 
 export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
@@ -126,8 +122,8 @@ type State = {
   clearToast: () => void;
 };
 
-const KEY = "ruksha:v7";
-const LEGACY_KEYS = ["fraktsiya:v7", "fraktsiya:v6", "fraktsiya:v5"];
+const KEY = "ruksha:v8";
+const LEGACY_KEYS = ["ruksha:v7", "fraktsiya:v7", "fraktsiya:v6", "fraktsiya:v5"];
 const todayIso = () => isoDate(new Date());
 
 function readPersist(): string | null {
@@ -239,12 +235,12 @@ export const useStudio = create<State>((set, get) => ({
   slots: generateWindow(startOfWeek(new Date()), 42),
   extraSlots: [],
   closedSlotIds: [],
-  bookings: seedBookings(),
-  food: seedFood(),
-  lifts: SEED_LIFTS,
-  clients: SEED_CLIENTS,
-  activeClientId: "c_maria",
-  notices: seedNotices(),
+  bookings: [],
+  food: [],
+  lifts: [],
+  clients: [],
+  activeClientId: "",
+  notices: [],
   dismissedSignalIds: [],
   notifyPrefs: DEFAULT_NOTIFY,
   waitlist: [],
@@ -253,16 +249,16 @@ export const useStudio = create<State>((set, get) => ({
   toast: null,
 
   hydrate: () => {
-    let bookings = seedBookings();
-    let food = seedFood();
-    let lifts: LiftLog[] = SEED_LIFTS;
+    let bookings: Booking[] = [];
+    let food: FoodLog[] = [];
+    let lifts: LiftLog[] = [];
     let role: Role = "client";
-    let clients: Client[] = SEED_CLIENTS;
-    let activeClientId = "c_maria";
+    let clients: Client[] = [];
+    let activeClientId = "";
     let extraSlots: Slot[] = [];
     let closedSlotIds: string[] = [];
     let dismissedSignalIds: string[] = [];
-    let notices = seedNotices();
+    let notices: Notice[] = [];
     let notifyPrefs: NotifyPrefs = DEFAULT_NOTIFY;
     let waitlist: WaitlistEntry[] = [];
     let workoutLogs: WorkoutLog[] = [];
@@ -271,9 +267,9 @@ export const useStudio = create<State>((set, get) => ({
       const raw = readPersist();
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<PersistShape>;
-        bookings = parsed.bookings?.length ? parsed.bookings : seedBookings();
-        food = parsed.food?.length ? parsed.food : seedFood();
-        lifts = parsed.lifts ?? SEED_LIFTS;
+        bookings = parsed.bookings ?? [];
+        food = parsed.food ?? [];
+        lifts = parsed.lifts ?? [];
         role = parsed.role === "trainer" ? "trainer" : "client";
         clients = parsed.clients?.length
           ? parsed.clients.map((c) => ({
@@ -281,20 +277,36 @@ export const useStudio = create<State>((set, get) => ({
               ...c,
               weightHistory: c.weightHistory?.length ? c.weightHistory : emptyClient().weightHistory,
               lateCancels: c.lateCancels ?? 0,
-              sessionsLeft: c.sessionsLeft ?? 8,
+              sessionsLeft: c.sessionsLeft ?? 0,
               ledger: c.ledger ?? [],
               frozenUntil: c.frozenUntil ?? null,
-              packExpiresAt: c.packExpiresAt ?? isoDate(addDays(new Date(), PACK_VALID_DAYS)),
+              packExpiresAt: c.packExpiresAt ?? null,
             }))
-          : SEED_CLIENTS;
+          : [];
+        const cleaned = stripDemoData({
+          clients,
+          bookings,
+          food,
+          lifts,
+          notices,
+          waitlist,
+          workoutLogs,
+        });
+        clients = cleaned.clients;
+        bookings = cleaned.bookings;
+        food = cleaned.food;
+        lifts = cleaned.lifts;
+        notices = cleaned.notices;
+        waitlist = cleaned.waitlist;
+        workoutLogs = cleaned.workoutLogs;
         activeClientId =
           parsed.activeClientId && clients.some((c) => c.id === parsed.activeClientId)
             ? parsed.activeClientId
-            : clients[0].id;
+            : clients[0]?.id ?? "";
         extraSlots = parsed.extraSlots ?? [];
         closedSlotIds = parsed.closedSlotIds ?? [];
         dismissedSignalIds = parsed.dismissedSignalIds ?? [];
-        notices = parsed.notices ?? seedNotices();
+        notices = parsed.notices ?? [];
         notifyPrefs = { ...DEFAULT_NOTIFY, ...parsed.notifyPrefs };
         waitlist = parsed.waitlist ?? [];
         workoutLogs = parsed.workoutLogs ?? [];

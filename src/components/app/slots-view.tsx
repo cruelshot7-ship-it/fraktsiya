@@ -16,7 +16,7 @@ import {
   type Slot,
 } from "@/data/studio";
 import { activeClient, slotTaken, useStudio } from "@/lib/studio-store";
-import { Field, inputClass } from "@/components/app/bits";
+import { Field, inputClass, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 
 export function SlotsView() {
@@ -45,7 +45,7 @@ function useWeekDays() {
       open,
       total: daySlots.length,
       booked,
-      train: me.trainDays.includes(i),
+      train: me?.trainDays.includes(i) ?? false,
     };
   });
   return { start, days, me };
@@ -70,6 +70,10 @@ function ClientSlots() {
   const minWeek = isoDate(startOfWeek(new Date()));
   const canPrev = weekStart > minWeek;
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  if (!me) {
+    return <EmptyHint>Слоты появятся в вашем профиле, когда тренер добавит вас в зал.</EmptyHint>;
+  }
 
   const daySlots = slots
     .filter((s) => s.date === selectedDate && !closedSlotIds.includes(s.id))
