@@ -60,8 +60,7 @@ export function getStartParam(): string {
 }
 
 export function inviteUrl(botUsername: string | null | undefined, code: string) {
-  const bot = (botUsername ?? "").replace(/^@/, "").trim();
-  if (!bot) return "";
+  const bot = (botUsername ?? "").replace(/^@/, "").trim() || "ruksha_discipline_bot";
   return `https://t.me/${bot}?startapp=${encodeURIComponent(code)}`;
 }
 

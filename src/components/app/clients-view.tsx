@@ -8,6 +8,7 @@ import {
   FREEZE_OPTIONS,
   initials,
   INVITE_CODE,
+  BOT_USERNAME,
   isoDate,
   isFrozen,
   PACK_VALID_DAYS,
@@ -48,7 +49,7 @@ export function ClientsView() {
 
   useEffect(() => {
     try {
-      setBotName(localStorage.getItem("ruksha:bot") ?? "");
+      setBotName(localStorage.getItem("ruksha:bot") || BOT_USERNAME);
     } catch {
       /* ignore */
     }
@@ -117,13 +118,12 @@ export function ClientsView() {
           type="button"
           className="pressable mt-2 h-11 w-full rounded-xl bg-secondary text-sm"
           onClick={async () => {
-            const url = inviteUrl(botName, INVITE_CODE);
-            const text = url || `startapp=${INVITE_CODE}`;
+            const url = inviteUrl(botName || BOT_USERNAME, INVITE_CODE);
             try {
-              await navigator.clipboard.writeText(text);
-              showToast(url ? "Ссылка скопирована" : "Укажи username бота — скопирован код");
+              await navigator.clipboard.writeText(url);
+              showToast("Ссылка скопирована");
             } catch {
-              showToast(text);
+              showToast(url);
             }
           }}
         >
