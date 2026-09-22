@@ -41,6 +41,7 @@ import {
 } from "@/data/studio";
 
 import { hapticNotify } from "@/lib/haptics";
+import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 
 export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
@@ -152,6 +153,7 @@ function persist(s: PersistShape) {
   } catch {
     /* ignore quota */
   }
+  scheduleCloudPush(s);
 }
 
 function snap(s: State): PersistShape {
@@ -301,6 +303,11 @@ export const useStudio = create<State>((set, get) => ({
     } catch {
       /* keep defaults */
     }
+    const identified = applyTelegramIdentity({ clients, activeClientId, role, notices });
+    clients = identified.clients;
+    activeClientId = identified.activeClientId;
+    role = identified.role;
+    notices = identified.notices;
     const selectedDate = role === "trainer" ? todayIso() : firstBookableDate();
     set({
       ready: true,
@@ -323,10 +330,39 @@ export const useStudio = create<State>((set, get) => ({
       checks,
       tab: role === "trainer" ? "clients" : "slots",
     });
+    void syncFromCloud().then((cloud) => {
+      if (!cloud) return;
+      const payload = cloud.payload;
+      const extra = payload.extraSlots ?? [];
+      set({
+        role: cloud.role,
+        clients: payload.clients,
+        activeClientId:
+          cloud.role === "client" && payload.clients[0]
+            ? payload.clients[0].id
+            : get().activeClientId,
+        bookings: payload.bookings,
+        food: payload.food,
+        lifts: payload.lifts,
+        extraSlots: extra,
+        closedSlotIds: payload.closedSlotIds,
+        notices: payload.notices,
+        dismissedSignalIds: payload.dismissedSignalIds,
+        notifyPrefs: payload.notifyPrefs,
+        waitlist: payload.waitlist,
+        workoutLogs: payload.workoutLogs,
+        checks: payload.checks,
+        slots: mergeSlots(extra),
+        tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
+      });
+      persist(snap(get()));
+      if (cloud.created) get().showToast("Заявка у тренера. Ждите пакет занятий.");
+    });
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),
   setRole: (role) => {
+    if (telegramLocked()) return;
     let tab = get().tab;
     if (role === "trainer") {
       if (tab === "food" || tab === "program" || tab === "bookings" || tab === "hall") tab = "clients";
