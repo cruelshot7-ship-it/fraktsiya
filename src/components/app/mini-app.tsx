@@ -156,6 +156,7 @@ export function MiniApp() {
             <>
               <div className="flex items-center justify-between gap-3">
                 <BrandLockup />
+                {inviteBlocked ? null : (
                 <div className="flex items-center gap-1.5">
                   {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} />}
                   <button
@@ -180,7 +181,10 @@ export function MiniApp() {
                     ) : null}
                   </button>
                 </div>
+                )}
               </div>
+              {inviteBlocked ? null : (
+              <>
               <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">
                 {title}
               </h1>
@@ -195,6 +199,8 @@ export function MiniApp() {
                     ? `Ближайшая ${nextMine!.time} · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`
                     : `${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)} на балансе`}
               </p>
+              </>
+              )}
             </>
           )}
         </header>

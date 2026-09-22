@@ -40,9 +40,9 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { mergeClients } from "@/lib/studio-sync";
+import { decideJoinFn, mergeClients, requestJoin } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
-import { getTelegramUser } from "@/lib/telegram";
+import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
@@ -312,6 +312,16 @@ export const useStudio = create<State>((set, get) => ({
               packExpiresAt: c.packExpiresAt ?? null,
             }))
           : [];
+        extraSlots = parsed.extraSlots ?? [];
+        closedSlotIds = parsed.closedSlotIds ?? [];
+        dismissedSignalIds = parsed.dismissedSignalIds ?? [];
+        notices = parsed.notices ?? [];
+        notifyPrefs = { ...DEFAULT_NOTIFY, ...parsed.notifyPrefs };
+        waitlist = parsed.waitlist ?? [];
+        workoutLogs = parsed.workoutLogs ?? [];
+        checks = parsed.checks ?? {};
+        trainerUsername = parsed.trainerUsername ?? null;
+        joinRequests = parsed.joinRequests ?? [];
         const cleaned = stripDemoData({
           clients,
           bookings,
@@ -332,17 +342,6 @@ export const useStudio = create<State>((set, get) => ({
           parsed.activeClientId && clients.some((c) => c.id === parsed.activeClientId)
             ? parsed.activeClientId
             : clients[0]?.id ?? "";
-        extraSlots = parsed.extraSlots ?? [];
-        closedSlotIds = parsed.closedSlotIds ?? [];
-        dismissedSignalIds = parsed.dismissedSignalIds ?? [];
-        notices = parsed.notices ?? [];
-        notifyPrefs = { ...DEFAULT_NOTIFY, ...parsed.notifyPrefs };
-        waitlist = parsed.waitlist ?? [];
-        workoutLogs = parsed.workoutLogs ?? [];
-        checks = parsed.checks ?? {};
-        trainerUsername = parsed.trainerUsername ?? null;
-        joinRequests = parsed.joinRequests ?? [];
-        joinRequests = parsed.joinRequests ?? [];
       }
     } catch {
       /* keep defaults */
@@ -411,8 +410,10 @@ export const useStudio = create<State>((set, get) => ({
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
       persist(snap(get()));
-      if (cloud.created) get().showToast("Вы в зале. Ждите пакет занятий.");
+      if (cloud.created) get().showToast("Вас приняли в зал.");
     });
+    const initData = getTelegramInitData();
+    if (initData) void requestJoin({ data: { initData } }).catch(() => undefined);
   },
 
   refreshCloud: () => {
@@ -424,7 +425,6 @@ export const useStudio = create<State>((set, get) => ({
         role: cloud.role,
         inviteBlocked: Boolean(cloud.blocked),
         clients: cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients),
-        bookings: payload.bookings.length ? payload.bookings : get().bookings,
         food: payload.food.length ? payload.food : get().food,
         lifts: payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
@@ -491,13 +491,18 @@ export const useStudio = create<State>((set, get) => ({
     });
     persist(snap(get()));
     get().showToast(`${req.firstName} в зале.`);
+    const initData = getTelegramInitData();
+    if (initData) void decideJoinFn({ data: { initData, telegramId: req.telegramId, approve: true } }).catch(() => undefined);
   },
 
   rejectJoin: (id) => {
+    const req = get().joinRequests.find((r) => r.id === id);
     set({
       joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "rejected" as const } : r)),
     });
     persist(snap(get()));
+    const initData = getTelegramInitData();
+    if (initData && req) void decideJoinFn({ data: { initData, telegramId: req.telegramId, approve: false } }).catch(() => undefined);
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),
@@ -535,6 +540,490 @@ export const useStudio = create<State>((set, get) => ({
     set({ weekStart, selectedDate: weekStart, selectedSlotId: null });
   },
   selectDay: (iso) => set({ selectedDate: iso, selectedSlotId: null }),
+
+  bookSlot: (slotId, forClientId) => {
+    const { slots, bookings, activeClientId, role, clients, closedSlotIds, notices, waitlist } = get();
+    const slot = slots.find((s) => s.id === slotId);
+    const targetId = forClientId ?? activeClientId;
+    const client = clients.find((c) => c.id === targetId) ?? clients[0];
+    if (!slot || !client) return false;
+    if (closedSlotIds.includes(slot.id)) {
+      get().showToast("Слот закрыт для записи.");
+      return false;
+    }
+    if (isSlotPast(slot.date, slot.time)) {
+      get().showToast("Этот слот уже прошёл.");
+      return false;
+    }
+    if (isFrozen(client)) {
+      get().showToast(`Заморозка до ${formatDayMonth(client.frozenUntil!)}. Запись недоступна.`);
+      return false;
+    }
+    if (bookings.some((b) => b.slotId === slot.id && b.clientId === client.id)) {
+      get().showToast("Уже есть запись на этот слот.");
+      return false;
+    }
+    if (slotTaken(slot, bookings) >= slot.capacity) {
+      get().showToast("Слот занят. Можно встать в лист ожидания.");
+      return false;
+    }
+    if (role !== "trainer" && (client.sessionsLeft ?? 0) <= 0) {
+      get().showToast("На балансе нет занятий. Напишите тренеру.");
+      return false;
+    }
+    if (role === "trainer" && (client.sessionsLeft ?? 0) <= 0) {
+      get().showToast(`У ${client.firstName} нет занятий на балансе.`);
+      return false;
+    }
+    const booking: Booking = {
+      id: `bk_${slot.id}_${client.id}_${Date.now()}`,
+      slotId: slot.id,
+      clientId: client.id,
+      date: slot.date,
+      time: slot.time,
+      duration: slot.duration,
+      held: true,
+    };
+    const hold = makeTxn(client.id, "hold", -1, `Запись ${formatLongDate(slot.date)} ${slot.time}`, booking.id);
+    const left = Math.max(0, (client.sessionsLeft ?? 0) - 1);
+    let nextNotices = pushNotice(notices, {
+      id: `nt_book_${booking.id}`,
+      audience: "trainer",
+      clientId: client.id,
+      kind: "book",
+      title: `Новая запись: ${shortName(client)}`,
+      body: `${formatLongDate(slot.date)} · ${slot.time} · осталось ${left} ${sessionsRu(left)}`,
+      at: hoursAgoIso(0),
+    });
+    if (role === "trainer") {
+      nextNotices = pushNotice(nextNotices, {
+        id: `nt_book_cli_${booking.id}`,
+        audience: "client",
+        clientId: client.id,
+        kind: "book",
+        title: "Тренер записал вас",
+        body: `${formatLongDate(slot.date)} · ${slot.time}`,
+        at: hoursAgoIso(0),
+      });
+    }
+    set({
+      bookings: [...bookings, booking],
+      selectedSlotId: slot.id,
+      notices: nextNotices,
+      clients: withTxn(clients, hold),
+      waitlist: waitlist.filter((w) => !(w.slotId === slot.id && w.clientId === client.id)),
+    });
+    persist(snap(get()));
+    hapticNotify("success");
+    const dow = DOW[(parseISODate(slot.date).getDay() + 6) % 7].toLowerCase();
+    get().showToast(
+      role === "trainer"
+        ? `Запись: ${client.firstName} · ${dow} ${slot.time}`
+        : `Готово. Встретимся ${dow} в ${slot.time}.`,
+    );
+    return true;
+  },
+
+  joinWaitlist: (slotId) => {
+    const { waitlist, activeClientId, slots, bookings, clients } = get();
+    const slot = slots.find((s) => s.id === slotId);
+    const client = clients.find((c) => c.id === activeClientId);
+    if (!slot || !client) return;
+    if (isFrozen(client)) {
+      get().showToast("Пока заморозка — лист недоступен.");
+      return;
+    }
+    if ((client.sessionsLeft ?? 0) <= 0) {
+      get().showToast("Нужно хотя бы одно занятие на балансе.");
+      return;
+    }
+    if (bookings.some((b) => b.slotId === slotId && b.clientId === client.id)) return;
+    if (waitlist.some((w) => w.slotId === slotId && w.clientId === client.id)) {
+      get().showToast("Вы уже в листе ожидания.");
+      return;
+    }
+    const entry: WaitlistEntry = {
+      id: `wl_${slotId}_${client.id}`,
+      slotId,
+      clientId: client.id,
+      at: new Date().toISOString(),
+    };
+    set({ waitlist: [...waitlist, entry] });
+    persist(snap(get()));
+    get().showToast(`В листе на ${slot.time}. Если место освободится — запишем автоматически.`);
+  },
+
+  leaveWaitlist: (slotId) => {
+    const id = get().activeClientId;
+    set({ waitlist: get().waitlist.filter((w) => !(w.slotId === slotId && w.clientId === id)) });
+    persist(snap(get()));
+    get().showToast("Сняли с листа ожидания.");
+  },
+
+  checkIn: (bookingId) => {
+    const { bookings, clients, notices } = get();
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking || booking.checkedIn) return;
+    const who = clients.find((c) => c.id === booking.clientId);
+    const nextNotices = who
+      ? pushNotice(notices, {
+          id: `nt_in_${bookingId}`,
+          audience: "trainer",
+          clientId: who.id,
+          kind: "checkin",
+          title: `${shortName(who)} на месте`,
+          body: `${booking.time} · чек-ин`,
+          at: new Date().toISOString(),
+        })
+      : notices;
+    set({
+      bookings: bookings.map((b) => (b.id === bookingId ? { ...b, checkedIn: true, noShow: false } : b)),
+      notices: nextNotices,
+    });
+    persist(snap(get()));
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(16);
+    get().showToast("Отметили: вы в зале.");
+  },
+
+  markNoShow: (bookingId) => {
+    const { bookings, clients, notices } = get();
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking || booking.checkedIn || booking.noShow) return;
+    const who = clients.find((c) => c.id === booking.clientId);
+    const nextNotices = who
+      ? pushNotice(notices, {
+          id: `nt_ns_${bookingId}`,
+          audience: "trainer",
+          clientId: who.id,
+          kind: "noshow",
+          title: `${shortName(who)} — неявка`,
+          body: `${formatLongDate(booking.date)} · ${booking.time} · занятие уже списано`,
+          at: new Date().toISOString(),
+        })
+      : notices;
+    set({
+      bookings: bookings.map((b) => (b.id === bookingId ? { ...b, noShow: true } : b)),
+      notices: nextNotices,
+    });
+    persist(snap(get()));
+    get().showToast("Неявка. Занятие остаётся списанным.");
+  },
+
+  creditSessions: (clientId, amount) => {
+    if (!amount) return;
+    const { clients, notices } = get();
+    const who = clients.find((c) => c.id === clientId);
+    if (!who) return;
+    const txn = makeTxn(
+      clientId,
+      amount > 0 ? "credit" : "adjust",
+      amount,
+      amount > 0 ? `Зачисление ${amount} ${sessionsRu(amount)}` : `Корректировка ${amount}`,
+    );
+    let next = withTxn(clients, txn);
+    if (amount > 0) {
+      const until = isoDate(addDays(new Date(), PACK_VALID_DAYS));
+      next = next.map((c) => (c.id === clientId ? { ...c, packExpiresAt: until } : c));
+    }
+    const left = next.find((c) => c.id === clientId)?.sessionsLeft ?? 0;
+    const nextNotices = pushNotice(notices, {
+      id: `nt_wal_${txn.id}`,
+      audience: "client",
+      clientId,
+      kind: "wallet",
+      title: amount > 0 ? "Тренер пополнил баланс" : "Баланс занятий изменён",
+      body: `${amount > 0 ? "+" : ""}${amount} · сейчас ${left} ${sessionsRu(left)}`,
+      at: new Date().toISOString(),
+    });
+    set({ clients: next, notices: nextNotices });
+    persist(snap(get()));
+    hapticNotify("success");
+    get().showToast(amount > 0 ? `Зачислено ${amount} ${sessionsRu(amount)}.` : `Списано ${Math.abs(amount)} ${sessionsRu(Math.abs(amount))}.`);
+  },
+
+  freezeClient: (clientId, days) => {
+    if (days <= 0) return;
+    const { clients, notices, waitlist } = get();
+    const who = clients.find((c) => c.id === clientId);
+    if (!who) return;
+    const until = isoDate(addDays(new Date(), days));
+    const nextNotices = pushNotice(notices, {
+      id: `nt_fr_${clientId}_${Date.now()}`,
+      audience: "client",
+      clientId,
+      kind: "freeze",
+      title: "Пакет заморожен",
+      body: `До ${formatDayMonth(until)} запись закрыта. Текущие слоты на месте.`,
+      at: new Date().toISOString(),
+    });
+    set({
+      clients: clients.map((c) => (c.id === clientId ? { ...c, frozenUntil: until } : c)),
+      notices: nextNotices,
+      waitlist: waitlist.filter((w) => w.clientId !== clientId),
+    });
+    persist(snap(get()));
+    get().showToast(`Заморозка ${who.firstName} до ${formatDayMonth(until)}.`);
+  },
+
+  unfreezeClient: (clientId) => {
+    const { clients, notices } = get();
+    const who = clients.find((c) => c.id === clientId);
+    if (!who) return;
+    const nextNotices = pushNotice(notices, {
+      id: `nt_uf_${clientId}_${Date.now()}`,
+      audience: "client",
+      clientId,
+      kind: "freeze",
+      title: "Заморозка снята",
+      body: "Можно снова записываться на слоты.",
+      at: new Date().toISOString(),
+    });
+    set({
+      clients: clients.map((c) => (c.id === clientId ? { ...c, frozenUntil: null } : c)),
+      notices: nextNotices,
+    });
+    persist(snap(get()));
+    get().showToast("Заморозка снята.");
+  },
+
+  cancelBooking: (id, by) => {
+    const { bookings, clients, notices, role, notifyPrefs, waitlist, slots } = get();
+    const booking = bookings.find((b) => b.id === id);
+    if (!booking) return;
+    const who = clients.find((c) => c.id === booking.clientId);
+    const actor: Role = by ?? role;
+    const hours = hoursUntilSlot(booking.date, booking.time);
+    const late = notifyPrefs.flagLate && isLateCancel(booking.date, booking.time, notifyPrefs.windowHours);
+    const burn = actor === "client" && late;
+    const when = `${formatLongDate(booking.date)} · ${booking.time}`;
+    const next = bookings.filter((b) => b.id !== id);
+    let nextNotices = notices;
+    let nextClients = clients;
+    hapticNotify("warning");
+
+    if (who && booking.held !== false) {
+      if (burn) {
+        const txn = makeTxn(who.id, "burn", 0, `Списание: отмена меньше чем за ${notifyPrefs.windowHours} ч`, booking.id);
+        nextClients = nextClients.map((c) =>
+          c.id === who.id
+            ? { ...c, lateCancels: (c.lateCancels ?? 0) + 1, ledger: [txn, ...(c.ledger ?? [])].slice(0, 40) }
+            : c,
+        );
+      } else {
+        const txn = makeTxn(
+          who.id,
+          "refund",
+          1,
+          actor === "trainer" ? "Возврат: отмена тренером" : "Возврат: отмена заранее",
+          booking.id,
+        );
+        nextClients = withTxn(nextClients, txn);
+      }
+    }
+
+    if (actor === "trainer" && who && notifyPrefs.notifyClient) {
+      nextNotices = pushNotice(nextNotices, {
+        id: `nt_cancel_${id}_${Date.now()}`,
+        audience: "client",
+        clientId: who.id,
+        kind: "cancel",
+        late,
+        slotId: booking.slotId,
+        title: "Тренер отменил запись",
+        body: `${when}. Занятие вернулось на баланс. Выберите другое время.`,
+        at: new Date().toISOString(),
+      });
+    }
+    if (actor === "client" && who && notifyPrefs.notifyTrainer) {
+      nextNotices = pushNotice(nextNotices, {
+        id: `nt_cancel_cli_${id}_${Date.now()}`,
+        audience: "trainer",
+        clientId: who.id,
+        kind: "cancel",
+        late: burn,
+        slotId: booking.slotId,
+        title: burn ? `${shortName(who)} — списание занятия` : `${shortName(who)} — отмена записи`,
+        body: burn
+          ? `${when} · меньше ${notifyPrefs.windowHours} ч · занятие сгорело`
+          : `${when} · до слота ${hoursUntilLabel(hours)} · занятие вернулось`,
+        at: new Date().toISOString(),
+      });
+    }
+
+    let nextWait = waitlist;
+    const slot = slots.find((s) => s.id === booking.slotId);
+    if (slot && slotTaken(slot, next) < slot.capacity) {
+      const queue = waitlist.filter((w) => w.slotId === booking.slotId).sort((a, b) => a.at.localeCompare(b.at));
+      const pick = queue.find((w) => {
+        const c = nextClients.find((x) => x.id === w.clientId);
+        return c && (c.sessionsLeft ?? 0) > 0 && !next.some((b) => b.slotId === slot.id && b.clientId === c.id);
+      });
+      if (pick) {
+        const guest = nextClients.find((c) => c.id === pick.clientId);
+        if (guest) {
+          const auto: Booking = {
+            id: `bk_auto_${slot.id}_${guest.id}_${Date.now()}`,
+            slotId: slot.id,
+            clientId: guest.id,
+            date: slot.date,
+            time: slot.time,
+            duration: slot.duration,
+            held: true,
+          };
+          const hold = makeTxn(guest.id, "hold", -1, `Автозапись из листа · ${slot.time}`, auto.id);
+          nextClients = withTxn(nextClients, hold);
+          next.push(auto);
+          nextWait = waitlist.filter((w) => w.id !== pick.id);
+          nextNotices = pushNotice(nextNotices, {
+            id: `nt_wl_${auto.id}`,
+            audience: "client",
+            clientId: guest.id,
+            kind: "waitlist",
+            slotId: slot.id,
+            title: "Место освободилось — вы записаны",
+            body: `${formatLongDate(slot.date)} · ${slot.time}`,
+            at: new Date().toISOString(),
+          });
+          nextNotices = pushNotice(nextNotices, {
+            id: `nt_wl_tr_${auto.id}`,
+            audience: "trainer",
+            clientId: guest.id,
+            kind: "waitlist",
+            title: `${shortName(guest)} с листа ожидания`,
+            body: `${slot.time} · автозапись`,
+            at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    set({ bookings: next, notices: nextNotices, clients: nextClients, waitlist: nextWait });
+    persist(snap(get()));
+
+    if (actor === "trainer") {
+      get().showToast("Запись отменена. Клиенту вернули занятие и отправили уведомление.");
+    } else if (burn) {
+      get().showToast("Поздняя отмена: занятие списано. Тренер получил уведомление.");
+    } else {
+      get().showToast("Запись отменена. Занятие вернулось на баланс.");
+    }
+  },
+
+  cancelSlotBookings: (slotId) => {
+    const ids = get()
+      .bookings.filter((b) => b.slotId === slotId && !isSlotPast(b.date, b.time))
+      .map((b) => b.id);
+    for (const id of ids) get().cancelBooking(id, "trainer");
+    const closedSlotIds = get().closedSlotIds.includes(slotId) ? get().closedSlotIds : [...get().closedSlotIds, slotId];
+    set({ closedSlotIds });
+    persist(snap(get()));
+    get().showToast(
+      ids.length
+        ? `Слот закрыт. ${ids.length} ${ids.length === 1 ? "клиент получил" : "клиентов получили"} уведомление.`
+        : "Слот закрыт.",
+    );
+  },
+
+  rescheduleBooking: (id, newSlotId) => {
+    const { bookings, slots, closedSlotIds, clients, notices } = get();
+    const booking = bookings.find((b) => b.id === id);
+    const slot = slots.find((s) => s.id === newSlotId);
+    if (!booking || !slot) return false;
+    if (closedSlotIds.includes(slot.id) || isSlotPast(slot.date, slot.time)) {
+      get().showToast("Этот слот недоступен.");
+      return false;
+    }
+    if (slotTaken(slot, bookings.filter((b) => b.id !== id)) >= slot.capacity) {
+      get().showToast("Слот занят.");
+      return false;
+    }
+    const who = clients.find((c) => c.id === booking.clientId);
+    const updated: Booking = {
+      ...booking,
+      slotId: slot.id,
+      date: slot.date,
+      time: slot.time,
+      duration: slot.duration,
+    };
+    const nextNotices = who
+      ? pushNotice(notices, {
+          id: `nt_move_${id}_${slot.id}`,
+          audience: "client",
+          clientId: who.id,
+          kind: "reschedule",
+          title: "Тренер перенёс запись",
+          body: `Было ${booking.time} · стало ${DOW[(parseISODate(slot.date).getDay() + 6) % 7]} ${slot.time}`,
+          at: new Date().toISOString(),
+        })
+      : notices;
+    set({
+      bookings: bookings.map((b) => (b.id === id ? updated : b)),
+      notices: nextNotices,
+    });
+    persist(snap(get()));
+    get().showToast("Перенос сохранён. Клиенту ушло уведомление.");
+    return true;
+  },
+
+  addFood: (mealId) => {
+    const meal = MEALS.find((m) => m.id === mealId);
+    if (!meal) return;
+    const entry: FoodLog = {
+      ...meal,
+      logId: `f_${Date.now()}`,
+      date: todayIso(),
+      clientId: get().activeClientId,
+    };
+    const food = [...get().food, entry];
+    const clients = get().clients.map((c) =>
+      c.id === entry.clientId ? { ...c, lastReportAt: todayIso(), streak: c.streak + (c.lastReportAt === todayIso() ? 0 : 1) } : c,
+    );
+    set({ food, clients });
+    persist(snap(get()));
+  },
+
+  addCustomFood: (meal) => {
+    const entry: FoodLog = {
+      id: `custom_${Date.now()}`,
+      ...meal,
+      logId: `f_${Date.now()}`,
+      date: todayIso(),
+      clientId: get().activeClientId,
+    };
+    const food = [...get().food, entry];
+    const clients = get().clients.map((c) =>
+      c.id === entry.clientId
+        ? { ...c, lastReportAt: todayIso(), streak: c.streak + (c.lastReportAt === todayIso() ? 0 : 1) }
+        : c,
+    );
+    set({ food, clients });
+    persist(snap(get()));
+    get().showToast(`Добавлено: ${meal.name}`);
+  },
+
+  removeFood: (logId) => {
+    const food = get().food.filter((f) => f.logId !== logId);
+    set({ food });
+    persist(snap(get()));
+  },
+
+  addLift: (exercise, weight, reps, sets) => {
+    const lifts = [
+      ...get().lifts,
+      {
+        id: `lift_${Date.now()}`,
+        date: todayIso(),
+        exercise,
+        weight,
+        reps,
+        sets,
+        clientId: get().activeClientId,
+      },
+    ];
+    set({ lifts });
+    persist(snap(get()));
+    get().showToast(`Записано: ${exercise} ${weight} кг`);
+  },
 
   toggleCheck: (item) => {
     const id = get().activeClientId;
@@ -585,91 +1074,61 @@ export const useStudio = create<State>((set, get) => ({
     set({ workoutLogs: nextLogs, clients: nextClients, bookings: nextBookings });
     persist(snap(get()));
     hapticNotify("success");
-    get().showToast(`Тренировка закрыта \u00b7 ${kcal} ккал`);
+    get().showToast(`Тренировка закрыта · ${kcal} ккал`);
   },
 
+  setWeight: (kg) => {
+    const id = get().activeClientId;
+    const today = todayIso();
+    const clients = get().clients.map((c) => {
+      if (c.id !== id) return c;
+      const history = [...c.weightHistory.filter((p) => p.date !== today), { date: today, kg }];
+      return { ...c, weight: kg, weightHistory: history };
+    });
+    set({ clients });
+    persist(snap(get()));
+  },
 
-  bookSlot: (slotId, forClientId) => {
-    const { slots, bookings, activeClientId, clients, waitlist } = get();
-    const slot = slots.find((s) => s.id === slotId);
-    const client = clients.find((c) => c.id === (forClientId ?? activeClientId));
-    if (!slot || !client) return false;
-    if (isSlotPast(slot.date, slot.time) || isFrozen(client) || (client.sessionsLeft ?? 0) <= 0) {
-      get().showToast("Сейчас записаться нельзя.");
-      return false;
-    }
-    if (slotTaken(slot, bookings) >= slot.capacity) {
-      get().showToast("Слот занят.");
-      return false;
-    }
-    const booking = {
-      id: `bk_${slot.id}_${client.id}_${Date.now()}`,
-      slotId: slot.id,
-      clientId: client.id,
-      date: slot.date,
-      time: slot.time,
-      duration: slot.duration,
-      held: true,
-    };
-    const hold = makeTxn(client.id, "hold", -1, `Запись ${slot.date} ${slot.time}`, booking.id);
+  addSlot: (date, time, capacity) => {
+    const id = `${date}_${time}`;
+    const slot: Slot = { id, date, time, duration: 60, capacity, seeded: 0 };
+    const extraSlots = [...get().extraSlots.filter((s) => s.id !== id), slot];
+    const closedSlotIds = get().closedSlotIds.filter((x) => x !== id);
     set({
-      bookings: [...bookings, booking],
-      clients: withTxn(clients, hold),
-      waitlist: waitlist.filter((w) => !(w.slotId === slot.id && w.clientId === client.id)),
+      extraSlots,
+      closedSlotIds,
+      slots: mergeSlots(extraSlots),
     });
     persist(snap(get()));
-    get().showToast(`Готово. ${slot.time}.`);
-    return true;
+    get().showToast(`Слот ${time} открыт.`);
   },
-  joinWaitlist: (slotId) => {
-    const { waitlist, activeClientId } = get();
-    if (waitlist.some((w) => w.slotId === slotId && w.clientId === activeClientId)) return;
-    set({ waitlist: [...waitlist, { id: `wl_${slotId}_${activeClientId}`, slotId, clientId: activeClientId, at: new Date().toISOString() }] });
+
+  closeSlot: (id) => {
+    const booked = get().bookings.filter((b) => b.slotId === id && !isSlotPast(b.date, b.time));
+    const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
+    set({ closedSlotIds });
     persist(snap(get()));
-    get().showToast("В листе ожидания.");
+    get().showToast(
+      booked.length ? "Слот закрыт для новых записей. Текущие остаются." : "Слот закрыт и скрыт у клиентов.",
+    );
   },
-  leaveWaitlist: (slotId) => {
-    const id = get().activeClientId;
-    set({ waitlist: get().waitlist.filter((w) => !(w.slotId === slotId && w.clientId === id)) });
+
+  openSlot: (id) => {
+    const closedSlotIds = get().closedSlotIds.filter((x) => x !== id);
+    set({ closedSlotIds });
     persist(snap(get()));
+    get().showToast("Слот снова открыт.");
   },
-  cancelBooking: (id) => {
-    const { bookings, clients } = get();
-    const booking = bookings.find((b) => b.id === id);
-    if (!booking) return;
-    const refund = makeTxn(booking.clientId, "refund", 1, "Отмена", booking.id);
-    set({ bookings: bookings.filter((b) => b.id !== id), clients: withTxn(clients, refund) });
+
+  deleteSlot: (id) => {
+    get().cancelSlotBookings(id);
+    const extraSlots = get().extraSlots.filter((s) => s.id !== id);
+    const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
+    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
     persist(snap(get()));
-    get().showToast("Запись снята.");
+    get().showToast("Слот удалён.");
   },
-  addFood: (mealId) => {
-    const meal = MEALS.find((m) => m.id === mealId);
-    if (!meal) return;
-    const log = { ...meal, logId: `f_${Date.now()}`, date: todayIso(), clientId: get().activeClientId };
-    set({ food: [...get().food, log] });
-    persist(snap(get()));
-  },
-  addCustomFood: (meal) => {
-    const log = { ...meal, id: `c_${Date.now()}`, logId: `f_${Date.now()}`, date: todayIso(), clientId: get().activeClientId };
-    set({ food: [...get().food, log] });
-    persist(snap(get()));
-  },
-  removeFood: (logId) => {
-    set({ food: get().food.filter((f) => f.logId !== logId) });
-    persist(snap(get()));
-  },
-  markNoShow: (bookingId) => {
-    set({ bookings: get().bookings.map((b) => (b.id === bookingId ? { ...b, noShow: true } : b)) });
-    persist(snap(get()));
-  },
-  dismissSignal: (id) => {
-    set({ dismissedSignalIds: [...get().dismissedSignalIds, id] });
-    persist(snap(get()));
-  },
-  setNotifyPrefs: (patch) => {
-    set({ notifyPrefs: { ...get().notifyPrefs, ...patch } });
-    persist(snap(get()));
-  },
+
   addClient: (draft) => {
     const firstName = draft.firstName.trim();
     const lastName = draft.lastName.trim();
@@ -693,18 +1152,20 @@ export const useStudio = create<State>((set, get) => ({
       get().showToast("Этот номер уже в зале.");
       return "";
     }
-    const c = {
+    const client = {
       ...emptyClient(),
       firstName,
       lastName,
       telegramUsername: draft.telegramUsername?.replace(/^@/, "").trim() || null,
       phone: phone || null,
     };
-    set({ clients: [...get().clients, c], activeClientId: c.id, sheetClientId: c.id });
+    const clients = [...get().clients, client];
+    set({ clients, activeClientId: client.id, sheetClientId: client.id });
     persist(snap(get()));
     get().showToast("Клиент добавлен. Назначьте пакет и программу.");
-    return c.id;
+    return client.id;
   },
+
   claimByPhone: async (raw) => {
     const pass = importClientPass(raw);
     if (pass) {
@@ -756,110 +1217,48 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast("Этот номер тренер ещё не занёс. Напишите ему в личку.");
     return false;
   },
-  creditSessions: (clientId, amount) => {
-    if (!amount) return;
-    const who = get().clients.find((c) => c.id === clientId);
-    if (!who) return;
-    const txn = makeTxn(
-      clientId,
-      amount > 0 ? "credit" : "adjust",
-      amount,
-      amount > 0 ? `Зачисление ${amount}` : `Списание ${Math.abs(amount)}`,
-    );
-    let next = withTxn(get().clients, txn);
-    if (amount > 0) {
-      const until = isoDate(addDays(new Date(), PACK_VALID_DAYS));
-      next = next.map((c) => (c.id === clientId ? { ...c, packExpiresAt: until } : c));
-    }
-    set({ clients: next });
-    persist(snap(get()));
-    get().showToast(amount > 0 ? `Зачислено ${amount}` : `Списано ${Math.abs(amount)}`);
-  },
-  freezeClient: (clientId, days) => {
-    set({
-      clients: get().clients.map((c) =>
-        c.id === clientId ? { ...c, frozenUntil: isoDate(addDays(new Date(), days)) } : c,
-      ),
-    });
-    persist(snap(get()));
-  },
-  unfreezeClient: (clientId) => {
-    set({ clients: get().clients.map((c) => (c.id === clientId ? { ...c, frozenUntil: null } : c)) });
-    persist(snap(get()));
-  },
-  updateClient: (id, patch) => {
-    set({ clients: get().clients.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
-    persist(snap(get()));
-  },
-  checkIn: (bookingId) => {
-    set({ bookings: get().bookings.map((b) => (b.id === bookingId ? { ...b, checkedIn: true, noShow: false } : b)) });
-    persist(snap(get()));
-    get().showToast("Отметили: вы в зале.");
-  },
-  addLift: (exercise, weight, reps, sets) => {
-    set({
-      lifts: [...get().lifts, { id: `lift_${Date.now()}`, date: todayIso(), exercise, weight, reps, sets, clientId: get().activeClientId }],
-    });
-    persist(snap(get()));
-  },
-  setWeight: (kg) => {
-    const id = get().activeClientId;
-    const today = todayIso();
-    set({
-      clients: get().clients.map((c) =>
-        c.id === id ? { ...c, weight: kg, weightHistory: [...c.weightHistory, { date: today, kg }] } : c,
-      ),
-    });
-    persist(snap(get()));
-  },
-  addSlot: (date, time, capacity) => {
-    const id = `${date}_${time}`;
-    const slot = { id, date, time, duration: 60, capacity, seeded: 0 };
-    const extraSlots = [...get().extraSlots.filter((s) => s.id !== id), slot];
-    const closedSlotIds = get().closedSlotIds.filter((x) => x !== id);
-    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
-    persist(snap(get()));
-  },
-  deleteSlot: (id) => {
-    get().cancelSlotBookings(id);
-    const extraSlots = get().extraSlots.filter((s) => s.id !== id);
-    const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
-    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
-    persist(snap(get()));
-    get().showToast("Слот удалён.");
-  },
-  closeSlot: (id) => {
-    set({ closedSlotIds: [...new Set([...get().closedSlotIds, id])] });
-    persist(snap(get()));
-  },
-  openSlot: (id) => {
-    set({ closedSlotIds: get().closedSlotIds.filter((x) => x !== id) });
-    persist(snap(get()));
-  },
+
   removeClient: (id) => {
+    const clients = get().clients.filter((c) => c.id !== id);
+    const activeClientId = get().activeClientId === id ? clients[0]?.id ?? "" : get().activeClientId;
+    const bookings = get().bookings.filter((b) => b.clientId !== id);
+    const food = get().food.filter((f) => f.clientId !== id);
+    const lifts = get().lifts.filter((l) => l.clientId !== id);
+    const notices = get().notices.filter((n) => n.clientId !== id);
+    const waitlist = get().waitlist.filter((w) => w.clientId !== id);
     set({
-      clients: get().clients.filter((c) => c.id !== id),
+      clients,
+      activeClientId,
+      bookings,
+      food,
+      lifts,
+      notices,
+      waitlist,
       sheetClientId: get().sheetClientId === id ? null : get().sheetClientId,
     });
     persist(snap(get()));
+    get().showToast("Клиент удалён.");
   },
-  cancelSlotBookings: (slotId) => {
-    for (const b of get().bookings.filter((x) => x.slotId === slotId && !isSlotPast(x.date, x.time))) {
-      get().cancelBooking(b.id, "trainer");
-    }
-  },
-  rescheduleBooking: (id, newSlotId) => {
-    const { bookings, slots } = get();
-    const booking = bookings.find((b) => b.id === id);
-    const slot = slots.find((s) => s.id === newSlotId);
-    if (!booking || !slot) return false;
-    set({
-      bookings: bookings.map((b) =>
-        b.id === id ? { ...b, slotId: slot.id, date: slot.date, time: slot.time, duration: slot.duration } : b,
-      ),
-    });
+
+  updateClient: (id, patch) => {
+    const clients = get().clients.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    set({ clients });
     persist(snap(get()));
-    return true;
+  },
+
+  dismissSignal: (id) => {
+    const dismissedSignalIds = get().dismissedSignalIds.includes(id)
+      ? get().dismissedSignalIds
+      : [...get().dismissedSignalIds, id];
+    const notices = get().notices.filter((n) => n.id !== id);
+    set({ dismissedSignalIds, notices });
+    persist(snap(get()));
+  },
+
+  setNotifyPrefs: (patch) => {
+    const notifyPrefs = { ...get().notifyPrefs, ...patch };
+    set({ notifyPrefs });
+    persist(snap(get()));
   },
 
   showToast: (toast) => {

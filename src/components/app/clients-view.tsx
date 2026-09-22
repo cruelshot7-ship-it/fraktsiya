@@ -37,8 +37,11 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
+  const joinRequests = useStudio((s) => s.joinRequests);
+  const approveJoin = useStudio((s) => s.approveJoin);
+  const rejectJoin = useStudio((s) => s.rejectJoin);
   const today = isoDate(new Date());
-  const [adding, setAdding] = useState(true);
+  const [adding, setAdding] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
@@ -76,6 +79,34 @@ export function ClientsView() {
 
   return (
     <div className="flex flex-col gap-3">
+      {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {joinRequests
+            .filter((r) => r.status === "pending")
+            .map((req) => (
+              <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
+                <p className="font-display text-base">
+                  {req.firstName} {req.lastName}
+                </p>
+                {req.telegramUsername ? <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p> : null}
+                <p className="mt-1 text-sm text-muted-foreground">{req.message || "Нажал Старт"}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+                    onClick={() => approveJoin(req.id)}
+                  >
+                    Принять
+                  </button>
+                  <button type="button" className="pressable h-11 rounded-xl bg-secondary text-sm" onClick={() => rejectJoin(req.id)}>
+                    Отклонить
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-3 gap-3 px-1 py-1">
         <Kpi value={todayCount} label={"тренировки\nсегодня"} tone="ok" />
         <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />

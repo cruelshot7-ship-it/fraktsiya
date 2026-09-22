@@ -45,7 +45,7 @@ const PushInput = z.object({
   payload: z.any(),
 });
 
-function emptyPayload(): StudioPayload {
+export function emptyPayload(): StudioPayload {
   return {
     bookings: [],
     food: [],
@@ -226,7 +226,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
   };
 }
 
-async function loadState(): Promise<StudioPayload> {
+export async function loadStudioState(): Promise<StudioPayload> {
   const { loadRemote } = await import("@/lib/studio-remote");
   const remote = await loadRemote();
   if (remote) return normalizePayload(remote);
@@ -241,7 +241,7 @@ async function loadState(): Promise<StudioPayload> {
   }
 }
 
-async function saveState(payload: StudioPayload) {
+export async function saveStudioState(payload: StudioPayload) {
   const { saveRemote } = await import("@/lib/studio-remote");
   await saveRemote(payload);
   try {
@@ -264,7 +264,7 @@ export const pullStudio = createServerFn({ method: "POST" })
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
 
-    let payload = await loadState();
+    let payload = await loadStudioState();
     let created = false;
 
     if (session.role === "client") {
@@ -286,7 +286,7 @@ export const pullStudio = createServerFn({ method: "POST" })
             c.id === match.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
           ),
         };
-        await saveState(payload);
+        await saveStudioState(payload);
       } else if (!byId) {
         return {
           ok: true,
@@ -301,10 +301,34 @@ export const pullStudio = createServerFn({ method: "POST" })
 
     if (session.user.username && payload.trainerUsername !== session.user.username) {
       payload = { ...payload, trainerUsername: session.user.username };
-      await saveState(payload);
+      await saveStudioState(payload);
     }
 
     return { ok: true, role: "trainer", payload };
+  });
+
+export const requestJoin = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional() }))
+  .handler(async ({ data }): Promise<{ ok: boolean; already?: boolean }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session) return { ok: false };
+    const bot = await import("@/lib/telegram-bot.server");
+    if (session.role === "trainer") {
+      await bot.ensureBotHook();
+      return { ok: true };
+    }
+    return bot.registerJoin(session.user);
+  });
+
+export const decideJoinFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), telegramId: z.string(), approve: z.boolean() }))
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session || session.role !== "trainer") return { ok: false };
+    const bot = await import("@/lib/telegram-bot.server");
+    return bot.decideJoin(data.telegramId, data.approve);
   });
 
 export const pushStudio = createServerFn({ method: "POST" })
@@ -315,7 +339,7 @@ export const pushStudio = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     const incoming = (data.payload ?? emptyPayload()) as StudioPayload;
-    const current = await loadState();
+    const current = await loadStudioState();
     const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
     const known =
       session.role === "trainer" ||
@@ -347,7 +371,7 @@ export const pushStudio = createServerFn({ method: "POST" })
       next = mergeClientWrite(bound, incoming, session.user.id);
     }
 
-    await saveState(next);
+    await saveStudioState(next);
     return { ok: true };
   });
 
