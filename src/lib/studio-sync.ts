@@ -104,6 +104,46 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
   };
 }
 
+function clientKey(c: Client) {
+  if (c.telegramId) return `tg:${c.telegramId}`;
+  const u = (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
+  if (u) return `u:${u}`;
+  return `id:${c.id}`;
+}
+
+export function mergeClients(primary: Client[], secondary: Client[]): Client[] {
+  const map = new Map<string, Client>();
+  for (const c of primary) map.set(clientKey(c), c);
+  for (const c of secondary) {
+    const k = clientKey(c);
+    const prev = map.get(k);
+    map.set(k, prev ? { ...prev, ...c, id: prev.id, telegramId: c.telegramId || prev.telegramId } : c);
+  }
+  return [...map.values()];
+}
+
+function mergeById<T extends { id: string }>(base: T[], incoming: T[]): T[] {
+  const map = new Map(base.map((x) => [x.id, x]));
+  for (const x of incoming) map.set(x.id, x);
+  return [...map.values()];
+}
+
+function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): StudioPayload {
+  return {
+    ...incoming,
+    clients: mergeClients(current.clients, incoming.clients),
+    bookings: mergeById(current.bookings, incoming.bookings),
+    food: mergeById(current.food, incoming.food),
+    lifts: mergeById(current.lifts, incoming.lifts),
+    notices: mergeById(current.notices, incoming.notices).slice(0, 40),
+    waitlist: mergeById(current.waitlist, incoming.waitlist),
+    workoutLogs: mergeById(current.workoutLogs, incoming.workoutLogs),
+    extraSlots: mergeById(current.extraSlots, incoming.extraSlots),
+    closedSlotIds: [...new Set([...current.closedSlotIds, ...incoming.closedSlotIds])],
+    trainerUsername: incoming.trainerUsername || current.trainerUsername,
+  };
+}
+
 function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, telegramId: string): StudioPayload {
   const mine = current.clients.find((c) => c.telegramId === telegramId);
   const incomingSelf = incoming.clients.find((c) => c.telegramId === telegramId) ?? incoming.clients[0];
@@ -222,7 +262,7 @@ export const pushStudio = createServerFn({ method: "POST" })
     const sql = await getSql();
     const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
     const current = rows[0]?.payload ?? emptyPayload();
-    const next = session.role === "trainer" ? incoming : mergeClientWrite(current, incoming, session.user.id);
+    const next = session.role === "trainer" ? mergeTrainerPayload(current, incoming) : mergeClientWrite(current, incoming, session.user.id);
 
     await sql.query(
       "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
@@ -230,3 +270,9 @@ export const pushStudio = createServerFn({ method: "POST" })
     );
     return { ok: true };
   });
+
+export const studioHealth = createServerFn({ method: "GET" }).handler(async (): Promise<{ bot: boolean; db: "neon" | "pglite" }> => {
+  const { env } = await import("@/lib/env.server");
+  const { dbSource } = await import("@/lib/db");
+  return { bot: Boolean(env("BOT_TOKEN")), db: dbSource };
+});

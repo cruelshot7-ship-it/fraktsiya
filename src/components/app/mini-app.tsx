@@ -43,6 +43,7 @@ const TITLES: Record<TabId, string> = {
 
 export function MiniApp() {
   const hydrate = useStudio((s) => s.hydrate);
+  const refreshCloud = useStudio((s) => s.refreshCloud);
   const tab = useStudio((s) => s.tab);
   const setTab = useStudio((s) => s.setTab);
   const role = useStudio((s) => s.role);
@@ -64,10 +65,14 @@ export function MiniApp() {
   useEffect(() => {
     initTelegram();
     let tries = 0;
+    let booted = false;
     const boot = () => {
       const user = getTelegramUser();
       setTgLocked(Boolean(user));
-      hydrate();
+      if (!booted && (user || tries >= 10)) {
+        booted = true;
+        hydrate();
+      }
       return Boolean(user) || String(user?.id ?? "") === String(TRAINER_TG_ID);
     };
     boot();
@@ -77,19 +82,27 @@ export function MiniApp() {
     }, 150);
     void primeFoodDb();
     const onVis = () => {
-      if (document.visibilityState === "visible") void primeFoodDb(true);
+      if (document.visibilityState === "visible") {
+        void primeFoodDb(true);
+        refreshCloud();
+      }
     };
-    const onOnline = () => void primeFoodDb(true);
+    const onOnline = () => {
+      void primeFoodDb(true);
+      refreshCloud();
+    };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("online", onOnline);
     const ping = window.setInterval(() => void primeFoodDb(true), 5 * 60 * 1000);
+    const cloud = window.setInterval(() => refreshCloud(), 12_000);
     return () => {
       window.clearInterval(timer);
+      window.clearInterval(cloud);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("online", onOnline);
       window.clearInterval(ping);
     };
-  }, [hydrate]);
+  }, [hydrate, refreshCloud]);
 
   const trainerBadge = notices.filter((n) => n.audience === "trainer" && !dismissed.includes(n.id)).length;
   const clientInbox = notices.filter((n) => n.audience === "client" && n.clientId === client?.id && !dismissed.includes(n.id));

@@ -21,6 +21,7 @@ import {
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { openTrainerChat } from "@/lib/telegram";
+import { studioHealth } from "@/lib/studio-sync";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -34,11 +35,19 @@ export function ClientsView() {
   const setClientFilter = useStudio((s) => s.setClientFilter);
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
+  const refreshCloud = useStudio((s) => s.refreshCloud);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
+  const [health, setHealth] = useState<{ bot: boolean; db: "neon" | "pglite" } | null>(null);
+
+  useEffect(() => {
+    void studioHealth()
+      .then(setHealth)
+      .catch(() => setHealth({ bot: false, db: "pglite" }));
+  }, []);
 
   const rows = useMemo(
     () =>
@@ -72,6 +81,12 @@ export function ClientsView() {
 
   return (
     <div className="flex flex-col gap-3">
+      {health && (!health.bot || health.db !== "neon") ? (
+        <p className="rounded-xl bg-primary-dim px-4 py-3 text-sm leading-relaxed text-primary">
+          Клиенты с другого телефона сюда не доходят: в Vercel нет { !health.bot ? "BOT_TOKEN" : "DATABASE_URL (Neon)" }.
+        </p>
+      ) : null}
+
       <div className="grid grid-cols-3 gap-3 px-1 py-1">
         <Kpi value={todayCount} label={"тренировки\nсегодня"} tone="ok" />
         <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />
@@ -88,6 +103,9 @@ export function ClientsView() {
         <FilterChip active={clientFilter === "today"} onClick={() => setClientFilter("today")}>
           Сегодня {todayCount}
         </FilterChip>
+        <button type="button" onClick={() => refreshCloud()} className="ml-auto text-tiny text-muted-foreground">
+          Обновить
+        </button>
       </div>
 
       <div className="stagger-in flex flex-col gap-2">

@@ -37,6 +37,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
+import { mergeClients } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramUser } from "@/lib/telegram";
 
@@ -88,6 +89,7 @@ type State = {
   trainerUsername: string | null;
   toast: string | null;
   hydrate: () => void;
+  refreshCloud: () => void;
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
@@ -361,7 +363,7 @@ export const useStudio = create<State>((set, get) => ({
       const extra = payload.extraSlots ?? [];
       set({
         role: cloud.role,
-        clients: payload.clients,
+        clients: mergeClients(get().clients, payload.clients),
         activeClientId:
           cloud.role === "client" && payload.clients[0]
             ? payload.clients[0].id
@@ -383,6 +385,28 @@ export const useStudio = create<State>((set, get) => ({
       });
       persist(snap(get()));
       if (cloud.created) get().showToast("Заявка у тренера. Ждите пакет занятий.");
+    });
+  },
+
+  refreshCloud: () => {
+    void syncFromCloud().then((cloud) => {
+      if (!cloud) return;
+      const payload = cloud.payload;
+      const extra = payload.extraSlots ?? get().extraSlots;
+      set({
+        role: cloud.role,
+        clients: mergeClients(get().clients, payload.clients),
+        bookings: payload.bookings.length ? payload.bookings : get().bookings,
+        food: payload.food.length ? payload.food : get().food,
+        lifts: payload.lifts.length ? payload.lifts : get().lifts,
+        extraSlots: extra,
+        closedSlotIds: payload.closedSlotIds.length ? payload.closedSlotIds : get().closedSlotIds,
+        notices: payload.notices.length ? payload.notices : get().notices,
+        workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
+        trainerUsername: payload.trainerUsername ?? get().trainerUsername,
+        slots: extra.length ? mergeSlots(extra) : get().slots,
+      });
+      persist(snap(get()));
     });
   },
 
