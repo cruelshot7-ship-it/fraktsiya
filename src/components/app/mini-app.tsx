@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, Users } from "lucide-react";
-import { formatDayMonth, formatWeekdayLong, hoursUntilSlot, isoDate, isFrozen, isSlotPast, relativeLabel, sessionsRu, STUDIO, type Notice } from "@/data/studio";
+import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
+import { BrandLockup } from "@/components/app/brand-mark";
+import { HapticLayer } from "@/components/app/haptic-layer";
 import { SlotsView } from "@/components/app/slots-view";
 import { BookingsView } from "@/components/app/bookings-view";
 import { ProgramView } from "@/components/app/program-view";
@@ -11,6 +13,8 @@ import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
+import { primeFoodDb } from "@/lib/barcode";
+import { initTelegram, getTelegramUser } from "@/lib/telegram";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
   { id: "slots", label: "Слоты" },
@@ -52,9 +56,25 @@ export function MiniApp() {
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [tgLocked, setTgLocked] = useState(false);
 
   useEffect(() => {
+    initTelegram();
+    setTgLocked(Boolean(getTelegramUser()));
     hydrate();
+    void primeFoodDb();
+    const onVis = () => {
+      if (document.visibilityState === "visible") void primeFoodDb(true);
+    };
+    const onOnline = () => void primeFoodDb(true);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("online", onOnline);
+    const id = window.setInterval(() => void primeFoodDb(true), 5 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("online", onOnline);
+      window.clearInterval(id);
+    };
   }, [hydrate]);
 
   const trainerBadge = notices.filter((n) => n.audience === "trainer" && !dismissed.includes(n.id)).length;
@@ -73,16 +93,17 @@ export function MiniApp() {
 
   return (
     <div className="flex min-h-dvh justify-center bg-background">
-      <div className="ambient-glow relative flex min-h-dvh w-full max-w-app flex-col pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <HapticLayer />
+      <div className="ambient-glow relative flex min-h-dvh w-full max-w-app flex-col pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
         <Toast message={toast} />
 
         {sheetClientId ? null : (
-        <header className="relative z-10 px-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[max(1.25rem,env(safe-area-inset-top))] pb-3">
+        <header className="relative z-10 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-3">
           {role === "trainer" ? (
             <>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-tiny text-muted-foreground">{formatWeekdayLong(isoDate(new Date()))}</p>
-                <RoleSwitch role={role} onChange={setRole} compact />
+                <BrandLockup compact />
+                {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">
@@ -91,7 +112,7 @@ export function MiniApp() {
                 <button
                   type="button"
                   onClick={() => setTab("signals")}
-                  className="relative grid size-10 place-items-center rounded-xl bg-secondary text-muted-foreground"
+                  className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground"
                   aria-label="Сигналы"
                 >
                   <Bell className="size-4" />
@@ -104,13 +125,13 @@ export function MiniApp() {
           ) : (
             <>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-tiny tracking-[0.14em] text-muted-foreground uppercase">{STUDIO.brand}</p>
+                <BrandLockup />
                 <div className="flex items-center gap-1.5">
-                  <RoleSwitch role={role} onChange={setRole} />
+                  {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} />}
                   <button
                     type="button"
                     onClick={() => setInboxOpen(true)}
-                    className="relative grid size-9 place-items-center rounded-full bg-secondary text-muted-foreground"
+                    className="pressable relative grid size-11 place-items-center rounded-full bg-secondary text-muted-foreground"
                     aria-label="Уведомления"
                   >
                     <Bell className="size-4" />
@@ -136,7 +157,7 @@ export function MiniApp() {
         )}
 
         {role === "client" && !sheetClientId ? (
-          <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
+          <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
               return (
@@ -145,7 +166,7 @@ export function MiniApp() {
                   type="button"
                   onClick={() => setTab(item.id)}
                   className={cn(
-                    "min-w-0 flex-1 border-b-2 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    "pressable min-h-11 min-w-0 flex-1 border-b-2 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
                     active ? "border-primary text-foreground" : "border-hairline text-muted-foreground",
                   )}
                 >
@@ -158,7 +179,7 @@ export function MiniApp() {
 
         <main
           className={cn(
-            "flex-1 overflow-y-auto px-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]",
+            "flex-1 overflow-y-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
             role === "trainer" ? "pb-24" : "pb-10",
           )}
         >
@@ -174,8 +195,8 @@ export function MiniApp() {
         </main>
 
         {role === "trainer" ? (
-          <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-hairline bg-background/90 backdrop-blur-md">
-            <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom))]">
+          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
+            <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))]">
               {TRAINER_NAV.map((item) => {
                 const active = tab === item.id;
                 const Icon = item.icon;
@@ -186,7 +207,7 @@ export function MiniApp() {
                     type="button"
                     onClick={() => setTab(item.id)}
                     className={cn(
-                      "relative flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
+                    "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
@@ -239,8 +260,8 @@ function RoleSwitch({
         type="button"
         onClick={() => onChange("client")}
         className={cn(
-          "font-medium",
-          compact ? "h-6 px-2 text-3xs" : "h-7 px-2.5 text-2xs",
+          "pressable font-medium",
+          compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs",
           role === "client" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground",
         )}
       >
@@ -250,8 +271,8 @@ function RoleSwitch({
         type="button"
         onClick={() => onChange("trainer")}
         className={cn(
-          "font-medium",
-          compact ? "h-6 px-2 text-3xs" : "h-7 px-2.5 text-2xs",
+          "pressable font-medium",
+          compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs",
           role === "trainer" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground",
         )}
       >
