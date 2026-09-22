@@ -161,13 +161,13 @@ function readPersist(): string | null {
   return null;
 }
 
-function persist(s: PersistShape) {
+function persist(s: PersistShape, push = true) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     /* ignore quota */
   }
-  scheduleCloudPush(s);
+  if (push) scheduleCloudPush(s);
 }
 
 function snap(s: State): PersistShape {
@@ -422,7 +422,7 @@ export const useStudio = create<State>((set, get) => ({
         slots: mergeSlots(extra),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
-      persist(snap(get()));
+      persist(snap(get()), false);
       if (cloud.created) get().showToast("Вас приняли в зал.");
     });
     const initData = getTelegramInitData();
@@ -453,7 +453,7 @@ export const useStudio = create<State>((set, get) => ({
         joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
         slots: extra.length ? mergeSlots(extra) : get().slots,
       });
-      persist(snap(get()));
+      persist(snap(get()), false);
     });
   },
 
