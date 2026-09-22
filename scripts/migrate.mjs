@@ -26,6 +26,17 @@ if (!databaseUrl) {
   process.exit(0);
 }
 
+try {
+  const host = new URL(databaseUrl).hostname;
+  if (!host || host === "base" || host === "localhost") {
+    console.warn(`[migrate] skipping dummy DATABASE_URL host "${host}".`);
+    process.exit(0);
+  }
+} catch {
+  console.warn("[migrate] DATABASE_URL is not a valid URL — skipping.");
+  process.exit(0);
+}
+
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
 
 async function main() {
