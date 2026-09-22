@@ -15,6 +15,7 @@ import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
 import { initTelegram, getTelegramUser } from "@/lib/telegram";
+import { TRAINER_TG_ID } from "@/data/studio";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
   { id: "slots", label: "Слоты" },
@@ -60,8 +61,18 @@ export function MiniApp() {
 
   useEffect(() => {
     initTelegram();
-    setTgLocked(Boolean(getTelegramUser()));
-    hydrate();
+    let tries = 0;
+    const boot = () => {
+      const user = getTelegramUser();
+      setTgLocked(Boolean(user));
+      hydrate();
+      return Boolean(user) || String(user?.id ?? "") === String(TRAINER_TG_ID);
+    };
+    boot();
+    const timer = window.setInterval(() => {
+      tries += 1;
+      if (boot() || tries > 10) window.clearInterval(timer);
+    }, 150);
     void primeFoodDb();
     const onVis = () => {
       if (document.visibilityState === "visible") void primeFoodDb(true);
@@ -69,11 +80,12 @@ export function MiniApp() {
     const onOnline = () => void primeFoodDb(true);
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("online", onOnline);
-    const id = window.setInterval(() => void primeFoodDb(true), 5 * 60 * 1000);
+    const ping = window.setInterval(() => void primeFoodDb(true), 5 * 60 * 1000);
     return () => {
+      window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("online", onOnline);
-      window.clearInterval(id);
+      window.clearInterval(ping);
     };
   }, [hydrate]);
 

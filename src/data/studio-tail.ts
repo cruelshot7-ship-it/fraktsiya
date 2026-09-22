@@ -71,7 +71,7 @@ export function firstBookableDate() {
 }
 
 function capacityFor(time: string) {
-  return time >= "18:00" || time === "12:00" ? 3 : 2;
+  return time >= "16:00" ? 3 : 2;
 }
 
 export function generateWindow(from: Date, days = 21): Slot[] {
@@ -234,24 +234,24 @@ export function emptyClient(): Client {
   const today = isoDate(new Date());
   return {
     id: `c_${Date.now()}`,
-    firstName: "Новый",
-    lastName: "клиент",
-    weight: 70,
-    kbju: { calories: 2200, protein: 150, fat: 65, carbs: 220 },
-    programTitle: "База",
+    firstName: "",
+    lastName: "",
+    weight: 0,
+    kbju: { calories: 0, protein: 0, fat: 0, carbs: 0 },
+    programTitle: "",
     programWeeks: 8,
     programStart: today,
-    sessions: [{ id: "a", name: "День A", focus: "Полное тело", items: ["Присед 3×8", "Жим 3×8", "Тяга 3×8"] }],
-    trainDays: [0, 2, 4],
-    trainTimes: ["18:00"],
-    lastReportAt: today,
+    sessions: [],
+    trainDays: [],
+    trainTimes: [],
+    lastReportAt: null,
     streak: 0,
-    weightHistory: historyFrom(70, [0, 0, 0, 0, 0, 0, 0]),
+    weightHistory: [],
     lateCancels: 0,
-    sessionsLeft: 8,
+    sessionsLeft: 0,
     ledger: [],
     frozenUntil: null,
-    packExpiresAt: isoDate(addDays(new Date(), PACK_VALID_DAYS)),
+    packExpiresAt: null,
     telegramId: null,
     telegramUsername: null,
   };

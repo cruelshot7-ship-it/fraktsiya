@@ -113,7 +113,8 @@ type State = {
   addSlot: (date: string, time: string, capacity: number) => void;
   closeSlot: (id: string) => void;
   openSlot: (id: string) => void;
-  addClient: () => string;
+  deleteSlot: (id: string) => void;
+  addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string }) => string;
   removeClient: (id: string) => void;
   updateClient: (id: string, patch: Partial<Client>) => void;
   dismissSignal: (id: string) => void;
@@ -542,10 +543,22 @@ export const useStudio = create<State>((set, get) => ({
     set({ notifyPrefs: { ...get().notifyPrefs, ...patch } });
     persist(snap(get()));
   },
-  addClient: () => {
-    const c = emptyClient();
-    set({ clients: [...get().clients, c] });
+  addClient: (draft) => {
+    const firstName = draft.firstName.trim();
+    const lastName = draft.lastName.trim();
+    if (!firstName) {
+      get().showToast("Напишите имя.");
+      return "";
+    }
+    const c = {
+      ...emptyClient(),
+      firstName,
+      lastName,
+      telegramUsername: draft.telegramUsername?.replace(/^@/, "").trim() || null,
+    };
+    set({ clients: [...get().clients, c], activeClientId: c.id, sheetClientId: c.id });
     persist(snap(get()));
+    get().showToast("Клиент добавлен. Назначьте пакет и программу.");
     return c.id;
   },
   creditSessions: (clientId, amount) => {
@@ -591,9 +604,20 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
   addSlot: (date, time, capacity) => {
-    const slot = { id: `ex_${date}_${time}_${Date.now()}`, date, time, duration: 60, capacity };
-    set({ extraSlots: [...get().extraSlots, slot], slots: [...get().slots, slot] });
+    const id = `${date}_${time}`;
+    const slot = { id, date, time, duration: 60, capacity, seeded: 0 };
+    const extraSlots = [...get().extraSlots.filter((s) => s.id !== id), slot];
+    const closedSlotIds = get().closedSlotIds.filter((x) => x !== id);
+    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
     persist(snap(get()));
+  },
+  deleteSlot: (id) => {
+    get().cancelSlotBookings(id);
+    const extraSlots = get().extraSlots.filter((s) => s.id !== id);
+    const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
+    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
+    persist(snap(get()));
+    get().showToast("Слот удалён.");
   },
   closeSlot: (id) => {
     set({ closedSlotIds: [...new Set([...get().closedSlotIds, id])] });

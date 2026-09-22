@@ -25,8 +25,8 @@ export const MONTHS = [
   "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ] as const;
 
-export const WEEKDAY_TIMES = ["10:00", "12:00", "18:00", "19:00", "20:00"];
-export const SATURDAY_TIMES = ["10:00", "11:00", "16:00"];
+export const WEEKDAY_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
+export const SATURDAY_TIMES: string[] = [];
 
 export type Meal = {
   id: string;

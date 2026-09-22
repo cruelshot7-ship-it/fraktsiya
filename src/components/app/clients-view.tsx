@@ -33,6 +33,10 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const today = isoDate(new Date());
+  const [adding, setAdding] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [tgUser, setTgUser] = useState("");
 
   const rows = useMemo(
     () =>
@@ -87,7 +91,7 @@ export function ClientsView() {
       <div className="stagger-in flex flex-col gap-2">
         {visible.length === 0 ? (
           <p className="rounded-xl bg-card px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground shadow-border">
-            Пока никого. Добавьте клиента или дождитесь, пока человек откроет бота.
+            Пока никого. Клиент открывает вашего бота — появится здесь. Или добавьте имя вручную.
           </p>
         ) : (
           visible.map(({ client, flag, week }) => (
@@ -137,14 +141,54 @@ export function ClientsView() {
         )))}
       </div>
 
-      <button
-        type="button"
-        onClick={() => addClient()}
-        className="pressable flex h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline text-sm text-muted-foreground"
-      >
-        <Plus className="size-4" />
-        Добавить клиента
-      </button>
+      {adding ? (
+        <div className="rounded-xl bg-card p-4 shadow-border">
+          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground uppercase">Новый клиент</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Field label="Имя">
+              <input className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Анна" />
+            </Field>
+            <Field label="Фамилия">
+              <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Козлова" />
+            </Field>
+          </div>
+          <div className="mt-3">
+            <Field label="Telegram">
+              <input className={inputClass} value={tgUser} onChange={(e) => setTgUser(e.target.value)} placeholder="@username" />
+            </Field>
+          </div>
+          <p className="mt-2 text-tiny text-muted-foreground">
+            Программа и КБЖУ пустые — назначите сами в карточке. Когда человек откроет бота, профиль свяжется по @username.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" className="h-11 rounded-lg bg-secondary text-sm" onClick={() => setAdding(false)}>
+              Отмена
+            </button>
+            <button
+              type="button"
+              className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+              onClick={() => {
+                if (!addClient({ firstName, lastName, telegramUsername: tgUser })) return;
+                setFirstName("");
+                setLastName("");
+                setTgUser("");
+                setAdding(false);
+              }}
+            >
+              Добавить
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="pressable flex h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline text-sm text-muted-foreground"
+        >
+          <Plus className="size-4" />
+          Добавить клиента
+        </button>
+      )}
     </div>
   );
 }

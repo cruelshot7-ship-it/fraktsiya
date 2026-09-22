@@ -17,6 +17,7 @@ import {
 } from "@/data/studio";
 import { activeClient, slotTaken, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, EmptyHint } from "@/components/app/bits";
+import { TrainerSlots } from "@/components/app/trainer-slots";
 import { cn } from "@/lib/utils";
 
 export function SlotsView() {
@@ -85,7 +86,7 @@ function ClientSlots() {
         days={days}
         selectedDate={selectedDate}
         canPrev={canPrev}
-        label={`${start.getDate()}\u2013${end.getDate()} ${formatDayMonth(isoDate(end)).split(" ").slice(1).join(" ")}`}
+        label={`${start.getDate()}–${end.getDate()} ${formatDayMonth(isoDate(end)).split(" ").slice(1).join(" ")}`}
         onPrev={() => shiftWeek(-1)}
         onNext={() => shiftWeek(1)}
         onSelect={(key) => {
@@ -97,7 +98,7 @@ function ClientSlots() {
 
       <p className="font-display mb-2.5 text-xs tracking-[0.08em] text-muted-foreground uppercase">
         {formatDayMonth(selectedDate)}
-        {me.trainDays.includes((parseISODate(selectedDate).getDay() + 6) % 7) ? ` \u00b7 день ${me.firstName}` : ""}
+        {me.trainDays.includes((parseISODate(selectedDate).getDay() + 6) % 7) ? ` · день ${me.firstName}` : ""}
       </p>
 
       <div className="stagger-in flex flex-col gap-2">
@@ -243,15 +244,13 @@ function ClientSlots() {
   );
 }
 
-function TrainerSlots() {
-  return <ClientSlots />;
-}
 
 function WeekStrip({
   days,
   selectedDate,
   canPrev,
   label,
+  hideLabel,
   onPrev,
   onNext,
   onSelect,
@@ -261,6 +260,7 @@ function WeekStrip({
   selectedDate: string;
   canPrev: boolean;
   label: string;
+  hideLabel?: boolean;
   onPrev: () => void;
   onNext: () => void;
   onSelect: (key: string) => void;
@@ -268,15 +268,38 @@ function WeekStrip({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between pt-1 pb-2.5">
-        <button type="button" disabled={!canPrev} onClick={onPrev} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border disabled:opacity-30">
-          ‹
-        </button>
-        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">{label}</p>
-        <button type="button" onClick={onNext} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border">
-          ›
-        </button>
-      </div>
+      {hideLabel ? null : (
+        <div className="flex items-center justify-between pt-1 pb-2.5">
+          <button
+            type="button"
+            disabled={!canPrev}
+            onClick={onPrev}
+            className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border disabled:opacity-30"
+            aria-label="Предыдущая неделя"
+          >
+            ‹
+          </button>
+          <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">{label}</p>
+          <button
+            type="button"
+            onClick={onNext}
+            className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border"
+            aria-label="Следующая неделя"
+          >
+            ›
+          </button>
+        </div>
+      )}
+      {hideLabel ? (
+        <div className="mb-2 flex justify-end gap-1">
+          <button type="button" disabled={!canPrev} onClick={onPrev} className="grid size-7 place-items-center text-muted-foreground disabled:opacity-30">
+            ‹
+          </button>
+          <button type="button" onClick={onNext} className="grid size-7 place-items-center text-muted-foreground">
+            ›
+          </button>
+        </div>
+      ) : null}
       <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-4">
         {days.map((day, i) => {
           const selected = selectedDate === day.key;
@@ -292,10 +315,21 @@ function WeekStrip({
                 !selected && "bg-card",
               )}
             >
-              <span className="block text-2xs tracking-wide text-muted-foreground">{DOW[i]}</span>
+              <span className="block text-2xs tracking-wide text-muted-foreground">
+                {DOW[i]}
+                {mode === "client" && day.train ? " ·" : ""}
+              </span>
               <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
               <span className="mt-0.5 block text-3xs text-muted-foreground">
-                {day.total === 0 ? "—" : mode === "trainer" ? `${day.booked} зап.` : day.open ? `${day.open} своб.` : "—"}
+                {mode === "trainer"
+                  ? day.total === 0
+                    ? "—"
+                    : `${day.booked} зап.`
+                  : day.total === 0
+                    ? "—"
+                    : day.open
+                      ? `${day.open} своб.`
+                      : "—"}
               </span>
             </button>
           );
