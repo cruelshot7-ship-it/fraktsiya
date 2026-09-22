@@ -24,6 +24,7 @@ import {
   type Booking,
   type Client,
   type FoodLog,
+  type JoinRequest,
   type LiftLog,
   type Meal,
   type Notice,
@@ -61,6 +62,7 @@ type PersistShape = {
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
   trainerUsername?: string | null;
+  joinRequests?: JoinRequest[];
 };
 
 type State = {
@@ -87,10 +89,14 @@ type State = {
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
   trainerUsername: string | null;
+  joinRequests: JoinRequest[];
   inviteBlocked: boolean;
   toast: string | null;
   hydrate: () => void;
   refreshCloud: () => void;
+  sendJoinRequest: (message: string) => void;
+  approveJoin: (id: string) => void;
+  rejectJoin: (id: string) => void;
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
@@ -176,6 +182,7 @@ function snap(s: State): PersistShape {
     workoutLogs: s.workoutLogs,
     checks: s.checks,
     trainerUsername: s.trainerUsername,
+    joinRequests: s.joinRequests,
   };
 }
 
@@ -255,6 +262,7 @@ export const useStudio = create<State>((set, get) => ({
   workoutLogs: [],
   checks: {},
   trainerUsername: null,
+  joinRequests: [],
   inviteBlocked: false,
   toast: null,
 
@@ -274,6 +282,7 @@ export const useStudio = create<State>((set, get) => ({
     let workoutLogs: WorkoutLog[] = [];
     let checks: Record<string, string[]> = {};
     let trainerUsername: string | null = null;
+    let joinRequests: JoinRequest[] = [];
     try {
       const raw = readPersist();
       if (raw) {
@@ -323,6 +332,8 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs = parsed.workoutLogs ?? [];
         checks = parsed.checks ?? {};
         trainerUsername = parsed.trainerUsername ?? null;
+        joinRequests = parsed.joinRequests ?? [];
+        joinRequests = parsed.joinRequests ?? [];
       }
     } catch {
       /* keep defaults */
@@ -358,6 +369,7 @@ export const useStudio = create<State>((set, get) => ({
       workoutLogs,
       checks,
       trainerUsername,
+      joinRequests,
       inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
@@ -385,6 +397,7 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
+        joinRequests: payload.joinRequests ?? get().joinRequests,
         slots: mergeSlots(extra),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
@@ -410,10 +423,72 @@ export const useStudio = create<State>((set, get) => ({
         notices: payload.notices.length ? payload.notices : get().notices,
         workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
+        joinRequests: payload.joinRequests ?? get().joinRequests,
         slots: extra.length ? mergeSlots(extra) : get().slots,
       });
       persist(snap(get()));
     });
+  },
+
+  sendJoinRequest: (message) => {
+    const user = getTelegramUser();
+    if (!user) {
+      get().showToast("Откройте из Telegram.");
+      return;
+    }
+    const req: JoinRequest = {
+      id: `jr_${user.id}`,
+      telegramId: String(user.id),
+      telegramUsername: user.username ?? null,
+      firstName: user.first_name?.trim() || "Клиент",
+      lastName: user.last_name?.trim() || "",
+      message: message.trim().slice(0, 500),
+      at: new Date().toISOString(),
+      status: "pending",
+    };
+    const joinRequests = [req, ...get().joinRequests.filter((r) => r.telegramId !== req.telegramId)];
+    set({ joinRequests });
+    persist(snap(get()));
+    get().showToast("Заявка отправлена.");
+  },
+
+  approveJoin: (id) => {
+    const req = get().joinRequests.find((r) => r.id === id);
+    if (!req) return;
+    const exists = get().clients.some((c) => c.telegramId === req.telegramId);
+    const fresh = exists
+      ? null
+      : {
+          ...emptyClient(),
+          id: `tg_${req.telegramId}`,
+          firstName: req.firstName,
+          lastName: req.lastName,
+          telegramId: req.telegramId,
+          telegramUsername: req.telegramUsername,
+        };
+    const notice: Notice = {
+      id: `nt_ok_${req.telegramId}`,
+      audience: "client",
+      clientId: fresh?.id ?? id,
+      kind: "join",
+      title: "Вас приняли в зал",
+      body: "Можно записываться. Тренер назначит программу и пакет.",
+      at: new Date().toISOString(),
+    };
+    set({
+      clients: fresh ? [...get().clients, fresh] : get().clients,
+      joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r)),
+      notices: [notice, ...get().notices].slice(0, 40),
+    });
+    persist(snap(get()));
+    get().showToast(`${req.firstName} в зале.`);
+  },
+
+  rejectJoin: (id) => {
+    set({
+      joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "rejected" as const } : r)),
+    });
+    persist(snap(get()));
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),

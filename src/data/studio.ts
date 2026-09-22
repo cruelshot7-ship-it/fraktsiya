@@ -212,12 +212,23 @@ export type Notice = {
   id: string;
   audience: "trainer" | "client";
   clientId: string;
-  kind: "cancel" | "reschedule" | "book" | "alert" | "photo" | "food" | "wallet" | "waitlist" | "checkin" | "freeze" | "noshow";
+  kind: "cancel" | "reschedule" | "book" | "alert" | "photo" | "food" | "wallet" | "waitlist" | "checkin" | "freeze" | "noshow" | "join";
   title: string;
   body: string;
   at: string;
   late?: boolean;
   slotId?: string;
+};
+
+export type JoinRequest = {
+  id: string;
+  telegramId: string;
+  telegramUsername: string | null;
+  firstName: string;
+  lastName: string;
+  message: string;
+  at: string;
+  status: "pending" | "approved" | "rejected";
 };
 
 export type NotifyPrefs = {

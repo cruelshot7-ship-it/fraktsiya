@@ -11,6 +11,7 @@ import { ProgramView } from "@/components/app/program-view";
 import { NutritionView } from "@/components/app/nutrition-view";
 import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
+import { JoinGate } from "@/components/app/join-gate";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
@@ -114,10 +115,11 @@ export function MiniApp() {
 
   const title = useMemo(() => {
     if (role === "trainer") return TITLES[tab] ?? "Клиенты";
+    if (inviteBlocked) return "Заявка в зал";
     if (tab === "program") return client ? `${client.firstName} · сегодня` : TITLES.program;
     if (tab === "slots") return "Запись на тренировку";
     return TITLES[tab];
-  }, [tab, client, role]);
+  }, [tab, client, role, inviteBlocked]);
 
   return (
     <div className="flex min-h-dvh justify-center bg-background">
@@ -187,7 +189,7 @@ export function MiniApp() {
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
                   ? inviteBlocked
-                    ? "Нужна ссылка от тренера"
+                    ? "Сначала заявка тренеру"
                     : "Профиль появится, когда тренер добавит вас в зал"
                   : isFrozen(client)
                   ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
@@ -229,21 +231,7 @@ export function MiniApp() {
         >
           <div key={`${role}-${tab}`} className="pt-4">
             {inviteBlocked && role === "client" ? (
-              <div className="rounded-xl bg-card px-5 py-10 text-center shadow-border">
-                <p className="font-display text-xl">Вход только по ссылке</p>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Сейчас в зал нельзя зайти самостоятельно. Напишите тренеру — он пришлёт приглашение.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!openTrainerChat(trainerUsername)) showToast("Напишите тренеру в Telegram.");
-                  }}
-                  className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                >
-                  Написать тренеру
-                </button>
-              </div>
+              <JoinGate />
             ) : (
               <>
             {tab === "slots" ? <SlotsView /> : null}

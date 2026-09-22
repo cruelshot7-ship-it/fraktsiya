@@ -3,10 +3,10 @@ import { z } from "zod";
 import {
   emptyClient,
   hoursAgoIso,
-  INVITE_CODE,
   type Booking,
   type Client,
   type FoodLog,
+  type JoinRequest,
   type LiftLog,
   type Notice,
   type NotifyPrefs,
@@ -29,6 +29,7 @@ export type StudioPayload = {
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
   trainerUsername: string | null;
+  joinRequests: JoinRequest[];
 };
 
 const STUDIO_ID = "ruksha";
@@ -62,6 +63,7 @@ function emptyPayload(): StudioPayload {
     workoutLogs: [],
     checks: {},
     trainerUsername: null,
+    joinRequests: [],
   };
 }
 
@@ -102,6 +104,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
       ? Object.fromEntries(Object.entries(payload.checks).filter(([k]) => k.startsWith(`${id}:`)))
       : {},
     trainerUsername: payload.trainerUsername ?? null,
+    joinRequests: (payload.joinRequests ?? []).filter((r) => r.telegramId === telegramId),
   };
 }
 
@@ -142,6 +145,7 @@ function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): S
     extraSlots: mergeById(current.extraSlots, incoming.extraSlots),
     closedSlotIds: [...new Set([...current.closedSlotIds, ...incoming.closedSlotIds])],
     trainerUsername: incoming.trainerUsername || current.trainerUsername,
+    joinRequests: mergeById(current.joinRequests ?? [], incoming.joinRequests ?? []),
   };
 }
 
@@ -202,7 +206,6 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byName = uname
         ? payload.clients.find((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
         : undefined;
-      const invited = session.startParam.trim().toLowerCase() === INVITE_CODE.toLowerCase();
       if (!byId && byName) {
         payload = {
           ...payload,
@@ -214,31 +217,14 @@ export const pullStudio = createServerFn({ method: "POST" })
           "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
           [STUDIO_ID, JSON.stringify(payload)],
         );
-      } else if (!byId && invited) {
-        const fresh = clientFromTelegram(session.user);
-        const notice: Notice = {
-          id: `nt_new_${session.user.id}`,
-          audience: "trainer",
-          clientId: fresh.id,
-          kind: "alert",
-          title: `Новый клиент: ${fresh.firstName} ${fresh.lastName}`.trim(),
-          body: session.user.username
-            ? `@${session.user.username} открыл Mini App по ссылке. Начислите пакет.`
-            : "Открыл Mini App по ссылке. Начислите пакет и заполните программу.",
-          at: hoursAgoIso(0),
-        };
-        payload = {
-          ...payload,
-          clients: [...payload.clients, fresh],
-          notices: [notice, ...payload.notices].slice(0, 40),
-        };
-        created = true;
-        await sql.query(
-          "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-          [STUDIO_ID, JSON.stringify(payload)],
-        );
       } else if (!byId) {
-        return { ok: true, role: "client", created: false, blocked: true, payload: scopePayload(emptyPayload(), session.user.id) };
+        return {
+          ok: true,
+          role: "client",
+          created: false,
+          blocked: true,
+          payload: scopePayload(payload, session.user.id),
+        };
       }
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
     }
@@ -266,7 +252,46 @@ export const pushStudio = createServerFn({ method: "POST" })
     const sql = await getSql();
     const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
     const current = rows[0]?.payload ?? emptyPayload();
-    const next = session.role === "trainer" ? mergeTrainerPayload(current, incoming) : mergeClientWrite(current, incoming, session.user.id);
+    const known =
+      session.role === "trainer" ||
+      current.clients.some((c) => c.telegramId === session.user.id);
+    let next: StudioPayload;
+    if (session.role === "trainer") {
+      next = mergeTrainerPayload(current, incoming);
+    } else if (!known) {
+      const req = (incoming.joinRequests ?? []).find((r) => r.telegramId === session.user.id && r.message?.trim());
+      if (!req) return { ok: true };
+      const pending = (current.joinRequests ?? []).some(
+        (r) => r.telegramId === session.user.id && r.status === "pending",
+      );
+      if (pending) return { ok: true };
+      const saved: JoinRequest = {
+        id: `jr_${session.user.id}`,
+        telegramId: session.user.id,
+        telegramUsername: session.user.username,
+        firstName: req.firstName || session.user.firstName,
+        lastName: req.lastName || session.user.lastName,
+        message: req.message.trim().slice(0, 500),
+        at: hoursAgoIso(0),
+        status: "pending",
+      };
+      const notice: Notice = {
+        id: `nt_join_${session.user.id}`,
+        audience: "trainer",
+        clientId: saved.id,
+        kind: "join",
+        title: `Заявка: ${saved.firstName} ${saved.lastName}`.trim(),
+        body: saved.message,
+        at: saved.at,
+      };
+      next = {
+        ...current,
+        joinRequests: [saved, ...(current.joinRequests ?? [])],
+        notices: [notice, ...current.notices].slice(0, 40),
+      };
+    } else {
+      next = mergeClientWrite(current, incoming, session.user.id);
+    }
 
     await sql.query(
       "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
