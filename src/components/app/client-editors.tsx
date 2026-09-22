@@ -6,7 +6,7 @@ import {
   type Client,
   type ProgramSession,
 } from "@/data/studio";
-import { Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
+import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 
 export function Kpi({
