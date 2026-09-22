@@ -238,3 +238,65 @@ function ClientSlots() {
     </div>
   );
 }
+
+function TrainerSlots() {
+  return <ClientSlots />;
+}
+
+function WeekStrip({
+  days,
+  selectedDate,
+  canPrev,
+  label,
+  onPrev,
+  onNext,
+  onSelect,
+  mode,
+}: {
+  days: { key: string; date: Date; open: number; total: number; booked: number; train: boolean }[];
+  selectedDate: string;
+  canPrev: boolean;
+  label: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onSelect: (key: string) => void;
+  mode: "client" | "trainer";
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between pt-1 pb-2.5">
+        <button type="button" disabled={!canPrev} onClick={onPrev} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border disabled:opacity-30">
+          ‹
+        </button>
+        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">{label}</p>
+        <button type="button" onClick={onNext} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border">
+          ›
+        </button>
+      </div>
+      <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-4">
+        {days.map((day, i) => {
+          const selected = selectedDate === day.key;
+          return (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => onSelect(day.key)}
+              className={cn(
+                "min-w-11 flex-1 rounded-xl px-1 py-2 text-center shadow-border",
+                selected && mode === "trainer" && "glow-ok bg-ok-dim",
+                selected && mode === "client" && "glow-alert bg-primary-dim",
+                !selected && "bg-card",
+              )}
+            >
+              <span className="block text-2xs tracking-wide text-muted-foreground">{DOW[i]}</span>
+              <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
+              <span className="mt-0.5 block text-3xs text-muted-foreground">
+                {day.total === 0 ? "—" : mode === "trainer" ? `${day.booked} зап.` : day.open ? `${day.open} своб.` : "—"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
