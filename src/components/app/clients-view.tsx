@@ -403,7 +403,7 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
               <div className="mt-3 grid grid-cols-4 gap-1.5">
                 {PACKS.map((n) => (
                   <button
-                    key={n}
+                    key={`p${n}`}
                     type="button"
                     onClick={() => creditSessions(client.id, n)}
                     className="pressable h-11 rounded-lg bg-secondary text-sm font-medium"
@@ -417,6 +417,27 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
                   className="pressable h-11 rounded-lg bg-secondary text-sm font-medium"
                 >
                   +1
+                </button>
+              </div>
+              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                {PACKS.map((n) => (
+                  <button
+                    key={`m${n}`}
+                    type="button"
+                    disabled={client.sessionsLeft <= 0}
+                    onClick={() => creditSessions(client.id, -n)}
+                    className="pressable h-11 rounded-lg bg-secondary text-sm font-medium text-muted-foreground disabled:opacity-40"
+                  >
+                    −{n}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={client.sessionsLeft <= 0}
+                  onClick={() => creditSessions(client.id, -1)}
+                  className="pressable h-11 rounded-lg bg-secondary text-sm font-medium text-muted-foreground disabled:opacity-40"
+                >
+                  −1
                 </button>
               </div>
               <div className="mt-2 flex gap-1.5">
@@ -440,10 +461,15 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
                 </button>
                 <button
                   type="button"
-                  onClick={() => creditSessions(client.id, -1)}
-                  className="pressable h-11 shrink-0 rounded-lg bg-secondary px-3 text-sm"
+                  disabled={client.sessionsLeft <= 0}
+                  onClick={() => {
+                    const n = Number(customAmt);
+                    if (!n) return;
+                    creditSessions(client.id, -n);
+                  }}
+                  className="pressable h-11 shrink-0 rounded-lg bg-secondary px-3 text-sm disabled:opacity-40"
                 >
-                  −1
+                  Списать
                 </button>
               </div>
               <div className="mt-4">

@@ -680,9 +680,23 @@ export const useStudio = create<State>((set, get) => ({
     return c.id;
   },
   creditSessions: (clientId, amount) => {
-    const txn = makeTxn(clientId, "credit", amount, `Пакет +${amount}`);
-    set({ clients: withTxn(get().clients, txn) });
+    if (!amount) return;
+    const who = get().clients.find((c) => c.id === clientId);
+    if (!who) return;
+    const txn = makeTxn(
+      clientId,
+      amount > 0 ? "credit" : "adjust",
+      amount,
+      amount > 0 ? `Зачисление ${amount}` : `Списание ${Math.abs(amount)}`,
+    );
+    let next = withTxn(get().clients, txn);
+    if (amount > 0) {
+      const until = isoDate(addDays(new Date(), PACK_VALID_DAYS));
+      next = next.map((c) => (c.id === clientId ? { ...c, packExpiresAt: until } : c));
+    }
+    set({ clients: next });
     persist(snap(get()));
+    get().showToast(amount > 0 ? `Зачислено ${amount}` : `Списано ${Math.abs(amount)}`);
   },
   freezeClient: (clientId, days) => {
     set({
