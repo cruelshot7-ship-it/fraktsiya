@@ -147,6 +147,8 @@ function clientKey(c: Client) {
   if (c.telegramId) return `tg:${c.telegramId}`;
   const u = (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
   if (u) return `u:${u}`;
+  const p = (c.phone ?? "").replace(/\D/g, "");
+  if (p.length >= 10) return `p:${p}`;
   return `id:${c.id}`;
 }
 

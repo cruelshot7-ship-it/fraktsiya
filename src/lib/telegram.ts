@@ -83,6 +83,18 @@ export function openTrainerChat(username: string | null | undefined) {
   return true;
 }
 
+export function openPhone(phone: string | null | undefined) {
+  const d = (phone ?? "").replace(/\D/g, "");
+  if (d.length < 10) return false;
+  const e164 =
+    d.length === 11 && d.startsWith("8") ? `7${d.slice(1)}` : d.length === 10 ? `7${d}` : d;
+  const url = `tel:+${e164}`;
+  const tg = getTelegram();
+  if (tg?.openLink) tg.openLink(url);
+  else window.open(url, "_self");
+  return true;
+}
+
 function bindVisualViewport() {
   if (typeof window === "undefined") return;
   const apply = () => {

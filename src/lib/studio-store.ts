@@ -126,7 +126,7 @@ type State = {
   closeSlot: (id: string) => void;
   openSlot: (id: string) => void;
   deleteSlot: (id: string) => void;
-  addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string }) => string;
+  addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string; phone?: string }) => string;
   removeClient: (id: string) => void;
   updateClient: (id: string, patch: Partial<Client>) => void;
   dismissSignal: (id: string) => void;
@@ -679,11 +679,23 @@ export const useStudio = create<State>((set, get) => ({
       get().showToast("Этот @username уже в зале.");
       return "";
     }
+    const phoneDigits = (draft.phone ?? "").replace(/\D/g, "");
+    const phone =
+      phoneDigits.length === 11 && phoneDigits.startsWith("8")
+        ? `7${phoneDigits.slice(1)}`
+        : phoneDigits.length === 10
+          ? `7${phoneDigits}`
+          : phoneDigits || "";
+    if (phone.length >= 10 && get().clients.some((c) => (c.phone ?? "").replace(/\D/g, "").endsWith(phone.slice(-10)))) {
+      get().showToast("Этот номер уже в зале.");
+      return "";
+    }
     const c = {
       ...emptyClient(),
       firstName,
       lastName,
       telegramUsername: draft.telegramUsername?.replace(/^@/, "").trim() || null,
+      phone: phone || null,
     };
     set({ clients: [...get().clients, c], activeClientId: c.id, sheetClientId: c.id });
     persist(snap(get()));

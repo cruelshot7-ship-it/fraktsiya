@@ -5,6 +5,7 @@ import {
   daysAgoPhrase,
   dayKbju,
   formatDayMonth,
+  formatPhone,
   FREEZE_OPTIONS,
   initials,
   isoDate,
@@ -20,7 +21,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
-import { openTrainerChat } from "@/lib/telegram";
+import { openPhone, openTrainerChat } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -40,6 +41,7 @@ export function ClientsView() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
+  const [phone, setPhone] = useState("");
 
   const rows = useMemo(
     () =>
@@ -97,10 +99,10 @@ export function ClientsView() {
       <div className="stagger-in flex flex-col gap-2">
         {visible.length === 0 ? (
           <p className="rounded-xl bg-card px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground shadow-border">
-            Пока никого. Добавьте клиента: имя и @username.
+            Пока никого. Добавьте клиента: имя и телефон или @username.
           </p>
         ) : (
-          visible.map(({ client, flag, week }) => (
+          visible.map(({ client, flag }) => (
           <button
             key={client.id}
             type="button"
@@ -127,8 +129,11 @@ export function ClientsView() {
                   {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
                 </div>
                 <p className="mt-0.5 truncate text-tiny text-muted-foreground">
-                  {client.programTitle} · неделя {week}
-                  {client.trainTimes[0] ? ` · ${client.trainTimes[0]}` : ""}
+                  {client.telegramUsername
+                    ? `@${client.telegramUsername}`
+                    : client.phone
+                      ? formatPhone(client.phone)
+                      : client.programTitle || "без контакта"}
                   {` · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`}
                 </p>
                 <div className="mt-2.5">
@@ -158,13 +163,22 @@ export function ClientsView() {
               <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Козлова" />
             </Field>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Field label="Телефон">
+              <input
+                className={inputClass}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+7 900 000-00-00"
+                inputMode="tel"
+              />
+            </Field>
             <Field label="Telegram">
               <input className={inputClass} value={tgUser} onChange={(e) => setTgUser(e.target.value)} placeholder="@username" />
             </Field>
           </div>
           <p className="mt-2 text-tiny text-muted-foreground">
-            Программа и КБЖУ пустые — назначите сами в карточке. Когда человек откроет бота, профиль свяжется по @username.
+            Достаточно телефона или @ — как удобно. Программу и пакет назначите в карточке.
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button type="button" className="h-11 rounded-lg bg-secondary text-sm" onClick={() => setAdding(false)}>
@@ -174,10 +188,11 @@ export function ClientsView() {
               type="button"
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
-                if (!addClient({ firstName, lastName, telegramUsername: tgUser })) return;
+                if (!addClient({ firstName, lastName, telegramUsername: tgUser, phone })) return;
                 setFirstName("");
                 setLastName("");
                 setTgUser("");
+                setPhone("");
                 setAdding(false);
               }}
             >
@@ -495,9 +510,12 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
                 type="button"
                 className="pressable h-14 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
                 onClick={() => {
-                  if (!openTrainerChat(client.telegramUsername)) {
-                    showToast("Нет @username. Клиент откроет бота — тогда появится чат.");
+                  if (client.telegramUsername) {
+                    openTrainerChat(client.telegramUsername);
+                    return;
                   }
+                  if (openPhone(client.phone)) return;
+                  showToast("Нет телефона и @username — допишите в карточке.");
                 }}
               >
                 Написать
