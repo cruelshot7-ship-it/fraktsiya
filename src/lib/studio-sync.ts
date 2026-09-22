@@ -226,6 +226,37 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
   };
 }
 
+async function loadState(): Promise<StudioPayload> {
+  const { loadRemote } = await import("@/lib/studio-remote");
+  const remote = await loadRemote();
+  if (remote) return normalizePayload(remote);
+  try {
+    const { getSql, dbSource } = await import("@/lib/db");
+    if (dbSource !== "neon") return emptyPayload();
+    const sql = await getSql();
+    const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
+    return normalizePayload(rows[0]?.payload);
+  } catch {
+    return emptyPayload();
+  }
+}
+
+async function saveState(payload: StudioPayload) {
+  const { saveRemote } = await import("@/lib/studio-remote");
+  await saveRemote(payload);
+  try {
+    const { getSql, dbSource } = await import("@/lib/db");
+    if (dbSource !== "neon") return;
+    const sql = await getSql();
+    await sql.query(
+      "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+      [STUDIO_ID, JSON.stringify(payload)],
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 export const pullStudio = createServerFn({ method: "POST" })
   .validator(PullInput)
   .handler(async ({ data }): Promise<{ ok: boolean; role?: "trainer" | "client"; payload?: StudioPayload; created?: boolean; blocked?: boolean; reason?: string }> => {
@@ -233,10 +264,7 @@ export const pullStudio = createServerFn({ method: "POST" })
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
 
-    const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
-    const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
-    let payload = normalizePayload(rows[0]?.payload);
+    let payload = await loadState();
     let created = false;
 
     if (session.role === "client") {
@@ -258,10 +286,7 @@ export const pullStudio = createServerFn({ method: "POST" })
             c.id === match.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
           ),
         };
-        await sql.query(
-          "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-          [STUDIO_ID, JSON.stringify(payload)],
-        );
+        await saveState(payload);
       } else if (!byId) {
         return {
           ok: true,
@@ -276,10 +301,7 @@ export const pullStudio = createServerFn({ method: "POST" })
 
     if (session.user.username && payload.trainerUsername !== session.user.username) {
       payload = { ...payload, trainerUsername: session.user.username };
-      await sql.query(
-        "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-        [STUDIO_ID, JSON.stringify(payload)],
-      );
+      await saveState(payload);
     }
 
     return { ok: true, role: "trainer", payload };
@@ -293,10 +315,7 @@ export const pushStudio = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     const incoming = (data.payload ?? emptyPayload()) as StudioPayload;
-    const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
-    const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
-    const current = normalizePayload(rows[0]?.payload);
+    const current = await loadState();
     const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
     const known =
       session.role === "trainer" ||
@@ -328,10 +347,7 @@ export const pushStudio = createServerFn({ method: "POST" })
       next = mergeClientWrite(bound, incoming, session.user.id);
     }
 
-    await sql.query(
-      "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-      [STUDIO_ID, JSON.stringify(next)],
-    );
+    await saveState(next);
     return { ok: true };
   });
 
