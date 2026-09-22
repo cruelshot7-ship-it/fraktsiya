@@ -221,6 +221,11 @@ export function ClientsView() {
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
                 if (!addClient({ firstName, lastName, telegramUsername: tgUser, phone })) return;
+                const handle = tgUser.replace(/^@/, "").trim();
+                const link = "https://t.me/ruksha_discipline_bot";
+                openTelegramUrl(
+                  `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Привет! Зал Ruksha: ${link} — нажми Старт`)}`,
+                );
                 setFirstName("");
                 setLastName("");
                 setTgUser("");

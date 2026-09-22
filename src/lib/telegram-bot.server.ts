@@ -244,4 +244,10 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   }
 }
 
-export { BOT_USERNAME, APP_URL };
+export async function sendBotLink(telegramId: string, text: string) {
+  return tg("sendMessage", {
+    chat_id: telegramId,
+    text,
+    reply_markup: webAppKeyboard("Открыть зал"),
+  });
+}

@@ -368,6 +368,17 @@ export const decideJoinFn = createServerFn({ method: "POST" })
     return bot.decideJoin(data.telegramId, data.approve);
   });
 
+export const sendBotLinkFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), telegramId: z.string(), text: z.string() }))
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session || session.role !== "trainer") return { ok: false };
+    const bot = await import("@/lib/telegram-bot.server");
+    const res = await bot.sendBotLink(data.telegramId, data.text);
+    return { ok: Boolean(res.ok) };
+  });
+
 export const pushStudio = createServerFn({ method: "POST" })
   .validator(PushInput)
   .handler(async ({ data }): Promise<{ ok: boolean; reason?: string }> => {

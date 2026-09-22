@@ -12,6 +12,10 @@ import {
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
+import { BOT_USERNAME } from "@/data/studio";
+import { openTelegramUrl } from "@/lib/telegram";
+
+const SLOT_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
 
 export function TrainerSlots() {
   const selectedDate = useStudio((s) => s.selectedDate);
@@ -23,6 +27,7 @@ export function TrainerSlots() {
   const shiftWeek = useStudio((s) => s.shiftWeek);
   const selectDay = useStudio((s) => s.selectDay);
   const addSlot = useStudio((s) => s.addSlot);
+  const showToast = useStudio((s) => s.showToast);
   const closeSlot = useStudio((s) => s.closeSlot);
   const cancelSlotBookings = useStudio((s) => s.cancelSlotBookings);
   const bookSlot = useStudio((s) => s.bookSlot);
@@ -131,8 +136,16 @@ export function TrainerSlots() {
                               key={c.id}
                               type="button"
                               onClick={() => {
-                                bookSlot(slot.id, c.id);
+                                const ok = bookSlot(slot.id, c.id);
                                 setPickId(null);
+                                if (ok) {
+                                  const link = `https://t.me/${BOT_USERNAME}`;
+                                  if (c.telegramUsername) {
+                                    openTelegramUrl(
+                                      `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Запись ${slot.time} · ${link}`)}`,
+                                    );
+                                  }
+                                }
                               }}
                               className="pressable flex h-10 items-center justify-between rounded-lg bg-secondary px-3 text-sm"
                             >
@@ -171,9 +184,24 @@ export function TrainerSlots() {
       {adding ? (
         <div className="mt-3 rounded-xl bg-card p-4 shadow-border">
           <p className="font-display text-xs tracking-[0.08em] text-muted-foreground uppercase">Новый слот</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {SLOT_TIMES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTime(t)}
+                className={cn(
+                  "h-9 rounded-lg px-2.5 text-xs font-medium",
+                  time === t ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Field label="Время">
-              <input className={inputClass} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+              <input className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} placeholder="18:00" inputMode="numeric" />
             </Field>
             <Field label="Мест">
               <input className={inputClass} inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} />
@@ -188,8 +216,12 @@ export function TrainerSlots() {
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
                 const capacity = Number(cap);
-                if (!time || !capacity) return;
-                addSlot(selectedDate, time, capacity);
+                const hhmm = /^\d{1,2}:\d{2}$/.test(time.trim()) ? time.trim().padStart(5, "0") : "";
+                if (!hhmm || !capacity) {
+                  showToast("Укажите время и число мест.");
+                  return;
+                }
+                addSlot(selectedDate, hhmm, capacity);
                 setAdding(false);
               }}
             >

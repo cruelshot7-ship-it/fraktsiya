@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  BOT_USERNAME,
   addDays,
   DEFAULT_NOTIFY,
   DOW,
@@ -40,7 +41,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { decideJoinFn, dropTombstones, isRemovedClient, mergeClients, requestJoin, tombstonesFor } from "@/lib/studio-sync";
+import { decideJoinFn, dropTombstones, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
@@ -190,6 +191,24 @@ function snap(s: State): PersistShape {
     joinRequests: s.joinRequests,
     removedClientIds: s.removedClientIds,
   };
+}
+
+function mergeExtraSlots(a: Slot[], b: Slot[]) {
+  const map = new Map(a.map((s) => [s.id, s]));
+  for (const s of b) map.set(s.id, s);
+  return [...map.values()];
+}
+
+function mergeByIdLocal<T extends { id: string }>(a: T[], b: T[]) {
+  const map = new Map(a.map((x) => [x.id, x]));
+  for (const x of b) map.set(x.id, x);
+  return [...map.values()];
+}
+
+function pingClient(telegramId: string | null | undefined, text: string) {
+  const initData = getTelegramInitData();
+  if (!initData || !telegramId) return;
+  void sendBotLinkFn({ data: { initData, telegramId, text } }).catch(() => undefined);
 }
 
 function mergeSlots(extra: Slot[]) {
@@ -392,7 +411,7 @@ export const useStudio = create<State>((set, get) => ({
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
       const payload = cloud.payload;
-      const extra = payload.extraSlots ?? [];
+      const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
       const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
       const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
         (c) => !isRemovedClient(c, removed),
@@ -406,11 +425,11 @@ export const useStudio = create<State>((set, get) => ({
           cloud.role === "client" && payload.clients[0]
             ? payload.clients[0].id
             : get().activeClientId,
-        bookings: payload.bookings,
+        bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
         food: payload.food,
         lifts: payload.lifts,
         extraSlots: extra,
-        closedSlotIds: payload.closedSlotIds,
+        closedSlotIds: [...new Set([...get().closedSlotIds, ...(payload.closedSlotIds ?? [])])],
         notices: payload.notices,
         dismissedSignalIds: payload.dismissedSignalIds,
         notifyPrefs: payload.notifyPrefs,
@@ -433,7 +452,7 @@ export const useStudio = create<State>((set, get) => ({
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
       const payload = cloud.payload;
-      const extra = payload.extraSlots ?? get().extraSlots;
+      const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
       const removed = [...new Set([...(get().removedClientIds ?? []), ...(payload.removedClientIds ?? [])])];
       const merged = (cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients)).filter(
         (c) => !isRemovedClient(c, removed),
@@ -446,12 +465,13 @@ export const useStudio = create<State>((set, get) => ({
         food: payload.food.length ? payload.food : get().food,
         lifts: payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
-        closedSlotIds: payload.closedSlotIds.length ? payload.closedSlotIds : get().closedSlotIds,
+        closedSlotIds: payload.closedSlotIds.length ? [...new Set([...get().closedSlotIds, ...payload.closedSlotIds])] : get().closedSlotIds,
         notices: payload.notices.length ? payload.notices : get().notices,
         workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: mergeJoin(get().joinRequests, payload.joinRequests ?? []),
-        slots: extra.length ? mergeSlots(extra) : get().slots,
+        slots: mergeSlots(extra),
+        bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
       });
       persist(snap(get()), false);
     });
@@ -640,6 +660,12 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     hapticNotify("success");
     const dow = DOW[(parseISODate(slot.date).getDay() + 6) % 7].toLowerCase();
+    if (role === "trainer") {
+      pingClient(
+        client.telegramId,
+        `Тренер записал вас: ${formatLongDate(slot.date)} · ${slot.time}\nОткройте зал: https://t.me/${BOT_USERNAME}`,
+      );
+    }
     get().showToast(
       role === "trainer"
         ? `Запись: ${client.firstName} · ${dow} ${slot.time}`
@@ -1192,6 +1218,10 @@ export const useStudio = create<State>((set, get) => ({
     });
     persist(snap(get()));
     get().showToast("Клиент добавлен. Назначьте пакет и программу.");
+    pingClient(
+      client.telegramId,
+      `Вас добавили в зал Ruksha Discipline.\nОткройте бота: https://t.me/${BOT_USERNAME}`,
+    );
     return client.id;
   },
 
