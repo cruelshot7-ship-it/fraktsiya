@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Camera, Keyboard, ScanLine, X } from "lucide-react";
 import { DEMO_BARCODES, scaleKbju, type ScanProduct } from "@/data/studio";
 import {
@@ -241,11 +242,8 @@ export function ScannerSheet({
     ? Boolean((draftName.trim() || readyProduct?.name) && draftCal.trim() !== "" && Number.isFinite(Number(draftCal)))
     : Boolean(readyProduct?.name.trim()) && Number.isFinite(readyProduct?.per100.calories ?? NaN);
 
-  return (
-    <div
-      className="fixed inset-x-0 z-50 flex justify-center bg-background/80"
-      style={{ top: "var(--vv-offset, 0px)", height: "var(--vv-height, 100dvh)" }}
-    >
+  const sheet = (
+    <div className="fixed inset-0 z-[200] flex justify-center bg-background">
       <div className="flex h-full w-full max-w-app flex-col bg-background pb-[max(0.5rem,env(safe-area-inset-bottom,0px),var(--keyboard,0px))]">
         <div className="sheet-in flex min-h-0 flex-1 flex-col px-5 pt-5">
           <div className="flex items-center justify-between gap-3">
@@ -550,4 +548,6 @@ export function ScannerSheet({
       </div>
     </div>
   );
+  if (typeof document === "undefined") return sheet;
+  return createPortal(sheet, document.body);
 }
