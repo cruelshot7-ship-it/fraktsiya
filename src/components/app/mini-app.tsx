@@ -44,6 +44,7 @@ const TITLES: Record<TabId, string> = {
 };
 
 export function MiniApp() {
+  const ready = useStudio((s) => s.ready);
   const hydrate = useStudio((s) => s.hydrate);
   const refreshCloud = useStudio((s) => s.refreshCloud);
   const tab = useStudio((s) => s.tab);
@@ -205,7 +206,7 @@ export function MiniApp() {
         </header>
         )}
 
-        {role === "client" && !sheetClientId && !inviteBlocked ? (
+        {role === "client" && ready && !sheetClientId && !inviteBlocked ? (
           <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
@@ -232,8 +233,13 @@ export function MiniApp() {
             role === "trainer" ? "pb-24" : "pb-10",
           )}
         >
-          <div key={`${role}-${tab}`} className="pt-4">
-            {inviteBlocked && role === "client" ? (
+          <div key={`${role}-${tab}-${ready}`} className="pt-4">
+            {!ready ? (
+              <div className="rounded-xl bg-card px-5 py-12 text-center shadow-border">
+                <p className="font-display text-xl">Открываем зал</p>
+                <p className="mt-3 text-sm text-muted-foreground">Проверяем вход и подгружаем данные.</p>
+              </div>
+            ) : inviteBlocked && role === "client" ? (
               <JoinGate />
             ) : (
               <>
