@@ -66,6 +66,30 @@ export function MiniApp() {
   const [tgLocked, setTgLocked] = useState(false);
 
   useEffect(() => {
+    if (!ready) return;
+    const st = useStudio.getState();
+    if (st.role === "client") {
+      const today = new Date();
+      const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const start = new Date(today);
+      const offset = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - offset);
+      const weekStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+      useStudio.setState({
+        tab: st.tab === "clients" || st.tab === "signals" || st.tab === "slots" ? "program" : st.tab,
+        selectedDate: iso,
+        weekStart,
+        notices: st.notices.filter((n) => !st.dismissedSignalIds.includes(n.id)),
+      });
+    }
+    const unsub = useStudio.subscribe((s) => {
+      const next = s.notices.filter((n) => !s.dismissedSignalIds.includes(n.id));
+      if (next.length !== s.notices.length) useStudio.setState({ notices: next });
+    });
+    return unsub;
+  }, [ready]);
+
+  useEffect(() => {
     initTelegram();
     let tries = 0;
     let booted = false;
