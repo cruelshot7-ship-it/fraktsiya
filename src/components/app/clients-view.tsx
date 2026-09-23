@@ -85,7 +85,7 @@ export function ClientsView() {
         className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
       >
         <p className="text-sm font-medium">Как видит новичок</p>
-        <p className="mt-1 text-tiny text-muted-foreground">Демо пробной записи. Клиентам не показывается.</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Бесплатная пробная, 8 за 200 и 12 за 265. Клиентам не показывается.</p>
       </button>
       {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
         <div className="flex flex-col gap-2">

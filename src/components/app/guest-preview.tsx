@@ -9,9 +9,9 @@ const FREQ = ["2", "3", "4"] as const;
 const LEVELS = ["Первый раз", "Был перерыв", "Тренируюсь"] as const;
 
 const OFFERS = [
-  { id: "trial", title: "Пробная", note: "знакомство и зал" },
-  { id: "8", title: "8 занятий", note: "пакет на месяц" },
-  { id: "12", title: "12 занятий", note: "если ходишь стабильно" },
+  { id: "trial", title: "Пробная", price: "0", unit: "BYN", note: "без пакета и обязательств" },
+  { id: "8", title: "8 занятий", price: "200", unit: "BYN", note: "25 за тренировку" },
+  { id: "12", title: "12 занятий", price: "265", unit: "BYN", note: "22 за тренировку" },
 ];
 
 export function GuestPreview() {
@@ -57,26 +57,41 @@ export function GuestPreview() {
             Закрыть
           </button>
         </div>
-        <h1 className="font-display mt-3 text-4xl leading-none tracking-wide">Пробная</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {STUDIO.trainer}, {STUDIO.city}. Зал, программа и питание — после первой встречи. Сейчас только запись на окно.
+        <h1 className="font-display mt-4 text-4xl leading-[0.95] tracking-wide">
+          Первая
+          <br />
+          бесплатно
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {STUDIO.trainer}, {STUDIO.city}. Приходи без пакета: зал, техника и понятно, твой ли это формат. Понравится — берёшь 8 или 12.
         </p>
 
-        <div className="mt-5">
-          <SectionLabel>Как можно зайти</SectionLabel>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {OFFERS.map((offer) => (
-              <div key={offer.id} className="rounded-xl bg-card px-2 py-3 text-center shadow-border">
-                <p className="font-display text-sm leading-tight">{offer.title}</p>
-                <p className="mt-1 text-3xs text-muted-foreground">{offer.note}</p>
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          {OFFERS.map((offer) => {
+            const lead = offer.id === "trial";
+            const best = offer.id === "12";
+            return (
+              <div
+                key={offer.id}
+                className={cn(
+                  "rounded-xl px-2 py-3 text-center shadow-border",
+                  lead ? "glow-ok bg-ok-dim" : best ? "glow-alert bg-card" : "bg-card",
+                )}
+              >
+                <p className="text-3xs tracking-wide text-muted-foreground uppercase">{offer.title}</p>
+                <p className="font-display mt-1 text-2xl leading-none">
+                  {offer.price}
+                  <span className="ml-0.5 text-xs">{offer.unit}</span>
+                </p>
+                <p className="mt-1.5 text-3xs leading-snug text-muted-foreground">{offer.note}</p>
               </div>
-            ))}
-          </div>
-          <p className="mt-2 text-3xs text-muted-foreground">Цены не стоят — впишешь свои, когда скажешь.</p>
+            );
+          })}
         </div>
+        <p className="mt-2 text-tiny text-muted-foreground">12 занятий выгоднее на 35 BYN, чем тот же объём по цене восьмёрки.</p>
 
-        <div className="mt-5">
-          <SectionLabel>Свободные окна</SectionLabel>
+        <div className="mt-6">
+          <SectionLabel>Выбери окно</SectionLabel>
           <div className="mt-2 flex flex-col gap-2">
             {openings.map((slot) => (
               <button
@@ -103,11 +118,12 @@ export function GuestPreview() {
         {sent && picked ? (
           <div className="mt-5 rounded-xl bg-card p-4 shadow-border glow-ok">
             <SectionLabel>Так придёт заявка</SectionLabel>
-            <p className="mt-2 text-sm">Пробная · {picked.label}</p>
+            <p className="mt-2 font-display text-lg leading-tight">Бесплатная пробная</p>
+            <p className="mt-1 text-sm">{picked.label}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {goal} · {freq} раза в неделю · {level}
             </p>
-            <p className="mt-3 text-tiny text-muted-foreground">Никому не отправлено. Это только показ.</p>
+            <p className="mt-3 text-tiny text-muted-foreground">Показ. В бот это пока не уходит.</p>
           </div>
         ) : null}
 
@@ -119,7 +135,7 @@ export function GuestPreview() {
             showToast("Демо. Заявка никуда не ушла.");
           }}
         >
-          Хочу пробную
+          Записаться бесплатно
         </button>
       </div>
     </div>
