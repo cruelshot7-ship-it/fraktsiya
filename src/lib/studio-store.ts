@@ -127,7 +127,7 @@ type State = {
   removeFood: (logId: string) => void;
   addLift: (exercise: string, weight: number, reps: number, sets: number) => void;
   toggleCheck: (item: string) => void;
-  completeWorkout: (totalItems: number, minutes?: number) => void;
+  completeWorkout: (totalItems: number, minutes?: number, startedAt?: string) => void;
   setWeight: (kg: number) => void;
   addSlot: (date: string, time: string, capacity: number) => void;
   closeSlot: (id: string) => void;
@@ -1111,7 +1111,7 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
 
-  completeWorkout: (totalItems, minutes) => {
+  completeWorkout: (totalItems, minutes, startedAt) => {
     const { activeClientId, clients, bookings, checks, workoutLogs, lifts } = get();
     const client = clients.find((c) => c.id === activeClientId);
     if (!client) return;
@@ -1123,7 +1123,7 @@ export const useStudio = create<State>((set, get) => ({
       return;
     }
     const booking = bookings.find((b) => b.clientId === client.id && b.date === today);
-    const mins = minutes ?? booking?.duration ?? 60;
+    const mins = Math.max(1, Math.round(minutes ?? booking?.duration ?? 60));
     const volume = lifts
       .filter((l) => l.clientId === client.id && l.date === today)
       .reduce((sum, l) => sum + l.weight * l.reps * l.sets, 0);
@@ -1138,6 +1138,7 @@ export const useStudio = create<State>((set, get) => ({
       done: doneItems.length,
       total,
       at: new Date().toISOString(),
+      startedAt,
     };
     const nextLogs = [log, ...workoutLogs.filter((w) => !(w.clientId === client.id && w.date === today))].slice(0, 60);
     const nextClients = clients.map((c) =>
@@ -1151,7 +1152,7 @@ export const useStudio = create<State>((set, get) => ({
     set({ workoutLogs: nextLogs, clients: nextClients, bookings: nextBookings });
     persist(snap(get()));
     hapticNotify("success");
-    get().showToast(`Тренировка закрыта · ${kcal} ккал`);
+    get().showToast(`Тренировка закрыта · ${mins} мин · ${kcal} ккал`);
   },
 
   setWeight: (kg) => {

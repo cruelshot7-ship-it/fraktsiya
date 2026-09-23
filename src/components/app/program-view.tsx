@@ -43,7 +43,10 @@ export function ProgramView() {
   const [reps, setReps] = useState("6");
   const [sets, setSets] = useState("4");
   const [chartReady, setChartReady] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
+  const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
   const series = useMemo(
     () =>
@@ -55,10 +58,21 @@ export function ProgramView() {
             .map((l) => ({ ...l, label: formatDayMonth(l.date) })),
     [lifts, exercise, client],
   );
+  const today = isoDate(new Date());
+  const startKey = client ? `ruksha:wo:${client.id}:${today}` : "";
+  useEffect(() => {
+    if (!startKey) return;
+    const raw = sessionStorage.getItem(startKey);
+    setStartedAt(raw ? Number(raw) : null);
+  }, [startKey]);
+  useEffect(() => {
+    if (!startedAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
   if (!client) {
     return <EmptyHint>Программа появится после того, как тренер добавит вас и назначит дни.</EmptyHint>;
   }
-  const today = isoDate(new Date());
   const session = visitSession(client, today, bookings);
   const week = programWeek(client, today);
   const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
@@ -75,8 +89,11 @@ export function ProgramView() {
   const shown = session ?? nextSession;
   const checked = checks[`${client.id}:${today}`] ?? [];
   const itemCount = shown?.items.length ?? 0;
+  const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
+  const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
+  const clock = (ts: number) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
   const liveKcal = checked.length
-    ? workoutKcal(client.weight, todayBook?.duration ?? 60, checked.length, itemCount || 1)
+    ? workoutKcal(client.weight, elapsedMin || todayBook?.duration || 60, checked.length, itemCount || 1)
     : 0;
   const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
   const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
@@ -213,22 +230,45 @@ export function ProgramView() {
               <Flame className="size-4 text-primary" />
             </p>
             <p className="mt-1 text-tiny text-muted-foreground">
-              MET силовая × {client.weight} кг × {todayBook?.duration ?? 60} мин
-              {checked.length ? ` · ${checked.length}/${itemCount || checked.length}` : " · отметьте подходы"}
+              {todayWorkout
+                ? `${todayWorkout.minutes} мин${todayWorkout.startedAt ? ` · ${clock(Date.parse(todayWorkout.startedAt))}–${clock(Date.parse(todayWorkout.at))}` : ""}`
+                : startedAt
+                  ? `${clock(startedAt)} · ${String(Math.floor(elapsedSec / 60)).padStart(2, "0")}:${String(elapsedSec % 60).padStart(2, "0")}`
+                  : "Нажмите «Начать», время пойдёт в калории"}
             </p>
           </div>
           {todayWorkout ? (
             <p className="mt-3 text-sm text-ok">
-              Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.done} упр.
+              Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.kcal} ккал
             </p>
           ) : (
-            <button
-              type="button"
-              onClick={() => completeWorkout(itemCount || checked.length, todayBook?.duration ?? 60)}
-              className="pressable mt-4 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-            >
-              Завершить тренировку
-            </button>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={Boolean(startedAt)}
+                onClick={() => {
+                  const stamp = Date.now();
+                  setStartedAt(stamp);
+                  sessionStorage.setItem(startKey, String(stamp));
+                }}
+                className="pressable h-12 rounded-xl bg-secondary text-sm font-medium disabled:opacity-50"
+              >
+                {startedAt ? "Идёт" : "Начать"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!startedAt) {
+                    showToast("Сначала нажмите «Начать».");
+                    return;
+                  }
+                  completeWorkout(itemCount || checked.length, elapsedMin, new Date(startedAt).toISOString());
+                }}
+                className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+              >
+                Завершить
+              </button>
+            </div>
           )}
         </Surface>
       ) : (

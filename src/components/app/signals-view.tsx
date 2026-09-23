@@ -73,7 +73,7 @@ export function SignalsView() {
             {req.firstName} {req.lastName}
           </p>
           {req.telegramUsername ? <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p> : null}
-          <p className="mt-1 text-sm text-muted-foreground">Нажал Старт — принять в зал?</p>
+          <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{req.message || "Выбрал пакет и время"}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"

@@ -174,6 +174,7 @@ export type WorkoutLog = {
   done: number;
   total: number;
   at: string;
+  startedAt?: string;
 };
 
 export type ScanProduct = {

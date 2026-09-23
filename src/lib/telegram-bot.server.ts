@@ -60,12 +60,16 @@ export async function ensureBotHook(origin = APP_URL) {
   return true;
 }
 
-export async function registerJoin(user: {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username: string | null;
-}) {
+export async function registerJoin(
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string | null;
+  },
+  offer?: string,
+) {
+  const message = (offer ?? "").trim().slice(0, 500);
   let payload = emptyPayload();
   try {
     payload = await loadStudioState();
@@ -79,21 +83,26 @@ export async function registerJoin(user: {
       (uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
   );
   if (inHall) {
-    // Mini App /start and hydrate must not spam the chat.
+    await tg("sendMessage", {
+      chat_id: user.id,
+      text: "Вы уже в зале. Откройте приложение.",
+      reply_markup: webAppKeyboard("Открыть зал"),
+    });
     return { ok: true, already: true };
   }
-  const pending = (payload.joinRequests ?? []).some((r) => r.telegramId === user.id && r.status === "pending");
+  if (!message) return { ok: false, already: false };
+  const prev = (payload.joinRequests ?? []).find((r) => r.telegramId === user.id && r.status === "pending");
+  if (prev?.message === message) return { ok: true, already: false };
   const req: JoinRequest = {
     id: `jr_${user.id}`,
     telegramId: user.id,
     telegramUsername: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
-    message: "Нажал Старт",
+    message,
     at: hoursAgoIso(0),
     status: "pending",
   };
-  if (pending) return { ok: true, already: false };
   payload = {
     ...payload,
     joinRequests: [req, ...(payload.joinRequests ?? []).filter((r) => r.telegramId !== user.id)],
@@ -103,12 +112,12 @@ export async function registerJoin(user: {
   const handle = req.telegramUsername ? `@${req.telegramUsername}` : `id ${req.telegramId}`;
   await tg("sendMessage", {
     chat_id: TRAINER_TG_ID,
-    text: `Заявка в зал\n${who}\n${handle}`,
+    text: `Заявка\n${who}\n${handle}\n\n${message}`,
     reply_markup: decideKeyboard(user.id),
   });
   await tg("sendMessage", {
     chat_id: user.id,
-    text: "Заявка у тренера. Как примет — откроется зал.",
+    text: "Заявка у тренера. Оплату обсудите с ним лично — в приложении её нет.",
     reply_markup: webAppKeyboard("Открыть заявку"),
   });
   return { ok: true, already: false };
@@ -231,11 +240,10 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   }
 
   if (text.startsWith("/start")) {
-    await registerJoin({
-      id,
-      firstName: from.first_name?.trim() || "Клиент",
-      lastName: from.last_name?.trim() || "",
-      username: from.username?.trim() || null,
+    await tg("sendMessage", {
+      chat_id: from.id,
+      text: "Выберите пакет и время в зале. Оплату обсудите с тренером лично.",
+      reply_markup: webAppKeyboard("Выбрать время"),
     });
   }
 }
