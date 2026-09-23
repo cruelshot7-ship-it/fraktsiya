@@ -4,6 +4,8 @@ import {
   downloadIcs,
   bookingIcs,
   formatLongDate,
+  parseISODate,
+  STUDIO,
   hoursUntilSlot,
   isLateCancel,
   isSlotPast,
@@ -13,6 +15,25 @@ import {
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+
+function googleCalendarUrl(booking: { date: string; time: string; duration: number }, title = "Тренировка · Ruksha") {
+  const [h, m] = booking.time.split(":").map(Number);
+  const start = parseISODate(booking.date);
+  start.setHours(h || 0, m || 0, 0, 0);
+  const end = new Date(start.getTime() + booking.duration * 60000);
+  const stamp = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+  };
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    dates: `${stamp(start)}/${stamp(end)}`,
+    location: STUDIO.brand,
+    details: "Ruksha Discipline",
+  });
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
+}
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -24,6 +45,7 @@ export function BookingsView() {
   const role = useStudio((s) => s.role);
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
+  const showToast = useStudio((s) => s.showToast);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const me = activeClient({ clients, activeClientId });
   const bookings = role === "trainer" ? all : all.filter((b) => b.clientId === me?.id);
@@ -153,12 +175,17 @@ export function BookingsView() {
                 {role === "client" ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      downloadIcs(
-                        `ruksha-${booking.date}.ics`,
-                        bookingIcs(booking),
-                      )
-                    }
+                    onClick={() => {
+                      const url = googleCalendarUrl(booking);
+                      try {
+                        const tg = (window as unknown as { Telegram?: { WebApp?: { openLink?: (u: string) => void } } }).Telegram?.WebApp;
+                        if (tg?.openLink) tg.openLink(url);
+                        else window.open(url, "_blank", "noopener,noreferrer");
+                      } catch {
+                        downloadIcs(`ruksha-${booking.date}.ics`, bookingIcs(booking));
+                      }
+                      showToast(`${booking.date} · ${booking.time}`);
+                    }}
                     className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
                   >
                     В календарь
