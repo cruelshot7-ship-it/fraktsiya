@@ -36,6 +36,7 @@ export function ClientsView() {
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
+  const openGuestPreview = useStudio((s) => s.openGuestPreview);
   const joinRequests = useStudio((s) => s.joinRequests);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
@@ -78,6 +79,14 @@ export function ClientsView() {
 
   return (
     <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={() => openGuestPreview()}
+        className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
+      >
+        <p className="text-sm font-medium">Как видит новичок</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Демо пробной записи. Клиентам не показывается.</p>
+      </button>
       {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
         <div className="flex flex-col gap-2">
           {joinRequests

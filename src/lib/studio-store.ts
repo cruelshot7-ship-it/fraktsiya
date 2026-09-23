@@ -97,6 +97,7 @@ type State = {
   removedClientIds: string[];
   inviteBlocked: boolean;
   noteOpen: boolean;
+  guestPreview: boolean;
   toast: string | null;
   hydrate: () => void;
   refreshCloud: () => void;
@@ -142,6 +143,8 @@ type State = {
   clearToast: () => void;
   openNote: () => void;
   closeNote: () => void;
+  openGuestPreview: () => void;
+  closeGuestPreview: () => void;
 };
 
 const KEY = "ruksha:v8";
@@ -300,6 +303,7 @@ export const useStudio = create<State>((set, get) => ({
   removedClientIds: [],
   inviteBlocked: false,
   noteOpen: false,
+  guestPreview: false,
   toast: null,
 
   hydrate: () => {
@@ -1363,4 +1367,6 @@ export const useStudio = create<State>((set, get) => ({
   clearToast: () => set({ toast: null }),
   openNote: () => set({ noteOpen: true }),
   closeNote: () => set({ noteOpen: false }),
+  openGuestPreview: () => set({ guestPreview: true }),
+  closeGuestPreview: () => set({ guestPreview: false }),
 }));

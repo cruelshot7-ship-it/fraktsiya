@@ -13,6 +13,7 @@ import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { JoinGate } from "@/components/app/join-gate";
 import { TrainerNote } from "@/components/app/trainer-note";
+import { GuestPreview } from "@/components/app/guest-preview";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
@@ -44,7 +45,6 @@ const TITLES: Record<TabId, string> = {
 };
 
 export function MiniApp() {
-  const ready = useStudio((s) => s.ready);
   const hydrate = useStudio((s) => s.hydrate);
   const refreshCloud = useStudio((s) => s.refreshCloud);
   const tab = useStudio((s) => s.tab);
@@ -61,33 +61,10 @@ export function MiniApp() {
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const inviteBlocked = useStudio((s) => s.inviteBlocked);
   const openNote = useStudio((s) => s.openNote);
+  const guestPreview = useStudio((s) => s.guestPreview);
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [tgLocked, setTgLocked] = useState(false);
-
-  useEffect(() => {
-    if (!ready) return;
-    const st = useStudio.getState();
-    if (st.role === "client") {
-      const today = new Date();
-      const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-      const start = new Date(today);
-      const offset = (start.getDay() + 6) % 7;
-      start.setDate(start.getDate() - offset);
-      const weekStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
-      useStudio.setState({
-        tab: st.tab === "clients" || st.tab === "signals" || st.tab === "slots" ? "program" : st.tab,
-        selectedDate: iso,
-        weekStart,
-        notices: st.notices.filter((n) => !st.dismissedSignalIds.includes(n.id)),
-      });
-    }
-    const unsub = useStudio.subscribe((s) => {
-      const next = s.notices.filter((n) => !s.dismissedSignalIds.includes(n.id));
-      if (next.length !== s.notices.length) useStudio.setState({ notices: next });
-    });
-    return unsub;
-  }, [ready]);
 
   useEffect(() => {
     initTelegram();
@@ -230,7 +207,7 @@ export function MiniApp() {
         </header>
         )}
 
-        {role === "client" && ready && !sheetClientId && !inviteBlocked ? (
+        {role === "client" && !sheetClientId && !inviteBlocked ? (
           <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
@@ -257,13 +234,8 @@ export function MiniApp() {
             role === "trainer" ? "pb-24" : "pb-10",
           )}
         >
-          <div key={`${role}-${tab}-${ready}`} className="pt-4">
-            {!ready ? (
-              <div className="rounded-xl bg-card px-5 py-12 text-center shadow-border">
-                <p className="font-display text-xl">Открываем зал</p>
-                <p className="mt-3 text-sm text-muted-foreground">Проверяем вход и подгружаем данные.</p>
-              </div>
-            ) : inviteBlocked && role === "client" ? (
+          <div key={`${role}-${tab}`} className="pt-4">
+            {inviteBlocked && role === "client" ? (
               <JoinGate />
             ) : (
               <>
@@ -326,6 +298,7 @@ export function MiniApp() {
           />
         ) : null}
         <TrainerNote />
+        {guestPreview ? <GuestPreview /> : null}
       </div>
     </div>
   );
