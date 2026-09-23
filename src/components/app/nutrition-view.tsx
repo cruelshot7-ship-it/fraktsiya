@@ -176,7 +176,11 @@ export function NutritionView() {
         </p>
       </Surface>
 
-      {scanOpen ? <ScannerSheet onClose={() => setScanOpen(false)} onAdd={addScanned} /> : null}
+      {scanOpen ? (
+        <div className="fixed inset-0 z-[80] bg-background">
+          <ScannerSheet onClose={() => setScanOpen(false)} onAdd={addScanned} />
+        </div>
+      ) : null}
     </div>
   );
 }
