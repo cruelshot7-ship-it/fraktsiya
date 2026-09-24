@@ -1,11 +1,53 @@
 import { useEffect, useRef, useState } from "react";
-import { MACHINES, type Machine, type MachineEx } from "@/data/studio";
+import { MACHINES, machineFromScan, type Machine, type MachineEx } from "@/data/studio";
 import { SectionLabel, Surface } from "@/components/app/bits";
+import { extractTelegramScan, getBarcodeDetector } from "@/lib/barcode";
+import { getStartParam } from "@/lib/telegram";
+import { useStudio } from "@/lib/studio-store";
 import { cn } from "@/lib/utils";
 
 export function HallView() {
+  const showToast = useStudio((s) => s.showToast);
   const [machine, setMachine] = useState<Machine | null>(null);
   const [ex, setEx] = useState<MachineEx | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const found = machineFromScan(getStartParam());
+    if (found) setMachine(found);
+  }, []);
+
+  function openCode(raw: string) {
+    const found = machineFromScan(raw);
+    if (!found) {
+      showToast("Это не наклейка зала. Выберите стойку из списка.");
+      return;
+    }
+    setEx(null);
+    setMachine(found);
+  }
+
+  function scan() {
+    const tg = extractTelegramScan();
+    if (tg) {
+      tg(openCode);
+      return;
+    }
+    fileRef.current?.click();
+  }
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    const detector = getBarcodeDetector();
+    if (!detector) {
+      showToast("Сканер недоступен. Выберите стойку из списка.");
+      return;
+    }
+    const bmp = await createImageBitmap(file).catch(() => null);
+    if (!bmp) return;
+    const codes = await detector.detect(bmp).catch(() => []);
+    openCode(codes[0]?.rawValue ?? "");
+  }
 
   if (ex && machine) {
     return <Drill machine={machine} exercise={ex} onBack={() => setEx(null)} />;
@@ -15,7 +57,7 @@ export function HallView() {
     return (
       <div className="stagger-in flex flex-col gap-3">
         <button type="button" onClick={() => setMachine(null)} className="self-start text-xs text-muted-foreground">
-          ← сканер
+          ← зал
         </button>
         <Surface glow="ok">
           <SectionLabel>{machine.zone}</SectionLabel>
@@ -30,7 +72,7 @@ export function HallView() {
             className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
           >
             <span className="font-display block text-base">{item.name}</span>
-            <span className="mt-1 block text-xs text-muted-foreground">техника и проверка траектории</span>
+            <span className="mt-1 block text-xs text-muted-foreground">техника, затем движение</span>
           </button>
         ))}
       </div>
@@ -40,12 +82,31 @@ export function HallView() {
   return (
     <div className="stagger-in flex flex-col gap-3">
       <Surface glow="soft">
-        <SectionLabel>Сканер</SectionLabel>
-        <h2 className="font-display mt-1 text-xl">Наведите на тренажёр</h2>
+        <SectionLabel>Зал</SectionLabel>
+        <h2 className="font-display mt-1 text-xl">Наклейка на стойке</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Здесь — демо: выберите стойку, разберите технику и повторите траекторию пальцем.
+          Сканируйте QR — откроются упражнения и техника. Камера не угадывает тренажёр сама.
         </p>
+        <button
+          type="button"
+          onClick={scan}
+          className="pressable mt-4 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+        >
+          Сканировать QR
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            void onFile(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
       </Surface>
+      <SectionLabel>Нет наклейки</SectionLabel>
       <div className="grid grid-cols-2 gap-2">
         {MACHINES.map((item) => (
           <button
@@ -59,15 +120,6 @@ export function HallView() {
           </button>
         ))}
       </div>
-      <Surface>
-        <SectionLabel>Как лучше сделать в зале</SectionLabel>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          На каждый тренажёр — QR-наклейка. Клиент сканирует из мини-приложения и сразу получает упражнения и технику. Так надёжнее, чем «голая» камера: в Telegram WebView свет, угол и похожие рамы путают модель.
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Дальше: если QR нет — фото стойки на 6–12 тренажёров. Контроль формы камерой — только после того, как упражнение уже выбрано.
-        </p>
-      </Surface>
     </div>
   );
 }
@@ -110,9 +162,9 @@ function Drill({
 
       <Surface className="overflow-hidden p-0" glow="alert">
         <div className="px-4 pt-4">
-          <SectionLabel>Проверка траектории</SectionLabel>
+          <SectionLabel>Движение</SectionLabel>
           <p className="mt-1 text-xs text-muted-foreground">
-            Необязательно. Три раза проведите пальцем по дуге — так запоминается путь грифа, это не зачёт подхода.
+            Упражнение уже выбрано. Ведите палец по дуге. Камера форму не оценивает.
           </p>
         </div>
         <FormCanvas

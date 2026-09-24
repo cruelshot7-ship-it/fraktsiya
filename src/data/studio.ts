@@ -297,7 +297,7 @@ export const MACHINES: Machine[] = [
     id: "bench",
     name: "Скамья для жима",
     zone: "Жимовая",
-    hint: "Наведите камеру на гриф и стойки — в зале так и будет.",
+    hint: "Гриф, стойки, скамья. Сначала выберите упражнение.",
     exercises: [
       {
         name: "Жим лёжа",
@@ -317,7 +317,7 @@ export const MACHINES: Machine[] = [
     id: "rack",
     name: "Силовая рама",
     zone: "Низ",
-    hint: "Рама, зеркало, ограничители — сканер узнает стойку.",
+    hint: "Рама и ограничители. Сначала выберите упражнение.",
     exercises: [
       {
         name: "Присед со штангой",
@@ -396,6 +396,19 @@ export const MACHINES: Machine[] = [
     ],
   },
 ];
+
+export function machineFromScan(raw: string): Machine | null {
+  const text = raw.trim();
+  const fromUrl = /startapp=([^&\s#]+)/i.exec(text)?.[1];
+  let token = fromUrl || text;
+  try {
+    token = decodeURIComponent(token);
+  } catch {
+    token = fromUrl || text;
+  }
+  const id = token.trim().toLowerCase().replace(/^m_/, "").replace(/^ruksha:/, "");
+  return MACHINES.find((m) => m.id === id) ?? null;
+}
 
 const MARIA_SESSIONS: ProgramSession[] = [
   { id: "a", name: "День A", focus: "Ноги + ягодицы", items: ["Присед 4×6", "Румынская 3×8", "Выпады 3×10", "Ягодичный мост 3×12"] },

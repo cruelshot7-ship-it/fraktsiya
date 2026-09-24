@@ -17,7 +17,7 @@ import { GuestPreview } from "@/components/app/guest-preview";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
-import { initTelegram, getTelegramUser } from "@/lib/telegram";
+import { initTelegram, getStartParam, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
@@ -39,7 +39,7 @@ const TITLES: Record<TabId, string> = {
   bookings: "Мои записи",
   program: "Сегодня",
   food: "Питание",
-  hall: "Зрение зала",
+  hall: "Зал",
   clients: "Клиенты",
   signals: "Сигналы",
 };
@@ -65,6 +65,11 @@ export function MiniApp() {
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [tgLocked, setTgLocked] = useState(false);
+
+  useEffect(() => {
+    if (role === "trainer") return;
+    if (getStartParam().toLowerCase().startsWith("m_")) setTab("hall");
+  }, [role, setTab]);
 
   useEffect(() => {
     initTelegram();
