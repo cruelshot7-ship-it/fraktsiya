@@ -96,29 +96,6 @@ export function ClientsView() {
       {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-3 text-sm text-primary shadow-border">Нет свободных окон. Новичок записаться не может.</p>
       ) : null}
-      <Surface>
-        <SectionLabel>Наклейки на стойки</SectionLabel>
-        <p className="mt-2 text-xs text-muted-foreground">Нажмите стойку — ссылка скопируется. Из неё сделайте QR и наклейте на тренажёр.</p>
-        <div className="mt-3 flex flex-col gap-2">
-          {MACHINES.map((item) => {
-            const url = inviteUrl(BOT_USERNAME, `m_${item.id}`);
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className="pressable rounded-lg bg-secondary px-3 py-2 text-left"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(url);
-                  showToast("Ссылка скопирована");
-                }}
-              >
-                <span className="block text-sm">{item.name}</span>
-                <span className="mt-0.5 block truncate text-2xs text-muted-foreground">{url}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Surface>
       {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
         <div className="flex flex-col gap-2">
           {joinRequests
@@ -292,6 +269,29 @@ export function ClientsView() {
           Добавить клиента
         </button>
       )}
+      <details className="rounded-xl bg-card px-4 py-3 shadow-border">
+        <summary className="cursor-pointer text-sm text-muted-foreground">Разработка</summary>
+        <p className="mt-3 text-xs text-muted-foreground">Наклейки на стойки. Нажатие копирует ссылку для QR.</p>
+        <div className="mt-2 flex flex-col gap-2">
+          {MACHINES.map((item) => {
+            const url = inviteUrl(BOT_USERNAME, `m_${item.id}`);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className="pressable rounded-lg bg-secondary px-3 py-2 text-left"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(url);
+                  showToast("Ссылка скопирована");
+                }}
+              >
+                <span className="block text-sm">{item.name}</span>
+                <span className="mt-0.5 block truncate text-2xs text-muted-foreground">{url}</span>
+              </button>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }
