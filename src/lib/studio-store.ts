@@ -6,6 +6,7 @@ import {
   DOW,
   emptyClient,
   firstBookableDate,
+  applyOfferBooking,
   digitsPhone,
   importClientPass,
   formatDayMonth,
@@ -101,7 +102,7 @@ type State = {
   toast: string | null;
   hydrate: () => void;
   refreshCloud: () => void;
-  sendJoinRequest: (message: string) => void;
+  sendJoinRequest: (message: string, extra?: { slotId?: string; goal?: string; pack?: string }) => void;
   approveJoin: (id: string) => void;
   rejectJoin: (id: string) => void;
   setTab: (tab: TabId) => void;
@@ -495,7 +496,7 @@ export const useStudio = create<State>((set, get) => ({
     });
   },
 
-  sendJoinRequest: (message) => {
+  sendJoinRequest: (message, extra) => {
     const user = getTelegramUser();
     if (!user) {
       get().showToast("Откройте из Telegram.");
@@ -510,6 +511,9 @@ export const useStudio = create<State>((set, get) => ({
       message: message.trim().slice(0, 500),
       at: new Date().toISOString(),
       status: "pending",
+      slotId: extra?.slotId,
+      goal: extra?.goal,
+      pack: extra?.pack,
     };
     const joinRequests = [req, ...get().joinRequests.filter((r) => r.telegramId !== req.telegramId)];
     set({ joinRequests });
@@ -549,8 +553,17 @@ export const useStudio = create<State>((set, get) => ({
       : get().clients.map((c) =>
           c.id === existing!.id ? { ...c, telegramId: req.telegramId, telegramUsername: req.telegramUsername ?? c.telegramUsername } : c,
         );
-    set({
+    const placed = applyOfferBooking({
       clients: nextClients,
+      bookings: get().bookings,
+      extraSlots: get().extraSlots,
+      closedSlotIds: get().closedSlotIds,
+      clientId,
+      req,
+    });
+    set({
+      clients: placed.clients,
+      bookings: placed.bookings,
       activeClientId: get().role === "trainer" ? get().activeClientId : clientId,
       sheetClientId: get().role === "trainer" ? clientId : get().sheetClientId,
       joinRequests: get().joinRequests.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r)),
@@ -563,7 +576,7 @@ export const useStudio = create<State>((set, get) => ({
       ]),
     });
     persist(snap(get()));
-    get().showToast(`${req.firstName} в зале.`);
+    get().showToast(placed.booked ? `${req.firstName} в зале и на слоте.` : `${req.firstName} в зале. Слот занять не вышло.`);
     const initData = getTelegramInitData();
     if (initData) void decideJoinFn({ data: { initData, telegramId: req.telegramId, approve: true } }).catch(() => undefined);
   },

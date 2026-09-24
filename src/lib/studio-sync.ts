@@ -379,7 +379,15 @@ export const pullStudio = createServerFn({ method: "POST" })
   });
 
 export const requestJoin = createServerFn({ method: "POST" })
-  .validator(z.object({ initData: z.string().optional(), offer: z.string().optional() }))
+  .validator(
+    z.object({
+      initData: z.string().optional(),
+      offer: z.string().optional(),
+      slotId: z.string().optional(),
+      goal: z.string().optional(),
+      pack: z.string().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<{ ok: boolean; already?: boolean }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
@@ -389,7 +397,12 @@ export const requestJoin = createServerFn({ method: "POST" })
       await bot.ensureBotHook();
       return { ok: true };
     }
-    return bot.registerJoin(session.user, data.offer);
+    return bot.registerJoin(session.user, {
+      message: data.offer ?? "",
+      slotId: data.slotId,
+      goal: data.goal,
+      pack: data.pack,
+    });
   });
 
 export const decideJoinFn = createServerFn({ method: "POST" })

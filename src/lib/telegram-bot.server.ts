@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -67,9 +67,9 @@ export async function registerJoin(
     lastName: string;
     username: string | null;
   },
-  offer?: string,
+  offer?: { message: string; slotId?: string; goal?: string; pack?: string },
 ) {
-  const message = (offer ?? "").trim().slice(0, 500);
+  const message = (offer?.message ?? "").trim().slice(0, 500);
   let payload = emptyPayload();
   try {
     payload = await loadStudioState();
@@ -100,6 +100,9 @@ export async function registerJoin(
     firstName: user.firstName,
     lastName: user.lastName,
     message,
+    slotId: offer?.slotId,
+    goal: offer?.goal,
+    pack: offer?.pack,
     at: hoursAgoIso(0),
     status: "pending",
   };
@@ -117,7 +120,7 @@ export async function registerJoin(
   });
   await tg("sendMessage", {
     chat_id: user.id,
-    text: "Заявка у тренера. Оплату обсудите с ним лично — в приложении её нет.",
+    text: "Заявка у тренера. Когда примет — откроется зал.",
     reply_markup: webAppKeyboard("Открыть заявку"),
   });
   return { ok: true, already: false };
@@ -146,13 +149,21 @@ export async function decideJoin(telegramId: string, approve: boolean) {
           telegramId,
           telegramUsername: req?.telegramUsername ?? null,
         };
+    const clientId = fresh?.id ?? existing!.id;
+    const withClient = fresh ? [...payload.clients, fresh] : payload.clients;
+    const placed = applyOfferBooking({
+      clients: withClient,
+      bookings: payload.bookings,
+      extraSlots: payload.extraSlots,
+      closedSlotIds: payload.closedSlotIds,
+      clientId,
+      req: req ?? { id: "", telegramId, telegramUsername: null, firstName: "", lastName: "", message: "", at: "", status: "approved" },
+    });
+    const when = placed.booked && req?.slotId ? req.message.split("\n")[1] : "";
     payload = {
       ...payload,
-      clients: fresh
-        ? [...payload.clients, fresh]
-        : payload.clients.map((c) =>
-            c.id === existing!.id ? { ...c, telegramId, telegramUsername: req?.telegramUsername ?? c.telegramUsername } : c,
-          ),
+      clients: placed.clients,
+      bookings: placed.bookings,
       joinRequests: (payload.joinRequests ?? []).map((r) =>
         r.telegramId === telegramId ? { ...r, status: "approved" as const } : r,
       ),
@@ -166,7 +177,9 @@ export async function decideJoin(telegramId: string, approve: boolean) {
     await saveStudioState(payload);
     await tg("sendMessage", {
       chat_id: telegramId,
-      text: "Вас приняли в зал. Откройте приложение — тренер назначит программу и питание.",
+      text: when
+        ? `Вас приняли и записали: ${when}. Откройте зал.`
+        : "Вас приняли в зал. Откройте приложение.",
       reply_markup: webAppKeyboard("Открыть зал"),
     });
     return { ok: true };

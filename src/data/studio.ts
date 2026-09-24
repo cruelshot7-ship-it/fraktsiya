@@ -230,6 +230,9 @@ export type JoinRequest = {
   message: string;
   at: string;
   status: "pending" | "approved" | "rejected";
+  slotId?: string;
+  goal?: string;
+  pack?: string;
 };
 
 export type NotifyPrefs = {
@@ -1025,4 +1028,73 @@ export function clientFlag(
     tone = "ok";
   }
   return { attention, today: todayOn, badge, tone, daysSinceReport, eaten };
+}
+
+export function applyOfferBooking(input: {
+  clients: Client[];
+  bookings: Booking[];
+  extraSlots: Slot[];
+  closedSlotIds: string[];
+  clientId: string;
+  req: JoinRequest;
+}): { clients: Client[]; bookings: Booking[]; booked: boolean } {
+  const slotId = input.req.slotId;
+  if (!slotId) return { clients: input.clients, bookings: input.bookings, booked: false };
+  const bookingId = `bk_join_${input.req.telegramId}`;
+  if (input.bookings.some((b) => b.id === bookingId || (b.slotId === slotId && b.clientId === input.clientId))) {
+    return { clients: input.clients, bookings: input.bookings, booked: true };
+  }
+  if (input.closedSlotIds.includes(slotId)) return { clients: input.clients, bookings: input.bookings, booked: false };
+  const [date, time] = slotId.split("_");
+  const extra = input.extraSlots.find((s) => s.id === slotId);
+  const generated = date && time ? generateWindow(startOfWeek(parseISODate(date)), 8).find((s) => s.id === slotId) : undefined;
+  const slot = extra ?? generated;
+  if (!slot || isSlotPast(slot.date, slot.time)) return { clients: input.clients, bookings: input.bookings, booked: false };
+  if (input.bookings.filter((b) => b.slotId === slot.id).length >= slot.capacity) {
+    return { clients: input.clients, bookings: input.bookings, booked: false };
+  }
+  const holdId = `tx_join_hold_${input.req.telegramId}`;
+  const clients = input.clients.map((c) => {
+    if (c.id !== input.clientId) return c;
+    let left = c.sessionsLeft ?? 0;
+    const ledger = [...(c.ledger ?? [])];
+    if (left < 1) {
+      left = 1;
+      ledger.push({
+        id: `tx_join_credit_${input.req.telegramId}`,
+        clientId: c.id,
+        kind: "credit",
+        delta: 1,
+        at: new Date().toISOString(),
+        note: "Первая тренировка",
+      });
+    }
+    left -= 1;
+    ledger.push({
+      id: holdId,
+      clientId: c.id,
+      kind: "hold",
+      delta: -1,
+      at: new Date().toISOString(),
+      note: `Запись ${formatLongDate(slot.date)} ${slot.time}`,
+      bookingId,
+    });
+    return { ...c, sessionsLeft: Math.max(0, left), ledger };
+  });
+  return {
+    clients,
+    bookings: [
+      ...input.bookings,
+      {
+        id: bookingId,
+        slotId: slot.id,
+        clientId: input.clientId,
+        date: slot.date,
+        time: slot.time,
+        duration: slot.duration,
+        held: true,
+      },
+    ],
+    booked: true,
+  };
 }

@@ -10,6 +10,7 @@ import {
   initials,
   isoDate,
   isFrozen,
+  isSlotPast,
   PACK_VALID_DAYS,
   packDaysLeft,
   PACKS,
@@ -20,7 +21,7 @@ import {
   weightDelta,
   type Client,
 } from "@/data/studio";
-import { useStudio } from "@/lib/studio-store";
+import { slotTaken, useStudio } from "@/lib/studio-store";
 import { openPhone, openTelegramUrl, openTrainerChat } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,8 @@ export function ClientsView() {
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
   const openGuestPreview = useStudio((s) => s.openGuestPreview);
+  const slots = useStudio((s) => s.slots);
+  const closedSlotIds = useStudio((s) => s.closedSlotIds);
   const joinRequests = useStudio((s) => s.joinRequests);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
@@ -87,6 +90,9 @@ export function ClientsView() {
         <p className="text-sm font-medium">Как видит новичок</p>
         <p className="mt-1 text-tiny text-muted-foreground">Так новичок выбирает пакет и время. Заявка придёт вам.</p>
       </button>
+      {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
+        <p className="rounded-xl bg-card px-4 py-3 text-sm text-primary shadow-border">Нет свободных окон. Новичок записаться не может.</p>
+      ) : null}
       {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
         <div className="flex flex-col gap-2">
           {joinRequests
@@ -176,6 +182,12 @@ export function ClientsView() {
                       : client.programTitle || "без контакта"}
                   {` · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`}
                 </p>
+                {joinRequests.find((r) => r.telegramId && r.telegramId === client.telegramId && r.pack) ? (
+                  <p className="mt-0.5 truncate text-tiny text-muted-foreground">
+                    {joinRequests.find((r) => r.telegramId === client.telegramId)?.pack} ·{" "}
+                    {joinRequests.find((r) => r.telegramId === client.telegramId)?.goal}
+                  </p>
+                ) : null}
                 <div className="mt-2.5">
                   <ProgressRail
                     value={flag.eaten.calories}
