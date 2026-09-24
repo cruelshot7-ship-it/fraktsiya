@@ -217,6 +217,8 @@ function pingClient(telegramId: string | null | undefined, text: string) {
   void sendBotLinkFn({ data: { initData, telegramId, text } }).catch(() => undefined);
 }
 
+let slotBusy = false;
+
 function mergeSlots(extra: Slot[]) {
   const base = generateWindow(startOfWeek(new Date()), 42);
   const map = new Map(base.map((s) => [s.id, s]));
@@ -613,6 +615,9 @@ export const useStudio = create<State>((set, get) => ({
   selectDay: (iso) => set({ selectedDate: iso, selectedSlotId: null }),
 
   bookSlot: (slotId, forClientId) => {
+    if (slotBusy) return false;
+    slotBusy = true;
+    try {
     const { slots, bookings, activeClientId, role, clients, closedSlotIds, notices, waitlist } = get();
     const slot = slots.find((s) => s.id === slotId);
     const targetId = forClientId ?? activeClientId;
@@ -699,6 +704,9 @@ export const useStudio = create<State>((set, get) => ({
         : `Готово. Встретимся ${dow} в ${slot.time}.`,
     );
     return true;
+    } finally {
+      slotBusy = false;
+    }
   },
 
   joinWaitlist: (slotId) => {

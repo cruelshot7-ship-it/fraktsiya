@@ -774,24 +774,28 @@ function historyFrom(kg: number, deltas: number[]): WeightPoint[] {
   }));
 }
 
-/** First actual visit this week = Day A, even if that weekday is Thursday. */
+/** Visits follow the program in order: 1st booking = day 1, 2nd = day 2, then it repeats. */
 export function visitSession(client: Client, iso: string, bookings: Booking[] = []): ProgramSession | null {
   if (!client.sessions.length) return null;
-  const week = startOfWeek(parseISODate(iso));
-  const weekDates = Array.from({ length: 7 }, (_, i) => isoDate(addDays(week, i)));
-  const booked = new Set(
-    bookings.filter((b) => b.clientId === client.id && weekDates.includes(b.date)).map((b) => b.date),
-  );
-  const train = client.trainDays.includes(dowIndex(iso));
-  const isVisit = booked.has(iso) || train;
-  if (!isVisit) return null;
+  const dates = [
+    ...new Set(
+      bookings
+        .filter((b) => b.clientId === client.id)
+        .map((b) => b.date),
+    ),
+  ].sort();
+  const bookedToday = dates.includes(iso);
+  const planned = client.trainDays.includes(dowIndex(iso));
+  if (!bookedToday && !planned) return null;
+  const doneBefore = dates.filter((d) => d < iso).length;
+  const index = bookedToday ? doneBefore : doneBefore;
+  return client.sessions[index % client.sessions.length];
+}
 
-  const sequence = booked.size
-    ? weekDates.filter((d) => booked.has(d) || d === iso)
-    : weekDates.filter((d) => client.trainDays.includes(dowIndex(d)));
-  const idx = sequence.indexOf(iso);
-  if (idx < 0) return null;
-  return client.sessions[idx % client.sessions.length];
+export function epley1rm(weight: number, reps: number) {
+  if (!(weight > 0) || !(reps > 0)) return 0;
+  if (reps <= 1) return Math.round(weight * 10) / 10;
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
 
 export function programWeek(client: Client, iso: string) {

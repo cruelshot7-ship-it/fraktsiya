@@ -19,6 +19,7 @@ import {
   visitSession,
   WEEK_GOAL,
   weekVisitCount,
+  epley1rm,
   workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
@@ -48,16 +49,17 @@ export function ProgramView() {
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
-  const series = useMemo(
-    () =>
-      !client
-        ? []
-        : lifts
-            .filter((l) => l.exercise === exercise && l.clientId === client.id)
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((l) => ({ ...l, label: formatDayMonth(l.date) })),
-    [lifts, exercise, client],
-  );
+  const series = useMemo(() => {
+    if (!client) return [];
+    const byDay = new Map<string, number>();
+    for (const lift of lifts.filter((l) => l.exercise === exercise && l.clientId === client.id)) {
+      const rm = epley1rm(lift.weight, lift.reps);
+      byDay.set(lift.date, Math.max(byDay.get(lift.date) ?? 0, rm));
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, rm]) => ({ date, label: formatDayMonth(date), rm }));
+  }, [lifts, exercise, client]);
   const today = isoDate(new Date());
   const startKey = client ? `ruksha:wo:${client.id}:${today}` : "";
   useEffect(() => {
@@ -144,7 +146,7 @@ export function ProgramView() {
             <h2 className="font-display mt-2 text-xl tracking-wide">{session.name}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {session.focus}
-              {visiting ? " · вы сегодня в зале" : " · первый визит недели = день A"}
+              {visiting ? " · вы сегодня в зале" : ` · день ${(client.sessions.indexOf(session) + 1)} из ${client.sessions.length}`}
             </p>
           </>
         ) : (
@@ -279,7 +281,7 @@ export function ProgramView() {
 
       {client.sessions.length > 1 ? (
         <div className="flex flex-col gap-2">
-          <SectionLabel>Цикл · по порядку визитов</SectionLabel>
+          <SectionLabel>Цикл · строго по порядку визитов</SectionLabel>
           {client.sessions.map((day, i) => {
             const active = shown?.id === day.id;
             return (
@@ -313,15 +315,16 @@ export function ProgramView() {
       </Surface>
 
       <Surface>
-        <SectionLabel>Прогресс</SectionLabel>
-        <div className="no-scrollbar mt-3 flex gap-1 overflow-x-auto">
+        <SectionLabel>Повторный максимум</SectionLabel>
+        <p className="mt-1 text-tiny text-muted-foreground">Считается по весу и повторам. 1 повтор = этот вес.</p>
+        <div className="mt-3 flex flex-wrap gap-1">
           {EXERCISES.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setExercise(item)}
               className={cn(
-                "pressable h-9 shrink-0 rounded-full px-3 text-sm",
+                "pressable h-9 rounded-full px-3 text-sm",
                 exercise === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
@@ -329,6 +332,10 @@ export function ProgramView() {
             </button>
           ))}
         </div>
+        <p className="font-display mt-3 text-3xl tabular-nums">
+          {series.at(-1)?.rm ?? 0}
+          <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
+        </p>
         <div className="mt-3 h-44">
           {chartReady && series.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -343,14 +350,14 @@ export function ProgramView() {
                     fontSize: 12,
                     color: "var(--color-foreground)",
                   }}
-                  formatter={(value) => [`${value} кг`, "вес"]}
+                  formatter={(value) => [`${value} кг`, "ПМ"]}
                 />
-                <Line type="monotone" dataKey="weight" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="rm" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="grid h-full place-items-center text-sm text-muted-foreground">
-              Нужно хотя бы две записи по упражнению
+            <p className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
+              {series.length === 1 ? "Ещё одна запись — и появится график" : "Запишите подход, чтобы увидеть ПМ"}
             </p>
           )}
         </div>
@@ -371,7 +378,10 @@ export function ProgramView() {
               const w = Number(kg.replace(",", "."));
               const r = Number(reps);
               const st = Number(sets);
-              if (!w || !r || !st) return;
+              if (!w || !r || !st) {
+                showToast("Введите вес, повторы и подходы.");
+                return;
+              }
               addLift(exercise, w, r, st);
             }}
           >
