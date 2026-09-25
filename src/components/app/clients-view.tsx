@@ -14,6 +14,7 @@ import {
   MACHINES,
   BOT_USERNAME,
   PACK_VALID_DAYS,
+  TRAINER_TG_ID,
   packDaysLeft,
   PACKS,
   programWeek,
@@ -24,7 +25,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
-import { openPhone, openTelegramUrl, openTrainerChat, inviteUrl } from "@/lib/telegram";
+import { openPhone, openTelegramUrl, openTrainerChat, inviteUrl, getTelegramUser } from "@/lib/telegram";
 import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -46,8 +47,15 @@ export function ClientsView() {
   const joinRequests = useStudio((s) => s.joinRequests);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
+  const coaches = useStudio((s) => s.coaches);
+  const addCoach = useStudio((s) => s.addCoach);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
+  const [coachName, setCoachName] = useState("");
+  const [coachUser, setCoachUser] = useState("");
+  const me = getTelegramUser();
+  const owner = !me || String(me.id) === TRAINER_TG_ID;
+  const myLink = inviteUrl(BOT_USERNAME, `c_${me?.id ?? TRAINER_TG_ID}`);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [tgUser, setTgUser] = useState("");
@@ -93,6 +101,54 @@ export function ClientsView() {
         <p className="text-sm font-medium">Как видит новичок</p>
         <p className="mt-1 text-tiny text-muted-foreground">Так новичок выбирает пакет и время. Заявка придёт вам.</p>
       </button>
+      <Surface>
+        <SectionLabel>Ваши клиенты</SectionLabel>
+        <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
+        <button
+          type="button"
+          className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-xs text-muted-foreground"
+          onClick={() => {
+            void navigator.clipboard?.writeText(myLink);
+            showToast("Ссылка скопирована");
+          }}
+        >
+          {myLink}
+        </button>
+        {owner ? (
+          <div className="mt-4">
+            <SectionLabel>Другие тренеры</SectionLabel>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input className={inputClass} value={coachName} onChange={(e) => setCoachName(e.target.value)} placeholder="Имя" />
+              <input className={inputClass} value={coachUser} onChange={(e) => setCoachUser(e.target.value)} placeholder="@username" />
+            </div>
+            <button
+              type="button"
+              className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
+              onClick={() => {
+                if (!coachName.trim() || !coachUser.trim()) {
+                  showToast("Нужны имя и @username.");
+                  return;
+                }
+                void addCoach(coachUser, coachName);
+                setCoachName("");
+                setCoachUser("");
+              }}
+            >
+              Дать доступ
+            </button>
+            {coaches.length > 0 ? (
+              <div className="mt-2 flex flex-col gap-1">
+                {coaches.map((coach) => (
+                  <p key={coach.username ?? coach.telegramId ?? coach.firstName} className="text-xs text-muted-foreground">
+                    {coach.firstName} · @{coach.username}
+                    {coach.telegramId ? "" : " · ещё не открыл бота"}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Surface>
       {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-3 text-sm text-primary shadow-border">Нет свободных окон. Новичок записаться не может.</p>
       ) : null}
@@ -244,7 +300,7 @@ export function ClientsView() {
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
                 if (!addClient({ firstName, lastName, telegramUsername: tgUser, phone })) return;
-                const link = "https://t.me/ruksha_discipline_bot";
+                const link = myLink;
                 openTelegramUrl(
                   `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Привет! Зал Ruksha: ${link} — нажми Старт`)}`,
                 );

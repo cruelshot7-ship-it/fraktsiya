@@ -38,11 +38,13 @@ import {
   type WaitlistEntry,
   type WorkoutLog,
   workoutKcal,
+  TRAINER_TG_ID,
+  type Coach,
 } from "@/data/studio";
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
+import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
@@ -68,6 +70,7 @@ type PersistShape = {
   trainerUsername?: string | null;
   joinRequests?: JoinRequest[];
   removedClientIds?: string[];
+  coaches?: Coach[];
 };
 
 type State = {
@@ -96,6 +99,7 @@ type State = {
   trainerUsername: string | null;
   joinRequests: JoinRequest[];
   removedClientIds: string[];
+  coaches: Coach[];
   inviteBlocked: boolean;
   noteOpen: boolean;
   guestPreview: boolean;
@@ -105,6 +109,7 @@ type State = {
   sendJoinRequest: (message: string, extra?: { slotId?: string; goal?: string; pack?: string }) => void;
   approveJoin: (id: string) => void;
   rejectJoin: (id: string) => void;
+  addCoach: (username: string, firstName: string) => Promise<void>;
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
@@ -197,6 +202,7 @@ function snap(s: State): PersistShape {
     trainerUsername: s.trainerUsername,
     joinRequests: s.joinRequests,
     removedClientIds: s.removedClientIds,
+    coaches: s.coaches,
   };
 }
 
@@ -204,6 +210,20 @@ function mergeExtraSlots(a: Slot[], b: Slot[]) {
   const map = new Map(a.map((s) => [s.id, s]));
   for (const s of b) map.set(s.id, s);
   return [...map.values()];
+}
+
+let slotHolds: Record<string, number> = {};
+
+function mergeSlots(extra: Slot[]) {
+  const base = generateWindow(startOfWeek(new Date()), 42);
+  const map = new Map(base.map((s) => [s.id, s]));
+  for (const slot of extra) map.set(slot.id, slot);
+  return [...map.values()]
+    .map((slot) => {
+      const hold = slotHolds[slot.id] ?? 0;
+      return hold ? { ...slot, seeded: slot.seeded + hold } : slot;
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function mergeByIdLocal<T extends { id: string }>(a: T[], b: T[]) {
@@ -219,13 +239,6 @@ function pingClient(telegramId: string | null | undefined, text: string) {
 }
 
 let slotBusy = false;
-
-function mergeSlots(extra: Slot[]) {
-  const base = generateWindow(startOfWeek(new Date()), 42);
-  const map = new Map(base.map((s) => [s.id, s]));
-  for (const slot of extra) map.set(slot.id, slot);
-  return [...map.values()].sort((a, b) => a.id.localeCompare(b.id));
-}
 
 function mergeJoin(base: JoinRequest[], incoming: JoinRequest[]) {
   const map = new Map(base.map((x) => [x.id, x]));
@@ -304,6 +317,7 @@ export const useStudio = create<State>((set, get) => ({
   trainerUsername: null,
   joinRequests: [],
   removedClientIds: [],
+  coaches: [],
   inviteBlocked: false,
   noteOpen: false,
   guestPreview: false,
@@ -327,6 +341,7 @@ export const useStudio = create<State>((set, get) => ({
     let trainerUsername: string | null = null;
     let joinRequests: JoinRequest[] = [];
     let removedClientIds: string[] = [];
+    let coaches: Coach[] = [];
     try {
       const raw = readPersist();
       if (raw) {
@@ -358,6 +373,7 @@ export const useStudio = create<State>((set, get) => ({
         trainerUsername = parsed.trainerUsername ?? null;
         joinRequests = parsed.joinRequests ?? [];
         removedClientIds = parsed.removedClientIds ?? [];
+        coaches = parsed.coaches ?? [];
         const cleaned = stripDemoData({
           clients,
           bookings,
@@ -416,31 +432,42 @@ export const useStudio = create<State>((set, get) => ({
       trainerUsername,
       joinRequests,
       removedClientIds,
+      coaches,
       inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
       const payload = cloud.payload;
+      slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
       const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
-      const seed = cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients);
+      const localFresh =
+        cloud.role === "trainer"
+          ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
+          : [];
+      const seed = cloud.blocked
+        ? get().clients
+        : cloud.role === "trainer"
+          ? [...(payload.clients ?? []), ...localFresh]
+          : mergeClients(get().clients, payload.clients);
       const next = ensureApprovedClients({
         ...payload,
         clients: seed,
         joinRequests: joined,
-        removedClientIds: get().removedClientIds ?? [],
+        removedClientIds: cloud.role === "trainer" ? payload.removedClientIds ?? [] : get().removedClientIds ?? [],
       });
       set({
         role: cloud.role,
         inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
         removedClientIds: next.removedClientIds,
         clients: next.clients,
+        coaches: payload.coaches ?? [],
         activeClientId:
           cloud.role === "client" && next.clients[0]
             ? next.clients[0].id
             : get().activeClientId,
-        bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
+        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
         food: payload.food,
         lifts: payload.lifts,
         extraSlots: extra,
@@ -467,30 +494,40 @@ export const useStudio = create<State>((set, get) => ({
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
       const payload = cloud.payload;
+      slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
       const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
-      const seed = cloud.blocked ? get().clients : mergeClients(get().clients, payload.clients);
+      const localFresh =
+        cloud.role === "trainer"
+          ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
+          : [];
+      const seed = cloud.blocked
+        ? get().clients
+        : cloud.role === "trainer"
+          ? [...(payload.clients ?? []), ...localFresh]
+          : mergeClients(get().clients, payload.clients);
       const next = ensureApprovedClients({
         ...payload,
         clients: seed,
         joinRequests: joined,
-        removedClientIds: get().removedClientIds ?? [],
+        removedClientIds: cloud.role === "trainer" ? payload.removedClientIds ?? [] : get().removedClientIds ?? [],
       });
       set({
         role: cloud.role,
         inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
         removedClientIds: next.removedClientIds,
         clients: next.clients,
-        food: payload.food.length ? payload.food : get().food,
-        lifts: payload.lifts.length ? payload.lifts : get().lifts,
+        coaches: payload.coaches ?? get().coaches,
+        food: cloud.role === "trainer" ? payload.food : payload.food.length ? payload.food : get().food,
+        lifts: cloud.role === "trainer" ? payload.lifts : payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
         closedSlotIds: payload.closedSlotIds.length ? [...new Set([...get().closedSlotIds, ...payload.closedSlotIds])] : get().closedSlotIds,
-        notices: payload.notices.length ? payload.notices : get().notices,
-        workoutLogs: payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
+        notices: cloud.role === "trainer" ? payload.notices : payload.notices.length ? payload.notices : get().notices,
+        workoutLogs: cloud.role === "trainer" ? payload.workoutLogs : payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra),
-        bookings: mergeByIdLocal(get().bookings, payload.bookings ?? []),
+        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
       });
       persist(snap(get()), false);
     });
@@ -537,6 +574,7 @@ export const useStudio = create<State>((set, get) => ({
           lastName: req.lastName,
           telegramId: req.telegramId,
           telegramUsername: req.telegramUsername,
+          coachId: req.coachId || String(getTelegramUser()?.id || TRAINER_TG_ID),
         };
     const clientId = existing?.id ?? fresh!.id;
     const notice: Notice = {
@@ -589,6 +627,21 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     const initData = getTelegramInitData();
     if (initData && req) void decideJoinFn({ data: { initData, telegramId: req.telegramId, approve: false } }).catch(() => undefined);
+  },
+
+  addCoach: async (username, firstName) => {
+    const initData = getTelegramInitData();
+    if (!initData) {
+      get().showToast("Откройте из Telegram.");
+      return;
+    }
+    const res = await addCoachFn({ data: { initData, username, firstName } }).catch(() => ({ ok: false as const }));
+    if (!res.ok) {
+      get().showToast("Не удалось добавить тренера.");
+      return;
+    }
+    if (res.coaches) set({ coaches: res.coaches });
+    get().showToast("Тренер добавлен. Пусть откроет бота.");
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),
@@ -1258,6 +1311,7 @@ export const useStudio = create<State>((set, get) => ({
       lastName,
       telegramUsername: draft.telegramUsername?.replace(/^@/, "").trim() || null,
       phone: phone || null,
+      coachId: String(getTelegramUser()?.id || TRAINER_TG_ID),
     };
     const clients = [...get().clients, client];
     set({

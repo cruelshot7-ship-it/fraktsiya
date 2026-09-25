@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { applyOfferBooking, BOT_USERNAME, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -67,7 +67,7 @@ export async function registerJoin(
     lastName: string;
     username: string | null;
   },
-  offer?: { message: string; slotId?: string; goal?: string; pack?: string },
+  offer?: { message: string; slotId?: string; goal?: string; pack?: string; coachId?: string },
 ) {
   const message = (offer?.message ?? "").trim().slice(0, 500);
   let payload = emptyPayload();
@@ -103,6 +103,7 @@ export async function registerJoin(
     slotId: offer?.slotId,
     goal: offer?.goal,
     pack: offer?.pack,
+    coachId: coachKey(offer?.coachId),
     at: hoursAgoIso(0),
     status: "pending",
   };
@@ -113,8 +114,9 @@ export async function registerJoin(
   await saveStudioState(payload);
   const who = [req.firstName, req.lastName].filter(Boolean).join(" ");
   const handle = req.telegramUsername ? `@${req.telegramUsername}` : `id ${req.telegramId}`;
+  const notifyId = coachKey(req.coachId);
   await tg("sendMessage", {
-    chat_id: TRAINER_TG_ID,
+    chat_id: notifyId,
     text: `Заявка\n${who}\n${handle}\n\n${message}`,
     reply_markup: decideKeyboard(user.id),
   });
@@ -148,6 +150,7 @@ export async function decideJoin(telegramId: string, approve: boolean) {
           lastName: req?.lastName || "",
           telegramId,
           telegramUsername: req?.telegramUsername ?? null,
+          coachId: coachKey(req?.coachId),
         };
     const clientId = fresh?.id ?? existing!.id;
     const withClient = fresh ? [...payload.clients, fresh] : payload.clients;
@@ -217,8 +220,17 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   if (cb?.data) {
     const [action, id] = cb.data.split(":");
     if ((action === "ok" || action === "no") && id) {
-      if (String(cb.from.id) !== String(TRAINER_TG_ID)) {
-        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Только тренер.", show_alert: true });
+      let payload = emptyPayload();
+      try {
+        payload = await loadStudioState();
+      } catch {
+        payload = emptyPayload();
+      }
+      const req = (payload.joinRequests ?? []).find((r) => r.telegramId === id);
+      const fromId = String(cb.from.id);
+      const allowed = fromId === String(TRAINER_TG_ID) || fromId === coachKey(req?.coachId);
+      if (!allowed) {
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Это не ваш клиент.", show_alert: true });
         return;
       }
       await decideJoin(id, action === "ok");
@@ -240,7 +252,7 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   if (!from || !text) return;
   const id = String(from.id);
 
-  if (id === String(TRAINER_TG_ID)) {
+  if (id === String(TRAINER_TG_ID) || (await loadStudioState()).coaches?.some((c) => c.telegramId === id)) {
     if (text.startsWith("/start")) {
       await ensureBotHook();
       await tg("sendMessage", {
@@ -269,11 +281,19 @@ export async function sendTrainerNote(
   const handle = from.username ? `@${from.username}` : `id ${from.id}`;
   const body = text.trim().slice(0, 1000);
   if (!body) return { ok: false as const };
+  let chat = String(TRAINER_TG_ID);
+  try {
+    const payload = await loadStudioState();
+    const client = payload.clients.find((c) => c.telegramId === from.id);
+    if (client) chat = clientCoach(client);
+  } catch {
+    chat = String(TRAINER_TG_ID);
+  }
   const rows: { text: string; url?: string; web_app?: { url: string } }[][] = [];
   if (from.username) rows.push([{ text: "Ответить в Telegram", url: `https://t.me/${from.username}` }]);
   rows.push([{ text: "Кабинет", web_app: { url: APP_URL } }]);
   return tg("sendMessage", {
-    chat_id: TRAINER_TG_ID,
+    chat_id: chat,
     text: `Сообщение из зала\n${who}\n${handle}\n\n${body}`,
     reply_markup: { inline_keyboard: rows },
   });

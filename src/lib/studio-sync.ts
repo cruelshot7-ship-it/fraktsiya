@@ -1,11 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
+  clientCoach,
+  coachKey,
   emptyClient,
   hoursAgoIso,
   digitsPhone,
+  TRAINER_TG_ID,
   type Booking,
   type Client,
+  type Coach,
   type FoodLog,
   type JoinRequest,
   type LiftLog,
@@ -32,6 +36,8 @@ export type StudioPayload = {
   trainerUsername: string | null;
   joinRequests: JoinRequest[];
   removedClientIds: string[];
+  coaches: Coach[];
+  foreignHolds?: Record<string, number>;
 };
 
 const STUDIO_ID = "ruksha";
@@ -68,6 +74,7 @@ export function emptyPayload(): StudioPayload {
     trainerUsername: null,
     joinRequests: [],
     removedClientIds: [],
+    coaches: [],
   };
 }
 
@@ -91,6 +98,8 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     trainerUsername: raw.trainerUsername ?? null,
     joinRequests: raw.joinRequests ?? [],
     removedClientIds: removed,
+    coaches: Array.isArray(raw.coaches) ? raw.coaches : [],
+    foreignHolds: undefined,
     clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
   });
 }
@@ -149,6 +158,117 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
   };
 }
 
+function sameHandle(a: string | null | undefined, b: string | null | undefined) {
+  const left = (a ?? "").replace(/^@/, "").trim().toLowerCase();
+  const right = (b ?? "").replace(/^@/, "").trim().toLowerCase();
+  return Boolean(left) && left === right;
+}
+
+export function bindCoach(payload: StudioPayload, user: { id: string; username: string | null; firstName: string; lastName: string }) {
+  const coaches = payload.coaches ?? [];
+  const idx = coaches.findIndex((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
+  if (idx < 0) return payload;
+  const row = coaches[idx];
+  if (row.telegramId === user.id && row.firstName) return payload;
+  const next = coaches.slice();
+  next[idx] = {
+    ...row,
+    telegramId: user.id,
+    username: user.username ?? row.username,
+    firstName: row.firstName || user.firstName,
+    lastName: row.lastName || user.lastName,
+  };
+  return { ...payload, coaches: next };
+}
+
+export function isCoachUser(payload: StudioPayload, user: { id: string; username: string | null }) {
+  if (user.id === String(TRAINER_TG_ID)) return true;
+  return (payload.coaches ?? []).some((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
+}
+
+export function coachFromStart(start: string, payload: StudioPayload) {
+  const match = /^c_(\d+)$/.exec((start ?? "").trim());
+  if (!match) return String(TRAINER_TG_ID);
+  const id = match[1];
+  if (id === String(TRAINER_TG_ID)) return id;
+  if ((payload.coaches ?? []).some((c) => c.telegramId === id)) return id;
+  return String(TRAINER_TG_ID);
+}
+
+export function scopeCoach(payload: StudioPayload, coachId: string): StudioPayload {
+  const mine = coachKey(coachId);
+  const clients = payload.clients.filter((c) => clientCoach(c) === mine);
+  const ids = new Set(clients.map((c) => c.id));
+  const holds: Record<string, number> = {};
+  for (const booking of payload.bookings) {
+    if (ids.has(booking.clientId)) continue;
+    holds[booking.slotId] = (holds[booking.slotId] ?? 0) + 1;
+  }
+  return {
+    ...payload,
+    clients,
+    bookings: payload.bookings.filter((b) => ids.has(b.clientId)),
+    food: payload.food.filter((f) => ids.has(f.clientId)),
+    lifts: payload.lifts.filter((l) => ids.has(l.clientId)),
+    workoutLogs: payload.workoutLogs.filter((w) => ids.has(w.clientId)),
+    waitlist: payload.waitlist.filter((w) => ids.has(w.clientId)),
+    notices: payload.notices.filter((n) => n.clientId && ids.has(n.clientId)),
+    checks: Object.fromEntries(Object.entries(payload.checks).filter(([k]) => [...ids].some((id) => k.startsWith(`${id}:`)))),
+    joinRequests: (payload.joinRequests ?? []).filter((r) => coachKey(r.coachId) === mine),
+    removedClientIds: payload.removedClientIds ?? [],
+    coaches: mine === String(TRAINER_TG_ID) ? payload.coaches ?? [] : [],
+    foreignHolds: holds,
+  };
+}
+
+export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayload, coachId: string): StudioPayload {
+  const mine = coachKey(coachId);
+  const foreignIds = new Set(current.clients.filter((c) => clientCoach(c) !== mine).map((c) => c.id));
+  const incomingMine = (incoming.clients ?? [])
+    .filter((c) => !foreignIds.has(c.id))
+    .map((c) => ({ ...c, coachId: mine }));
+  const myOld = current.clients.filter((c) => clientCoach(c) === mine);
+  const removed = (incoming.removedClientIds ?? []).filter((id) => myOld.some((c) => isRemovedClient(c, [id])));
+  const myClients = mergeClients(myOld, incomingMine).filter((c) => !isRemovedClient(c, removed));
+  const others = current.clients.filter((c) => clientCoach(c) !== mine);
+  const clients = [...others, ...myClients];
+  const myIds = new Set(myClients.map((c) => c.id));
+  const oldIds = new Set(myOld.map((c) => c.id));
+  const takeMine = <T extends { clientId: string }>(rows: T[], incomingRows: T[]) => [
+    ...rows.filter((row) => !oldIds.has(row.clientId)),
+    ...incomingRows.filter((row) => myIds.has(row.clientId)),
+  ];
+  return ensureApprovedClients({
+    ...current,
+    clients,
+    bookings: takeMine(current.bookings, incoming.bookings ?? []),
+    food: takeMine(current.food, incoming.food ?? []),
+    lifts: takeMine(current.lifts, incoming.lifts ?? []),
+    workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
+    waitlist: takeMine(current.waitlist, incoming.waitlist ?? []),
+    notices: mergeById(
+      current.notices.filter((n) => !n.clientId || !oldIds.has(n.clientId)),
+      (incoming.notices ?? []).filter((n) => n.clientId && myIds.has(n.clientId)),
+    ).slice(0, 40),
+    checks: {
+      ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => ![...oldIds].some((id) => k.startsWith(`${id}:`)))),
+      ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => [...myIds].some((id) => k.startsWith(`${id}:`)))),
+    },
+    joinRequests: mergeById(
+      (current.joinRequests ?? []).filter((r) => coachKey(r.coachId) !== mine),
+      (incoming.joinRequests ?? []).filter((r) => coachKey(r.coachId) === mine).map((r) => ({ ...r, coachId: mine })),
+    ),
+    removedClientIds: [...new Set([...(current.removedClientIds ?? []).filter((id) => !myOld.some((c) => isRemovedClient(c, [id]))), ...removed])],
+    extraSlots: mergeById(current.extraSlots, incoming.extraSlots ?? []),
+    closedSlotIds: [...new Set([...current.closedSlotIds, ...(incoming.closedSlotIds ?? [])])],
+    coaches:
+      mine === String(TRAINER_TG_ID) && Array.isArray(incoming.coaches)
+        ? incoming.coaches
+        : current.coaches ?? [],
+    trainerUsername: mine === String(TRAINER_TG_ID) ? incoming.trainerUsername || current.trainerUsername : current.trainerUsername,
+  });
+}
+
 function clientKey(c: Client) {
   if (c.telegramId) return `tg:${c.telegramId}`;
   const u = (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
@@ -204,6 +324,7 @@ function clientFromJoin(req: JoinRequest): Client {
     lastName: req.lastName || "",
     telegramId: req.telegramId,
     telegramUsername: req.telegramUsername ?? null,
+    coachId: coachKey(req.coachId),
   };
 }
 
@@ -336,9 +457,15 @@ export const pullStudio = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     let payload = await loadStudioState();
+    const bound = bindCoach(payload, session.user);
+    if (bound !== payload) {
+      payload = bound;
+      await saveStudioState(payload);
+    }
+    const trainer = isCoachUser(payload, session.user);
     let created = false;
 
-    if (session.role === "client") {
+    if (!trainer) {
       const byId = payload.clients.some((c) => c.telegramId === session.user.id);
       const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
       const byName = uname
@@ -370,12 +497,16 @@ export const pullStudio = createServerFn({ method: "POST" })
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
     }
 
-    if (session.user.username && payload.trainerUsername !== session.user.username) {
+    if (
+      session.user.id === String(TRAINER_TG_ID) &&
+      session.user.username &&
+      payload.trainerUsername !== session.user.username
+    ) {
       payload = { ...payload, trainerUsername: session.user.username };
       await saveStudioState(payload);
     }
 
-    return { ok: true, role: "trainer", payload };
+    return { ok: true, role: "trainer", payload: scopeCoach(payload, session.user.id) };
   });
 
 export const requestJoin = createServerFn({ method: "POST" })
@@ -393,7 +524,8 @@ export const requestJoin = createServerFn({ method: "POST" })
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false };
     const bot = await import("@/lib/telegram-bot.server");
-    if (session.role === "trainer") {
+    const payload = await loadStudioState();
+    if (isCoachUser(payload, session.user)) {
       await bot.ensureBotHook();
       return { ok: true };
     }
@@ -402,6 +534,7 @@ export const requestJoin = createServerFn({ method: "POST" })
       slotId: data.slotId,
       goal: data.goal,
       pack: data.pack,
+      coachId: coachFromStart(session.startParam, payload),
     });
   });
 
@@ -410,7 +543,11 @@ export const decideJoinFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
-    if (!session || session.role !== "trainer") return { ok: false };
+    const current = await loadStudioState();
+    if (!session || !isCoachUser(current, session.user)) return { ok: false };
+    const req = (current.joinRequests ?? []).find((r) => r.telegramId === data.telegramId);
+    const owner = session.user.id === String(TRAINER_TG_ID);
+    if (!owner && coachKey(req?.coachId) !== session.user.id) return { ok: false };
     const bot = await import("@/lib/telegram-bot.server");
     return bot.decideJoin(data.telegramId, data.approve);
   });
@@ -439,7 +576,8 @@ export const sendBotLinkFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
-    if (!session || session.role !== "trainer") return { ok: false };
+    const current = await loadStudioState();
+    if (!session || !isCoachUser(current, session.user)) return { ok: false };
     const bot = await import("@/lib/telegram-bot.server");
     const res = await bot.sendBotLink(data.telegramId, data.text);
     return { ok: Boolean(res.ok) };
@@ -454,17 +592,18 @@ export const pushStudio = createServerFn({ method: "POST" })
 
     const incoming = (data.payload ?? emptyPayload()) as StudioPayload;
     const current = await loadStudioState();
+    const trainer = isCoachUser(current, session.user);
     const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
     const known =
-      session.role === "trainer" ||
+      trainer ||
       current.clients.some((c) => c.telegramId === session.user.id) ||
       Boolean(
         uname &&
           current.clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
       );
     let next: StudioPayload;
-    if (session.role === "trainer") {
-      next = mergeTrainerPayload(current, normalizePayload(incoming));
+    if (trainer) {
+      next = mergeCoachPayload(current, normalizePayload(incoming), session.user.id);
     } else if (!known) {
       return { ok: true };
     } else {
@@ -487,6 +626,22 @@ export const pushStudio = createServerFn({ method: "POST" })
 
     await saveStudioState(next);
     return { ok: true };
+  });
+
+export const addCoachFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), username: z.string(), firstName: z.string() }))
+  .handler(async ({ data }): Promise<{ ok: boolean; coaches?: Coach[] }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
+    const username = data.username.replace(/^@/, "").trim().toLowerCase();
+    const firstName = data.firstName.trim();
+    if (!username || !firstName) return { ok: false };
+    const current = await loadStudioState();
+    if ((current.coaches ?? []).some((c) => sameHandle(c.username, username))) return { ok: true, coaches: current.coaches };
+    const coaches = [...(current.coaches ?? []), { telegramId: null, username, firstName, lastName: "" }];
+    await saveStudioState({ ...current, coaches });
+    return { ok: true, coaches };
   });
 
 export const studioHealth = createServerFn({ method: "GET" }).handler(async (): Promise<{ bot: boolean; db: "neon" | "pglite" }> => {

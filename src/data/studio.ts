@@ -1,4 +1,20 @@
 export const TRAINER_TG_ID = "8144320404";
+
+export type Coach = {
+  telegramId: string | null;
+  username: string | null;
+  firstName: string;
+  lastName: string;
+};
+
+export function coachKey(id: string | null | undefined) {
+  const value = String(id ?? "").trim();
+  return value || TRAINER_TG_ID;
+}
+
+export function clientCoach(client: { coachId?: string | null }) {
+  return coachKey(client.coachId);
+}
 export const INVITE_CODE = "erjoin";
 export const BOT_USERNAME = "ruksha_discipline_bot";
 
@@ -233,6 +249,7 @@ export type JoinRequest = {
   slotId?: string;
   goal?: string;
   pack?: string;
+  coachId?: string | null;
 };
 
 export type NotifyPrefs = {
@@ -275,6 +292,7 @@ export type Client = {
   telegramId?: string | null;
   telegramUsername?: string | null;
   phone?: string | null;
+  coachId?: string | null;
 };
 
 export type MachineEx = {
