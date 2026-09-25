@@ -198,13 +198,14 @@ export function ProgramView() {
             <p className="text-xs text-muted-foreground">{shown.focus}</p>
           </div>
           <ul className="mt-3 space-y-1.5">
-            {shown.items.map((item) => {
-              const on = checked.includes(item);
+            {shown.items.map((item, index) => {
+              const mark = `${index}:${item}`;
+              const on = checked.includes(mark);
               return (
-                <li key={item}>
+                <li key={mark}>
                   <button
                     type="button"
-                    onClick={() => toggleCheck(item)}
+                    onClick={() => toggleCheck(mark)}
                     className={cn(
                       "pressable flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
                       on ? "bg-ok-dim text-foreground" : "bg-transparent",
