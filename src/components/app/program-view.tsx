@@ -20,6 +20,8 @@ import {
   WEEK_GOAL,
   weekVisitCount,
   epley1rm,
+  planTotals,
+  readPlanLine,
   workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
@@ -44,7 +46,7 @@ export function ProgramView() {
   const [reps, setReps] = useState("6");
   const [sets, setSets] = useState("4");
   const [chartReady, setChartReady] = useState(false);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [facts, setFacts] = useState<Record<number, string>>({});
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
@@ -62,6 +64,15 @@ export function ProgramView() {
   }, [lifts, exercise, client]);
   const today = isoDate(new Date());
   const startKey = client ? `ruksha:wo:${client.id}:${today}` : "";
+  const factKey = client ? `ruksha:fact:${client.id}:${today}` : "";
+  useEffect(() => {
+    if (!factKey) return;
+    try {
+      setFacts(JSON.parse(sessionStorage.getItem(factKey) || "{}") as Record<number, string>);
+    } catch {
+      setFacts({});
+    }
+  }, [factKey]);
   useEffect(() => {
     if (!startKey) return;
     const raw = sessionStorage.getItem(startKey);
@@ -93,9 +104,12 @@ export function ProgramView() {
   const itemCount = shown?.items.length ?? 0;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
+  const totals = planTotals(shown?.items ?? [], checked, facts);
+  const restMin = Math.round(totals.restSec / 60);
+  const withRest = elapsedMin + restMin;
   const clock = (ts: number) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
   const liveKcal = checked.length
-    ? workoutKcal(client.weight, elapsedMin || todayBook?.duration || 60, checked.length, itemCount || 1)
+    ? workoutKcal(client.weight, withRest || todayBook?.duration || 60, checked.length, itemCount || 1) + Math.round(totals.volume * 0.04)
     : 0;
   const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
   const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
@@ -201,6 +215,7 @@ export function ProgramView() {
             {shown.items.map((item, index) => {
               const mark = `${index}:${item}`;
               const on = checked.includes(mark);
+              const bit = readPlanLine(item);
               return (
                 <li key={mark}>
                   <button
@@ -221,10 +236,27 @@ export function ProgramView() {
                     </span>
                     <span className={on ? "line-through opacity-70" : ""}>{item}</span>
                   </button>
+                  {on && bit.kind === "weight" ? (
+                    <input
+                      className={cn(inputClass, "mt-1 ml-10")}
+                      inputMode="decimal"
+                      placeholder="факт, кг — если другой"
+                      value={facts[index] ?? ""}
+                      onChange={(e) => {
+                        const next = { ...facts, [index]: e.target.value };
+                        setFacts(next);
+                        if (factKey) sessionStorage.setItem(factKey, JSON.stringify(next));
+                      }}
+                    />
+                  ) : null}
                 </li>
               );
             })}
           </ul>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Общий вес {totals.volume} кг · подходы {totals.sets} · отдых {restMin} мин
+            {startedAt ? ` · вместе ${withRest} мин` : ""}
+          </p>
           <div className="mt-4 border-t border-hairline pt-3">
             <SectionLabel>Сожжено</SectionLabel>
             <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
@@ -265,7 +297,7 @@ export function ProgramView() {
                     showToast("Сначала нажмите «Начать».");
                     return;
                   }
-                  completeWorkout(itemCount || checked.length, elapsedMin, new Date(startedAt).toISOString());
+                  completeWorkout(itemCount || checked.length, withRest, new Date(startedAt).toISOString(), totals.volume);
                 }}
                 className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
               >

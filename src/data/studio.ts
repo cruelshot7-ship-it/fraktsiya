@@ -540,6 +540,71 @@ export function workoutKcal(weightKg: number, minutes: number, done: number, tot
   return Math.max(0, Math.round(met * weightKg * hours * effort));
 }
 
+export type PlanBit = {
+  kind: "scheme" | "weight" | "rest" | "text";
+  sets: number;
+  reps: number;
+  kg: number | null;
+  restSec: number;
+};
+
+export function readPlanLine(text: string): PlanBit {
+  const raw = text.trim().toLowerCase().replace(/х/g, "x").replace(/×/g, "x").replace(/[–—]/g, "-");
+  const rest = /отдых\s*(\d+)/.exec(raw);
+  if (rest) return { kind: "rest", sets: 0, reps: 0, kg: null, restSec: Number(rest[1]) };
+  const scheme = /(\d+)\s*x\s*(\d+)(?:\s*-\s*(\d+))?/.exec(raw);
+  if (scheme) {
+    const lo = Number(scheme[2]);
+    const hi = scheme[3] ? Number(scheme[3]) : lo;
+    const arms = /кажд/.test(raw) ? 2 : 1;
+    return { kind: "scheme", sets: Number(scheme[1]) * arms, reps: Math.round((lo + hi) / 2), kg: null, restSec: 0 };
+  }
+  const weight = /(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d+(?:[.,]\d+)?))?\s*кг/.exec(raw);
+  if (weight) {
+    const a = Number(weight[1].replace(",", "."));
+    const b = weight[2] ? Number(weight[2].replace(",", ".")) : a;
+    return { kind: "weight", sets: 0, reps: 0, kg: Math.round(((a + b) / 2) * 10) / 10, restSec: 0 };
+  }
+  return { kind: "text", sets: 0, reps: 0, kg: null, restSec: 0 };
+}
+
+export function planTotals(items: string[], checked: string[], facts: Record<number, string>) {
+  let sets = 0;
+  let reps = 0;
+  let volume = 0;
+  let restSec = 0;
+  let pendingSets = 0;
+  let pendingReps = 0;
+  let pendingKg: number | null = null;
+  const flush = () => {
+    if (pendingSets > 0 && pendingKg != null && pendingReps > 0) {
+      volume += pendingSets * pendingReps * pendingKg;
+      sets += pendingSets;
+      reps += pendingReps;
+    }
+    pendingSets = 0;
+    pendingReps = 0;
+    pendingKg = null;
+  };
+  items.forEach((item, index) => {
+    if (!checked.includes(`${index}:${item}`)) return;
+    const bit = readPlanLine(item);
+    if (bit.kind === "text") flush();
+    if (bit.kind === "scheme") {
+      flush();
+      pendingSets = bit.sets;
+      pendingReps = bit.reps;
+    }
+    if (bit.kind === "weight") {
+      const typed = Number((facts[index] ?? "").replace(",", "."));
+      pendingKg = typed > 0 ? typed : bit.kg;
+    }
+    if (bit.kind === "rest") restSec += bit.restSec;
+  });
+  flush();
+  return { sets, volume: Math.round(volume), restSec };
+}
+
 export type Motive = { kicker: string; line: string };
 
 export type MotiveCtx = {

@@ -128,7 +128,7 @@ type State = {
   removeFood: (logId: string) => void;
   addLift: (exercise: string, weight: number, reps: number, sets: number) => void;
   toggleCheck: (item: string) => void;
-  completeWorkout: (totalItems: number, minutes?: number, startedAt?: string) => void;
+  completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
   setWeight: (kg: number) => void;
   addSlot: (date: string, time: string, capacity: number) => void;
   closeSlot: (id: string) => void;
@@ -1132,7 +1132,7 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
 
-  completeWorkout: (totalItems, minutes, startedAt) => {
+  completeWorkout: (totalItems, minutes, startedAt, extraVolume = 0) => {
     const { activeClientId, clients, bookings, checks, workoutLogs, lifts } = get();
     const client = clients.find((c) => c.id === activeClientId);
     if (!client) return;
@@ -1145,9 +1145,10 @@ export const useStudio = create<State>((set, get) => ({
     }
     const booking = bookings.find((b) => b.clientId === client.id && b.date === today);
     const mins = Math.max(1, Math.round(minutes ?? booking?.duration ?? 60));
-    const volume = lifts
-      .filter((l) => l.clientId === client.id && l.date === today)
-      .reduce((sum, l) => sum + l.weight * l.reps * l.sets, 0);
+    const volume =
+      lifts
+        .filter((l) => l.clientId === client.id && l.date === today)
+        .reduce((sum, l) => sum + l.weight * l.reps * l.sets, 0) + Math.max(0, extraVolume);
     const total = Math.max(totalItems, doneItems.length);
     const kcal = workoutKcal(client.weight, mins, doneItems.length, total) + Math.round(volume * 0.04);
     const log: WorkoutLog = {
