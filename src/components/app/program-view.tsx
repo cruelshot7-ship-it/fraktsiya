@@ -47,6 +47,7 @@ export function ProgramView() {
   const [sets, setSets] = useState("4");
   const [chartReady, setChartReady] = useState(false);
   const [facts, setFacts] = useState<Record<number, string>>({});
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
