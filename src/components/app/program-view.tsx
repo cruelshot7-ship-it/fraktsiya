@@ -21,6 +21,7 @@ import {
   weekVisitCount,
   epley1rm,
   planTotals,
+  lineGroup,
   readPlanLine,
   workoutKcal,
 } from "@/data/studio";
@@ -221,7 +222,13 @@ export function ProgramView() {
                 <li key={mark}>
                   <button
                     type="button"
-                    onClick={() => toggleCheck(mark)}
+                    onClick={() => {
+                      const marks = lineGroup(shown.items, index).map((i) => `${i}:${shown.items[i]}`);
+                      const allOn = marks.every((m) => checked.includes(m));
+                      for (const markId of marks) {
+                        if (checked.includes(markId) === allOn) toggleCheck(markId);
+                      }
+                    }}
                     className={cn(
                       "pressable flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
                       on ? "bg-ok-dim text-foreground" : "bg-transparent",
@@ -255,8 +262,7 @@ export function ProgramView() {
             })}
           </ul>
           <p className="mt-3 text-xs text-muted-foreground">
-            Общий вес {totals.volume} кг · подходы {totals.sets} · отдых {restMin} мин
-            {startedAt ? ` · вместе ${withRest} мин` : ""}
+            Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
           </p>
           <div className="mt-4 border-t border-hairline pt-3">
             <SectionLabel>Сожжено</SectionLabel>

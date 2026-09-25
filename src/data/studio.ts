@@ -568,6 +568,17 @@ export function readPlanLine(text: string): PlanBit {
   return { kind: "text", sets: 0, reps: 0, kg: null, restSec: 0 };
 }
 
+export function lineGroup(items: string[], index: number): number[] {
+  if (readPlanLine(items[index] ?? "").kind !== "text") return [index];
+  if (readPlanLine(items[index + 1] ?? "").kind === "text") return [index];
+  const group = [index];
+  for (let i = index + 1; i < items.length; i += 1) {
+    if (readPlanLine(items[i]).kind === "text") break;
+    group.push(i);
+  }
+  return group.length > 1 ? group : [index];
+}
+
 export function planTotals(items: string[], checked: string[], facts: Record<number, string>) {
   let sets = 0;
   let reps = 0;
