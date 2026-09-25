@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, CalendarDays, MessageCircle, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
@@ -65,6 +65,10 @@ export function MiniApp() {
   const client = activeClient({ clients, activeClientId });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [tgLocked, setTgLocked] = useState(false);
+  const scroller = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [canScroll, setCanScroll] = useState(false);
 
   useEffect(() => {
     if (role === "trainer") return;
@@ -131,6 +135,20 @@ export function MiniApp() {
     return TITLES[tab];
   }, [tab, client, role, inviteBlocked]);
 
+  function readScroll() {
+    const el = scroller.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    setScrolled(el.scrollTop > 6);
+    setProgress(max > 8 ? Math.min(1, el.scrollTop / max) : 0);
+    setCanScroll(max > 48);
+  }
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(readScroll);
+    return () => cancelAnimationFrame(frame);
+  }, [tab, role, inviteBlocked]);
+
   return (
     <div className="flex min-h-dvh justify-center bg-background">
       <HapticLayer />
@@ -138,7 +156,9 @@ export function MiniApp() {
         <Toast message={toast} />
 
         {sheetClientId ? null : (
-        <header className="relative z-10 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-3">
+        <div className={cn("chrome relative z-10", scrolled && "is-scrolled")}>
+        <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
+        <header className="px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pt-[max(0.85rem,env(safe-area-inset-top,0px))] pb-3">
           {role === "trainer" ? (
             <>
               <div className="flex items-center justify-between gap-3">
@@ -210,9 +230,8 @@ export function MiniApp() {
             </>
           )}
         </header>
-        )}
 
-        {role === "client" && !sheetClientId && !inviteBlocked ? (
+        {role === "client" && !inviteBlocked ? (
           <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
@@ -222,9 +241,10 @@ export function MiniApp() {
                   type="button"
                   onClick={() => setTab(item.id)}
                   className={cn(
-                    "pressable min-h-11 min-w-0 flex-1 border-b-2 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                    active ? "border-primary text-foreground" : "border-hairline text-muted-foreground",
+                    "min-h-11 min-w-0 flex-1 border-b-2 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    active ? "border-primary bg-primary/10 text-foreground" : "border-hairline text-muted-foreground",
                   )}
+                  aria-current={active ? "page" : undefined}
                 >
                   {item.label}
                 </button>
@@ -232,8 +252,12 @@ export function MiniApp() {
             })}
           </div>
         ) : null}
+        </div>
+        )}
 
         <main
+          ref={scroller}
+          onScroll={readScroll}
           className={cn(
             "flex-1 overflow-y-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
             role === "trainer" ? "pb-24" : "pb-10",
@@ -256,6 +280,10 @@ export function MiniApp() {
           </div>
         </main>
 
+        {canScroll && progress < 0.02 && !sheetClientId && !guestPreview ? (
+          <p className={cn("scroll-hint", role === "trainer" ? "bottom-20" : "bottom-3")}>ниже</p>
+        ) : null}
+
         {role === "trainer" ? (
           <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
             <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))]">
@@ -272,6 +300,7 @@ export function MiniApp() {
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-foreground" : "text-muted-foreground",
                     )}
+                    aria-current={active ? "page" : undefined}
                   >
                     {active ? <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" /> : null}
                     <span className="relative">

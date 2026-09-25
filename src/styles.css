@@ -223,6 +223,7 @@
     linear-gradient(180deg, rgb(236 231 220 / 0.05), transparent 32%),
     var(--color-card);
   box-shadow: var(--shadow-border);
+  transition: transform 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
 }
 
 @supports (corner-shape: squircle) {
@@ -237,8 +238,48 @@
   backdrop-filter: blur(16px) saturate(1.45);
 }
 
+.chrome {
+  transition: background-color 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
+}
+
+.chrome.is-scrolled {
+  background: rgb(20 19 16 / 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow: inset 0 -1px 0 rgb(236 231 220 / 0.08);
+}
+
+.chrome header {
+  transition: padding 280ms var(--ease-apple);
+}
+
+.scroll-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  height: 2px;
+  width: 100%;
+  transform-origin: left center;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.scroll-hint {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  text-align: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: var(--color-muted-foreground);
+}
+
 .pressable {
-  transition: transform 160ms var(--ease-apple), box-shadow 220ms var(--ease-apple), background-color 180ms var(--ease-apple);
+  transition: transform 220ms var(--ease-apple), box-shadow 280ms var(--ease-apple), background-color 220ms var(--ease-apple), color 220ms var(--ease-apple), border-color 220ms var(--ease-apple);
 }
 
 .pressable:active:not(:disabled) {
@@ -252,6 +293,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .apple-block:hover {
+    transform: translateY(-4px);
     box-shadow: var(--shadow-border-hover);
   }
 }
@@ -295,11 +337,15 @@
   .stagger-in > *,
   .sheet-in,
   .glow-dot,
-  .title-in {
+  .title-in,
+  .scroll-hint {
     animation: none;
   }
+  .chrome,
+  .chrome.is-scrolled header,
   .pressable,
-  .pressable:active:not(:disabled) {
+  .pressable:active:not(:disabled),
+  .apple-block {
     transition: none;
     transform: none;
   }
