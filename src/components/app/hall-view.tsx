@@ -56,8 +56,8 @@ export function HallView() {
   if (machine) {
     return (
       <div className="stagger-in flex flex-col gap-3">
-        <button type="button" onClick={() => setMachine(null)} className="self-start text-xs text-muted-foreground">
-          ← зал
+        <button type="button" onClick={() => setMachine(null)} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+          Назад
         </button>
         <Surface glow="ok">
           <SectionLabel>{machine.zone}</SectionLabel>
@@ -138,8 +138,8 @@ function Drill({
 
   return (
     <div className="stagger-in flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="self-start text-xs text-muted-foreground">
-        ← {machine.name}
+      <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+        Назад
       </button>
       <Surface glow="ok">
         <SectionLabel>Техника</SectionLabel>

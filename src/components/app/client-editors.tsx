@@ -86,8 +86,8 @@ export function ProgramEditor({
   const [draft, setDraft] = useState(client);
   return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="self-start text-xs text-muted-foreground">
-        ← к карточке
+      <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+        Назад
       </button>
       <Field label="Название программы">
         <input className={inputClass} value={draft.programTitle} onChange={(e) => setDraft({ ...draft, programTitle: e.target.value })} />
@@ -129,7 +129,7 @@ export function ProgramEditor({
           );
         })}
       </div>
-      <p className="text-tiny text-muted-foreground">Первый визит недели всегда день A — даже если это четверг.</p>
+      <p className="text-tiny text-muted-foreground">Порядок блоков сверху вниз — это порядок визитов. Буквы в названии дня ни на что не влияют.</p>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
         {WEEKDAY_TIMES.map((t) => {
@@ -224,12 +224,16 @@ function SessionEditor({
         <input className={inputClass} value={session.focus} onChange={(e) => onChange({ ...session, focus: e.target.value })} />
       </div>
       <textarea
-        className={`${inputClass} mt-2 h-24 resize-none py-2`}
+        className={`${inputClass} mt-2 h-36 resize-none py-2`}
+        placeholder={"1. Тяга верхнего блока\n3×8-10\n60-70 кг\nОтдых 90 секунд"}
         value={session.items.join("\n")}
         onChange={(e) =>
           onChange({ ...session, items: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) })
         }
       />
+      <p className="mt-2 text-tiny leading-relaxed text-muted-foreground">
+        Одна строка — один пункт. Название, затем подходы, вес и отдых. «кг» и слово «Отдых» обязательны. «на каждую руку» считает две стороны.
+      </p>
     </div>
   );
 }
@@ -247,8 +251,8 @@ export function FoodEditor({
   const [rest, setRest] = useState(client.kbjuRest?.calories ? client.kbjuRest : SAMPLE_KBJU_REST);
   return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="self-start text-xs text-muted-foreground">
-        ← к карточке
+      <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+        Назад
       </button>
       <SectionLabel>Тренировочный день</SectionLabel>
       <KbjuFields value={train} onChange={setTrain} />
@@ -306,8 +310,8 @@ export function MeasuresEditor({
   const [lastName, setLastName] = useState(client.lastName);
   return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="self-start text-xs text-muted-foreground">
-        ← к карточке
+      <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+        Назад
       </button>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Имя">
