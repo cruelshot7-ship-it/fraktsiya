@@ -5,6 +5,7 @@ export type Coach = {
   username: string | null;
   firstName: string;
   lastName: string;
+  code?: string;
 };
 
 export function coachKey(id: string | null | undefined) {

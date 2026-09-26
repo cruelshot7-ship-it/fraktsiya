@@ -137,13 +137,32 @@ export function ClientsView() {
               Дать доступ
             </button>
             {coaches.length > 0 ? (
-              <div className="mt-2 flex flex-col gap-1">
-                {coaches.map((coach) => (
-                  <p key={coach.username ?? coach.telegramId ?? coach.firstName} className="text-xs text-muted-foreground">
-                    {coach.firstName} · @{coach.username}
-                    {coach.telegramId ? "" : " · ещё не открыл бота"}
-                  </p>
-                ))}
+              <div className="mt-2 flex flex-col gap-2">
+                {coaches.map((coach) => {
+                  const token = coach.code || coach.telegramId;
+                  const link = token ? inviteUrl(BOT_USERNAME, `c_${token}`) : "";
+                  return (
+                    <button
+                      key={coach.code || coach.username || coach.firstName}
+                      type="button"
+                      className="pressable rounded-lg bg-secondary px-3 py-2 text-left"
+                      onClick={() => {
+                        if (!link) {
+                          showToast("Пусть тренер сначала откроет бота.");
+                          return;
+                        }
+                        void navigator.clipboard?.writeText(link);
+                        showToast("Ссылка тренера скопирована");
+                      }}
+                    >
+                      <p className="text-xs text-foreground">
+                        {coach.firstName} · @{coach.username}
+                        {coach.telegramId ? "" : " · ещё не открыл бота"}
+                      </p>
+                      <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
+                    </button>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -152,10 +171,10 @@ export function ClientsView() {
       {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-3 text-sm text-primary shadow-border">Нет свободных окон. Новичок записаться не может.</p>
       ) : null}
-      {joinRequests.filter((r) => r.status === "pending").length > 0 ? (
+      {joinRequests.filter((r) => r.status === "pending" && (!r.coachId || r.coachId === String(me?.id ?? TRAINER_TG_ID))).length > 0 ? (
         <div className="flex flex-col gap-2">
           {joinRequests
-            .filter((r) => r.status === "pending")
+            .filter((r) => r.status === "pending" && (!r.coachId || r.coachId === String(me?.id ?? TRAINER_TG_ID)))
             .map((req) => (
               <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
                 <p className="font-display text-base">

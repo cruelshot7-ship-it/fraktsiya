@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, clientCoach, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -91,7 +91,16 @@ export async function registerJoin(
     return { ok: true, already: true };
   }
   if (!message) return { ok: false, already: false };
+  const coachId = (offer?.coachId ?? "").trim();
+  if (!coachId) {
+    await tg("sendMessage", {
+      chat_id: user.id,
+      text: "Нужна личная ссылка тренера. Общая ссылка бота заявку не создаёт.",
+    });
+    return { ok: false, already: false };
+  }
   const prev = (payload.joinRequests ?? []).find((r) => r.telegramId === user.id && r.status === "pending");
+  if (prev?.coachId && prev.coachId !== coachId) return { ok: true, already: true };
   if (prev?.message === message) return { ok: true, already: false };
   const req: JoinRequest = {
     id: `jr_${user.id}`,
@@ -103,7 +112,7 @@ export async function registerJoin(
     slotId: offer?.slotId,
     goal: offer?.goal,
     pack: offer?.pack,
-    coachId: coachKey(offer?.coachId),
+    coachId,
     at: hoursAgoIso(0),
     status: "pending",
   };
@@ -114,7 +123,8 @@ export async function registerJoin(
   await saveStudioState(payload);
   const who = [req.firstName, req.lastName].filter(Boolean).join(" ");
   const handle = req.telegramUsername ? `@${req.telegramUsername}` : `id ${req.telegramId}`;
-  const notifyId = coachKey(req.coachId);
+  const notifyId = req.coachId;
+  if (!notifyId) return { ok: false, already: false };
   await tg("sendMessage", {
     chat_id: notifyId,
     text: `Заявка\n${who}\n${handle}\n\n${message}`,
@@ -150,7 +160,7 @@ export async function decideJoin(telegramId: string, approve: boolean) {
           lastName: req?.lastName || "",
           telegramId,
           telegramUsername: req?.telegramUsername ?? null,
-          coachId: coachKey(req?.coachId),
+          coachId: req?.coachId || null,
         };
     const clientId = fresh?.id ?? existing!.id;
     const withClient = fresh ? [...payload.clients, fresh] : payload.clients;
@@ -228,8 +238,7 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       }
       const req = (payload.joinRequests ?? []).find((r) => r.telegramId === id);
       const fromId = String(cb.from.id);
-      const allowed = fromId === String(TRAINER_TG_ID) || fromId === coachKey(req?.coachId);
-      if (!allowed) {
+      if (!req?.coachId || fromId !== req.coachId) {
         await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Это не ваш клиент.", show_alert: true });
         return;
       }

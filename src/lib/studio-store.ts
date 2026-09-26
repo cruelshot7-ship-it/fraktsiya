@@ -441,7 +441,7 @@ export const useStudio = create<State>((set, get) => ({
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      const joined = cloud.role === "trainer" ? payload.joinRequests ?? [] : mergeJoin(get().joinRequests, payload.joinRequests ?? []);
       const localFresh =
         cloud.role === "trainer"
           ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
@@ -496,7 +496,7 @@ export const useStudio = create<State>((set, get) => ({
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const joined = mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      const joined = cloud.role === "trainer" ? payload.joinRequests ?? [] : mergeJoin(get().joinRequests, payload.joinRequests ?? []);
       const localFresh =
         cloud.role === "trainer"
           ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
@@ -561,6 +561,11 @@ export const useStudio = create<State>((set, get) => ({
   approveJoin: (id) => {
     const req = get().joinRequests.find((r) => r.id === id);
     if (!req) return;
+    const me = String(getTelegramUser()?.id || "");
+    if (req.coachId && me && req.coachId !== me) {
+      get().showToast("Это заявка другого тренера.");
+      return;
+    }
     const uname = (req.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
     const existing =
       get().clients.find((c) => c.telegramId === req.telegramId) ??
