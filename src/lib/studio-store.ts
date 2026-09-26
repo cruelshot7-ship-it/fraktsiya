@@ -44,7 +44,7 @@ import {
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
+import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
@@ -110,6 +110,7 @@ type State = {
   approveJoin: (id: string) => void;
   rejectJoin: (id: string) => void;
   addCoach: (username: string, firstName: string) => Promise<void>;
+  removeCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
@@ -647,6 +648,24 @@ export const useStudio = create<State>((set, get) => ({
     }
     if (res.coaches) set({ coaches: res.coaches });
     get().showToast("Тренер добавлен. Пусть откроет бота.");
+  },
+
+  removeCoach: async (coach) => {
+    const initData = getTelegramInitData();
+    if (!initData) {
+      get().showToast("Откройте из Telegram.");
+      return;
+    }
+    const res = await removeCoachFn({
+      data: { initData, username: coach.username ?? "", code: coach.code, telegramId: coach.telegramId ?? "" },
+    }).catch(() => ({ ok: false as const }));
+    if (!res.ok) {
+      get().showToast("Не удалось закрыть доступ.");
+      return;
+    }
+    if (res.coaches) set({ coaches: res.coaches });
+    persist(snap({ ...get(), coaches: res.coaches ?? get().coaches }));
+    get().showToast("Доступ тренера закрыт.");
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),

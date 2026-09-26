@@ -668,6 +668,25 @@ export const addCoachFn = createServerFn({ method: "POST" })
     return { ok: true, coaches };
   });
 
+export const removeCoachFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), username: z.string().optional(), code: z.string().optional(), telegramId: z.string().optional() }))
+  .handler(async ({ data }): Promise<{ ok: boolean; coaches?: Coach[] }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
+    const current = await loadStudioState();
+    const before = current.coaches ?? [];
+    const coaches = before.filter((c) => {
+      if (data.telegramId && c.telegramId === data.telegramId) return false;
+      if (data.code && c.code && c.code === data.code) return false;
+      if (data.username && sameHandle(c.username, data.username)) return false;
+      return true;
+    });
+    if (!before.length || coaches.length === before.length) return { ok: false };
+    await saveStudioState({ ...current, coaches });
+    return { ok: true, coaches };
+  });
+
 export const studioHealth = createServerFn({ method: "GET" }).handler(async (): Promise<{ bot: boolean; db: "neon" | "pglite" }> => {
   const { env } = await import("@/lib/env.server");
   const { dbSource } = await import("@/lib/db");

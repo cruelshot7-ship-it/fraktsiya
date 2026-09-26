@@ -49,6 +49,7 @@ export function ClientsView() {
   const rejectJoin = useStudio((s) => s.rejectJoin);
   const coaches = useStudio((s) => s.coaches);
   const addCoach = useStudio((s) => s.addCoach);
+  const removeCoach = useStudio((s) => s.removeCoach);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
   const [coachName, setCoachName] = useState("");
@@ -142,25 +143,33 @@ export function ClientsView() {
                   const token = coach.code || coach.telegramId;
                   const link = token ? inviteUrl(BOT_USERNAME, `c_${token}`) : "";
                   return (
-                    <button
-                      key={coach.code || coach.username || coach.firstName}
-                      type="button"
-                      className="pressable rounded-lg bg-secondary px-3 py-2 text-left"
-                      onClick={() => {
-                        if (!link) {
-                          showToast("Пусть тренер сначала откроет бота.");
-                          return;
-                        }
-                        void navigator.clipboard?.writeText(link);
-                        showToast("Ссылка тренера скопирована");
-                      }}
-                    >
-                      <p className="text-xs text-foreground">
-                        {coach.firstName} · @{coach.username}
-                        {coach.telegramId ? "" : " · ещё не открыл бота"}
-                      </p>
-                      <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
-                    </button>
+                    <div key={coach.code || coach.username || coach.firstName} className="rounded-lg bg-secondary px-3 py-2">
+                      <button
+                        type="button"
+                        className="pressable w-full text-left"
+                        onClick={() => {
+                          if (!link) {
+                            showToast("Пусть тренер сначала откроет бота.");
+                            return;
+                          }
+                          void navigator.clipboard?.writeText(link);
+                          showToast("Ссылка тренера скопирована");
+                        }}
+                      >
+                        <p className="text-xs text-foreground">
+                          {coach.firstName} · @{coach.username}
+                          {coach.telegramId ? "" : " · ещё не открыл бота"}
+                        </p>
+                        <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
+                      </button>
+                      <button
+                        type="button"
+                        className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-primary"
+                        onClick={() => void removeCoach(coach)}
+                      >
+                        Удалить и закрыть доступ
+                      </button>
+                    </div>
                   );
                 })}
               </div>
