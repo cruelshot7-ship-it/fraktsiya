@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { applyOfferBooking, BOT_USERNAME, clientCoach, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, clientCoach, coachPhase, COACH_TRIAL_CAP, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -241,6 +241,18 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       if (!req?.coachId || fromId !== req.coachId) {
         await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Это не ваш клиент.", show_alert: true });
         return;
+      }
+      const coach = (payload.coaches ?? []).find((c) => c.telegramId === fromId);
+      if (coach) {
+        const phase = coachPhase(coach);
+        if (phase !== "trial" && phase !== "paid") {
+          await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Пробный доступ закончился.", show_alert: true });
+          return;
+        }
+        if (action === "ok" && phase === "trial" && payload.clients.filter((c) => c.coachId === fromId).length >= COACH_TRIAL_CAP) {
+          await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "На пробе не больше 15 клиентов.", show_alert: true });
+          return;
+        }
       }
       await decideJoin(id, action === "ok");
       await tg("answerCallbackQuery", { callback_query_id: cb.id, text: action === "ok" ? "Принят" : "Отклонён" });

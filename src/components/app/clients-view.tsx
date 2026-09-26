@@ -15,6 +15,7 @@ import {
   BOT_USERNAME,
   PACK_VALID_DAYS,
   TRAINER_TG_ID,
+  coachStatusLine,
   packDaysLeft,
   PACKS,
   programWeek,
@@ -50,6 +51,7 @@ export function ClientsView() {
   const coaches = useStudio((s) => s.coaches);
   const addCoach = useStudio((s) => s.addCoach);
   const removeCoach = useStudio((s) => s.removeCoach);
+  const payCoach = useStudio((s) => s.payCoach);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
   const [coachName, setCoachName] = useState("");
@@ -92,8 +94,17 @@ export function ClientsView() {
     return true;
   });
 
+  const myCoach = me && String(me.id) !== TRAINER_TG_ID ? coaches.find((c) => c.telegramId === String(me.id)) : undefined;
+
   return (
     <div className="flex flex-col gap-3">
+      {myCoach ? (
+        <Surface>
+          <SectionLabel>Доступ</SectionLabel>
+          <p className="mt-2 text-sm">{coachStatusLine(myCoach)}</p>
+          <p className="mt-1 text-tiny text-muted-foreground">Оплата $10 лично Евгению. После отметки кабинет снова открыт на 30 дней.</p>
+        </Surface>
+      ) : null}
       <button
         type="button"
         onClick={() => openGuestPreview()}
@@ -161,13 +172,21 @@ export function ClientsView() {
                           {coach.telegramId ? "" : " · ещё не открыл бота"}
                         </p>
                         <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
+                        <p className="mt-1 text-tiny text-foreground">{coachStatusLine(coach)}</p>
+                      </button>
+                      <button
+                        type="button"
+                        className="pressable mt-2 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                        onClick={() => void payCoach(coach)}
+                      >
+                        Оплачено · $10
                       </button>
                       <button
                         type="button"
                         className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-primary"
                         onClick={() => void removeCoach(coach)}
                       >
-                        Удалить и закрыть доступ
+                        Удалить полностью
                       </button>
                     </div>
                   );

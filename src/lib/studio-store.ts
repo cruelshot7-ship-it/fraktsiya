@@ -40,17 +40,30 @@ import {
   workoutKcal,
   TRAINER_TG_ID,
   type Coach,
+  coachPhase,
+  COACH_TRIAL_CAP,
 } from "@/data/studio";
 
 import { hapticNotify } from "@/lib/haptics";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
-import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
+import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
 export type ClientFilter = "all" | "attention" | "today";
+
+function coachGate(coaches: Coach[]) {
+  const me = String(getTelegramUser()?.id || "");
+  if (!me || me === String(TRAINER_TG_ID)) return "open" as const;
+  const row = coaches.find((c) => c.telegramId === me);
+  if (!row) return "open" as const;
+  const phase = coachPhase(row);
+  if (phase === "paused" || phase === "expired") return "pause" as const;
+  if (phase === "trial") return "cap" as const;
+  return "open" as const;
+}
 
 type PersistShape = {
   bookings: Booking[];
@@ -111,6 +124,7 @@ type State = {
   rejectJoin: (id: string) => void;
   addCoach: (username: string, firstName: string) => Promise<void>;
   removeCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
+  payCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
@@ -562,6 +576,15 @@ export const useStudio = create<State>((set, get) => ({
   approveJoin: (id) => {
     const req = get().joinRequests.find((r) => r.id === id);
     if (!req) return;
+    const gate = coachGate(get().coaches);
+    if (gate === "pause") {
+      get().showToast("Пробный доступ на паузе. Подписка $10 в месяц.");
+      return;
+    }
+    if (gate === "cap" && get().clients.length >= COACH_TRIAL_CAP) {
+      get().showToast("На пробе не больше 15 клиентов.");
+      return;
+    }
     const me = String(getTelegramUser()?.id || "");
     if (req.coachId && me && req.coachId !== me) {
       get().showToast("Это заявка другого тренера.");
@@ -665,7 +688,25 @@ export const useStudio = create<State>((set, get) => ({
     }
     if (res.coaches) set({ coaches: res.coaches });
     persist(snap({ ...get(), coaches: res.coaches ?? get().coaches }));
-    get().showToast("Доступ тренера закрыт.");
+    get().showToast("Доступ тренера закрыт. Его клиенты стёрты.");
+  },
+
+  payCoach: async (coach) => {
+    const initData = getTelegramInitData();
+    if (!initData) {
+      get().showToast("Откройте из Telegram.");
+      return;
+    }
+    const res = await payCoachFn({
+      data: { initData, username: coach.username ?? "", code: coach.code, telegramId: coach.telegramId ?? "" },
+    }).catch(() => ({ ok: false as const }));
+    if (!res.ok) {
+      get().showToast("Не удалось отметить оплату.");
+      return;
+    }
+    if (res.coaches) set({ coaches: res.coaches });
+    persist(snap({ ...get(), coaches: res.coaches ?? get().coaches }));
+    get().showToast("Оплата принята. Доступ ещё на 30 дней.");
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),
@@ -706,6 +747,10 @@ export const useStudio = create<State>((set, get) => ({
 
   bookSlot: (slotId, forClientId) => {
     if (slotBusy) return false;
+    if (coachGate(get().coaches) === "pause") {
+      get().showToast("Пробный доступ на паузе. Новые записи закрыты.");
+      return false;
+    }
     slotBusy = true;
     try {
     const { slots, bookings, activeClientId, role, clients, closedSlotIds, notices, waitlist } = get();
@@ -1311,6 +1356,15 @@ export const useStudio = create<State>((set, get) => ({
     const lastName = draft.lastName.trim();
     if (!firstName) {
       get().showToast("Напишите имя.");
+      return "";
+    }
+    const gate = coachGate(get().coaches);
+    if (gate === "pause") {
+      get().showToast("Пробный доступ на паузе. Новых клиентов добавить нельзя.");
+      return "";
+    }
+    if (gate === "cap" && get().clients.length >= COACH_TRIAL_CAP) {
+      get().showToast("На пробе не больше 15 клиентов. Дальше подписка $10.");
       return "";
     }
     const handle = draft.telegramUsername?.replace(/^@/, "").trim().toLowerCase() || "";

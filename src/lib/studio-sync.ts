@@ -3,6 +3,9 @@ import { z } from "zod";
 import {
   clientCoach,
   coachKey,
+  coachPhase,
+  COACH_PAID_DAYS,
+  COACH_TRIAL_CAP,
   emptyClient,
   hoursAgoIso,
   digitsPhone,
@@ -98,7 +101,10 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     trainerUsername: raw.trainerUsername ?? null,
     joinRequests: raw.joinRequests ?? [],
     removedClientIds: removed,
-    coaches: Array.isArray(raw.coaches) ? raw.coaches : [],
+    coaches: (Array.isArray(raw.coaches) ? raw.coaches : []).map((coach) => ({
+      ...coach,
+      addedAt: coach.addedAt || new Date().toISOString(),
+    })),
     foreignHolds: undefined,
     clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
   }));
@@ -183,7 +189,14 @@ export function bindCoach(payload: StudioPayload, user: { id: string; username: 
 
 export function isCoachUser(payload: StudioPayload, user: { id: string; username: string | null }) {
   if (user.id === String(TRAINER_TG_ID)) return true;
-  return (payload.coaches ?? []).some((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
+  const row = (payload.coaches ?? []).find((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
+  if (!row) return false;
+  const phase = coachPhase(row);
+  return phase === "trial" || phase === "paid" || phase === "paused";
+}
+
+function coachRow(payload: StudioPayload, user: { id: string; username: string | null }) {
+  return (payload.coaches ?? []).find((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
 }
 
 export function coachFromStart(start: string, payload: StudioPayload) {
@@ -192,7 +205,10 @@ export function coachFromStart(start: string, payload: StudioPayload) {
   const token = match[1];
   if (token === String(TRAINER_TG_ID)) return String(TRAINER_TG_ID);
   const coach = (payload.coaches ?? []).find((c) => c.code === token || c.telegramId === token);
-  return coach?.telegramId ?? "";
+  if (!coach?.telegramId) return "";
+  const phase = coachPhase(coach);
+  if (phase !== "trial" && phase !== "paid") return "";
+  return coach.telegramId;
 }
 
 function restoreInviteOwner(payload: StudioPayload): StudioPayload {
@@ -227,7 +243,10 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
     checks: Object.fromEntries(Object.entries(payload.checks).filter(([k]) => [...ids].some((id) => k.startsWith(`${id}:`)))),
     joinRequests: (payload.joinRequests ?? []).filter((r) => coachKey(r.coachId) === mine),
     removedClientIds: payload.removedClientIds ?? [],
-    coaches: mine === String(TRAINER_TG_ID) ? payload.coaches ?? [] : [],
+    coaches:
+      mine === String(TRAINER_TG_ID)
+        ? payload.coaches ?? []
+        : (payload.coaches ?? []).filter((c) => c.telegramId === mine),
     foreignHolds: holds,
   };
 }
@@ -241,19 +260,45 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     .map((c) => ({ ...c, coachId: mine }));
   const myOld = current.clients.filter((c) => clientCoach(c) === mine);
   const removed = (incoming.removedClientIds ?? []).filter((id) => myOld.some((c) => isRemovedClient(c, [id])));
-  const myClients = mergeClients(myOld, incomingMine).filter((c) => !isRemovedClient(c, removed));
+  const row = (current.coaches ?? []).find((c) => c.telegramId === mine);
+  const phase = mine === String(TRAINER_TG_ID) ? "paid" : row ? coachPhase(row) : "expired";
+  const allowedIncoming =
+    phase === "paused" || phase === "expired" ? incomingMine.filter((c) => myOld.some((old) => old.id === c.id)) : incomingMine;
+  let myClients = mergeClients(myOld, allowedIncoming).filter((c) => !isRemovedClient(c, removed));
+  if (phase === "trial" && myClients.length > COACH_TRIAL_CAP) {
+    const oldIds = new Set(myOld.map((c) => c.id));
+    const kept = myClients.filter((c) => oldIds.has(c.id));
+    const fresh = myClients.filter((c) => !oldIds.has(c.id));
+    myClients = [...kept, ...fresh.slice(0, Math.max(0, COACH_TRIAL_CAP - kept.length))];
+  }
   const others = current.clients.filter((c) => clientCoach(c) !== mine);
   const clients = [...others, ...myClients];
   const myIds = new Set(myClients.map((c) => c.id));
   const oldIds = new Set(myOld.map((c) => c.id));
+  const oldBookingIds = new Set(current.bookings.filter((b) => oldIds.has(b.clientId)).map((b) => b.id));
+  const incomingBookings =
+    phase === "paused" || phase === "expired"
+      ? (incoming.bookings ?? []).filter((b) => oldBookingIds.has(b.id))
+      : incoming.bookings ?? [];
   const takeMine = <T extends { clientId: string }>(rows: T[], incomingRows: T[]) => [
     ...rows.filter((row) => !oldIds.has(row.clientId)),
     ...incomingRows.filter((row) => myIds.has(row.clientId)),
   ];
+  const keepCoach = (prev: Coach[], incomingRows: Coach[]) =>
+    incomingRows.map((next) => {
+      const prevRow = prev.find(
+        (c) =>
+          (next.code && c.code === next.code) ||
+          (next.telegramId && c.telegramId === next.telegramId) ||
+          sameHandle(c.username, next.username),
+      );
+      if (!prevRow) return next;
+      return { ...prevRow, ...next, addedAt: next.addedAt || prevRow.addedAt, paidUntil: next.paidUntil ?? prevRow.paidUntil, code: next.code || prevRow.code };
+    });
   return ensureApprovedClients({
     ...current,
     clients,
-    bookings: takeMine(current.bookings, incoming.bookings ?? []),
+    bookings: takeMine(current.bookings, incomingBookings),
     food: takeMine(current.food, incoming.food ?? []),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
@@ -268,14 +313,17 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     },
     joinRequests: mergeById(
       (current.joinRequests ?? []).filter((r) => coachKey(r.coachId) !== mine),
-      (incoming.joinRequests ?? []).filter((r) => coachKey(r.coachId) === mine).map((r) => ({ ...r, coachId: mine })),
+      (incoming.joinRequests ?? [])
+        .filter((r) => coachKey(r.coachId) === mine)
+        .filter((r) => phase === "trial" || phase === "paid" || (current.joinRequests ?? []).some((old) => old.id === r.id))
+        .map((r) => ({ ...r, coachId: mine })),
     ),
     removedClientIds: [...new Set([...(current.removedClientIds ?? []).filter((id) => !myOld.some((c) => isRemovedClient(c, [id]))), ...removed])],
     extraSlots: mergeById(current.extraSlots, incoming.extraSlots ?? []),
     closedSlotIds: [...new Set([...current.closedSlotIds, ...(incoming.closedSlotIds ?? [])])],
     coaches:
       mine === String(TRAINER_TG_ID) && Array.isArray(incoming.coaches)
-        ? incoming.coaches
+        ? keepCoach(current.coaches ?? [], incoming.coaches)
         : current.coaches ?? [],
     trainerUsername: mine === String(TRAINER_TG_ID) ? incoming.trainerUsername || current.trainerUsername : current.trainerUsername,
   });
@@ -436,7 +484,8 @@ async function normalizedState(raw: Partial<StudioPayload> | null | undefined) {
     const now = next.clients.find((row) => row.id === client.id);
     return Boolean(now && (now.coachId || "") !== (client.coachId || ""));
   });
-  if (changed) await saveStudioState(next);
+  const stamped = (raw?.coaches ?? []).some((coach) => !coach.addedAt);
+  if (changed || stamped) await saveStudioState(next);
   return next;
 }
 
@@ -571,6 +620,15 @@ export const decideJoinFn = createServerFn({ method: "POST" })
     if (!session || !isCoachUser(current, session.user)) return { ok: false };
     const req = (current.joinRequests ?? []).find((r) => r.telegramId === data.telegramId);
     if (!req?.coachId || session.user.id !== req.coachId) return { ok: false };
+    if (session.user.id !== String(TRAINER_TG_ID)) {
+      const row = coachRow(current, session.user);
+      const phase = row ? coachPhase(row) : "expired";
+      if (phase !== "trial" && phase !== "paid") return { ok: false };
+      if (data.approve && phase === "trial") {
+        const count = current.clients.filter((c) => c.coachId === session.user.id).length;
+        if (count >= COACH_TRIAL_CAP) return { ok: false };
+      }
+    }
     const bot = await import("@/lib/telegram-bot.server");
     return bot.decideJoin(data.telegramId, data.approve);
   });
@@ -663,7 +721,10 @@ export const addCoachFn = createServerFn({ method: "POST" })
     const current = await loadStudioState();
     if ((current.coaches ?? []).some((c) => sameHandle(c.username, username))) return { ok: true, coaches: current.coaches };
     const code = Math.random().toString(36).slice(2, 8);
-    const coaches = [...(current.coaches ?? []), { telegramId: null, username, firstName, lastName: "", code }];
+    const coaches = [
+      ...(current.coaches ?? []),
+      { telegramId: null, username, firstName, lastName: "", code, addedAt: new Date().toISOString(), paidUntil: null },
+    ];
     await saveStudioState({ ...current, coaches });
     return { ok: true, coaches };
   });
@@ -683,6 +744,49 @@ export const removeCoachFn = createServerFn({ method: "POST" })
       return true;
     });
     if (!before.length || coaches.length === before.length) return { ok: false };
+    const droppedIds = new Set(
+      before
+        .filter((c) => !coaches.some((left) => left === c || (left.code && left.code === c.code) || (left.telegramId && left.telegramId === c.telegramId)))
+        .map((c) => c.telegramId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    const goneClients = current.clients.filter((c) => c.coachId && droppedIds.has(c.coachId));
+    const goneIds = new Set(goneClients.map((c) => c.id));
+    const dropRow = <T extends { clientId: string }>(rows: T[]) => rows.filter((row) => !goneIds.has(row.clientId));
+    await saveStudioState({
+      ...current,
+      coaches,
+      clients: current.clients.filter((c) => !goneIds.has(c.id)),
+      bookings: dropRow(current.bookings),
+      food: dropRow(current.food),
+      lifts: dropRow(current.lifts),
+      workoutLogs: dropRow(current.workoutLogs),
+      waitlist: dropRow(current.waitlist),
+      notices: current.notices.filter((n) => !n.clientId || !goneIds.has(n.clientId)),
+      joinRequests: (current.joinRequests ?? []).filter((r) => !r.coachId || !droppedIds.has(r.coachId)),
+      removedClientIds: [...new Set([...(current.removedClientIds ?? []), ...goneClients.flatMap((c) => tombstonesFor(c))])],
+    });
+    return { ok: true, coaches };
+  });
+
+export const payCoachFn = createServerFn({ method: "POST" })
+  .validator(z.object({ initData: z.string().optional(), username: z.string().optional(), code: z.string().optional(), telegramId: z.string().optional() }))
+  .handler(async ({ data }): Promise<{ ok: boolean; coaches?: Coach[] }> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
+    const current = await loadStudioState();
+    const idx = (current.coaches ?? []).findIndex(
+      (c) =>
+        (data.telegramId && c.telegramId === data.telegramId) ||
+        (data.code && c.code === data.code) ||
+        (data.username && sameHandle(c.username, data.username)),
+    );
+    if (idx < 0) return { ok: false };
+    const row = current.coaches[idx];
+    const base = Math.max(Date.now(), row.paidUntil ? Date.parse(row.paidUntil) || 0 : 0);
+    const coaches = current.coaches.slice();
+    coaches[idx] = { ...row, paidUntil: new Date(base + COACH_PAID_DAYS * 86_400_000).toISOString() };
     await saveStudioState({ ...current, coaches });
     return { ok: true, coaches };
   });

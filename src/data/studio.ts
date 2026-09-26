@@ -6,7 +6,40 @@ export type Coach = {
   firstName: string;
   lastName: string;
   code?: string;
+  addedAt?: string;
+  paidUntil?: string | null;
 };
+
+export const COACH_PRICE_USD = 10;
+export const COACH_TRIAL_DAYS = 7;
+export const COACH_GRACE_DAYS = 7;
+export const COACH_TRIAL_CAP = 15;
+export const COACH_PAID_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+export type CoachPhase = "trial" | "paid" | "paused" | "expired";
+
+export function coachPhase(coach: { addedAt?: string | null; paidUntil?: string | null }, now = Date.now()): CoachPhase {
+  const paid = coach.paidUntil ? Date.parse(coach.paidUntil) : 0;
+  if (Number.isFinite(paid) && paid > now) return "paid";
+  const start = coach.addedAt ? Date.parse(coach.addedAt) : now;
+  const trialEnd = (Number.isFinite(start) ? start : now) + COACH_TRIAL_DAYS * DAY_MS;
+  if (now < trialEnd) return "trial";
+  if (now < trialEnd + COACH_GRACE_DAYS * DAY_MS) return "paused";
+  return "expired";
+}
+
+export function coachStatusLine(coach: { addedAt?: string | null; paidUntil?: string | null }, now = Date.now()) {
+  const phase = coachPhase(coach, now);
+  const start = coach.addedAt && Number.isFinite(Date.parse(coach.addedAt)) ? Date.parse(coach.addedAt) : now;
+  const trialEnd = start + COACH_TRIAL_DAYS * DAY_MS;
+  const graceEnd = trialEnd + COACH_GRACE_DAYS * DAY_MS;
+  const left = (until: number) => Math.max(1, Math.ceil((until - now) / DAY_MS));
+  if (phase === "paid") return `Оплачено · ещё ${left(Date.parse(coach.paidUntil || ""))} дн. · $${COACH_PRICE_USD}/мес`;
+  if (phase === "trial") return `Проба · ещё ${left(trialEnd)} дн. · до ${COACH_TRIAL_CAP} клиентов`;
+  if (phase === "paused") return `Пауза · данные ещё ${left(graceEnd)} дн. · $${COACH_PRICE_USD}/мес`;
+  return "Срок вышел. Кабинет закрыт, данные можно стереть.";
+}
 
 export function coachKey(id: string | null | undefined) {
   const value = String(id ?? "").trim();
