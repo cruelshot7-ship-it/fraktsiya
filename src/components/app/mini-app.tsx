@@ -9,6 +9,7 @@ import { SlotsView } from "@/components/app/slots-view";
 import { BookingsView } from "@/components/app/bookings-view";
 import { ProgramView } from "@/components/app/program-view";
 import { NutritionView } from "@/components/app/nutrition-view";
+import { FormView } from "@/components/app/form-view";
 import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { JoinGate } from "@/components/app/join-gate";
@@ -25,6 +26,7 @@ const CLIENT_TABS: { id: TabId; label: string }[] = [
   { id: "bookings", label: "Записи" },
   { id: "program", label: "Сегодня" },
   { id: "food", label: "Еда" },
+  { id: "form", label: "Форма" },
   { id: "hall", label: "Зал" },
 ];
 
@@ -39,6 +41,7 @@ const TITLES: Record<TabId, string> = {
   bookings: "Мои записи",
   program: "Сегодня",
   food: "Питание",
+  form: "Форма",
   hall: "Зал",
   clients: "Клиенты",
   signals: "Сигналы",
@@ -272,6 +275,7 @@ export function MiniApp() {
             {tab === "bookings" ? <BookingsView /> : null}
             {tab === "program" ? <ProgramView /> : null}
             {tab === "food" ? <NutritionView /> : null}
+            {tab === "form" ? <FormView /> : null}
             {tab === "hall" ? <HallView /> : null}
             {tab === "clients" ? <ClientsView /> : null}
             {tab === "signals" ? <SignalsView /> : null}

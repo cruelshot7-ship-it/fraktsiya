@@ -205,6 +205,28 @@ export const FREEZE_OPTIONS = [7, 14, 30] as const;
 
 export type FoodLog = Meal & { logId: string; date: string; clientId: string };
 
+export type DayCheck = {
+  id: string;
+  clientId: string;
+  date: string;
+  steps: number;
+  sleepHours: number;
+  waterMl: number;
+  moveMin: number;
+  moveKind: string;
+};
+
+export const FORM_GOALS = {
+  steps: 8000,
+  sleep: 7.5,
+  water: 2500,
+  move: 30,
+};
+
+export const MOVE_KINDS = ["Ходьба", "Бег", "Велосипед", "Дома"] as const;
+export const FATSECRET_URL = "https://www.fatsecret.com/";
+export const TRACKABLES_URL = "https://apps.apple.com/app/id6745567488";
+
 export type LiftLog = {
   id: string;
   date: string;

@@ -14,6 +14,7 @@ import {
   type Client,
   type Coach,
   type FoodLog,
+  type DayCheck,
   type JoinRequest,
   type LiftLog,
   type Notice,
@@ -26,6 +27,7 @@ import {
 export type StudioPayload = {
   bookings: Booking[];
   food: FoodLog[];
+  dayChecks: DayCheck[];
   lifts: LiftLog[];
   clients: Client[];
   extraSlots: Slot[];
@@ -59,6 +61,7 @@ export function emptyPayload(): StudioPayload {
   return {
     bookings: [],
     food: [],
+    dayChecks: [],
     lifts: [],
     clients: [],
     extraSlots: [],
@@ -90,6 +93,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     ...raw,
     bookings: raw.bookings ?? [],
     food: raw.food ?? [],
+    dayChecks: raw.dayChecks ?? [],
     lifts: raw.lifts ?? [],
     extraSlots: raw.extraSlots ?? [],
     closedSlotIds: raw.closedSlotIds ?? [],
@@ -151,6 +155,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
     ...payload,
     clients: mine ? [mine] : [],
     food: id ? payload.food.filter((f) => f.clientId === id) : [],
+    dayChecks: id ? (payload.dayChecks ?? []).filter((d) => d.clientId === id) : [],
     lifts: id ? payload.lifts.filter((l) => l.clientId === id) : [],
     workoutLogs: id ? payload.workoutLogs.filter((w) => w.clientId === id) : [],
     notices: id ? payload.notices.filter((n) => n.audience === "client" && n.clientId === id) : [],
@@ -236,6 +241,7 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
     clients,
     bookings: payload.bookings.filter((b) => ids.has(b.clientId)),
     food: payload.food.filter((f) => ids.has(f.clientId)),
+    dayChecks: (payload.dayChecks ?? []).filter((d) => ids.has(d.clientId)),
     lifts: payload.lifts.filter((l) => ids.has(l.clientId)),
     workoutLogs: payload.workoutLogs.filter((w) => ids.has(w.clientId)),
     waitlist: payload.waitlist.filter((w) => ids.has(w.clientId)),
@@ -300,6 +306,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     clients,
     bookings: takeMine(current.bookings, incomingBookings),
     food: takeMine(current.food, incoming.food ?? []),
+    dayChecks: takeMine(current.dayChecks ?? [], incoming.dayChecks ?? []),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
     waitlist: takeMine(current.waitlist, incoming.waitlist ?? []),
@@ -462,6 +469,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...incoming.bookings.filter((b) => b.clientId === id),
     ],
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
+    dayChecks: [...(current.dayChecks ?? []).filter((d) => d.clientId !== id), ...(incoming.dayChecks ?? []).filter((d) => d.clientId === id)],
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
     waitlist: [
       ...current.waitlist.filter((w) => w.clientId !== id),
@@ -759,6 +767,7 @@ export const removeCoachFn = createServerFn({ method: "POST" })
       clients: current.clients.filter((c) => !goneIds.has(c.id)),
       bookings: dropRow(current.bookings),
       food: dropRow(current.food),
+      dayChecks: dropRow(current.dayChecks ?? []),
       lifts: dropRow(current.lifts),
       workoutLogs: dropRow(current.workoutLogs),
       waitlist: dropRow(current.waitlist),

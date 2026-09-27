@@ -28,6 +28,7 @@ import {
   type Booking,
   type Client,
   type FoodLog,
+  type DayCheck,
   type JoinRequest,
   type LiftLog,
   type Meal,
@@ -50,7 +51,7 @@ import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemo
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
-export type TabId = "slots" | "bookings" | "program" | "food" | "hall" | "clients" | "signals";
+export type TabId = "slots" | "bookings" | "program" | "food" | "form" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
 export type ClientFilter = "all" | "attention" | "today";
 
@@ -68,6 +69,7 @@ function coachGate(coaches: Coach[]) {
 type PersistShape = {
   bookings: Booking[];
   food: FoodLog[];
+  dayChecks: DayCheck[];
   lifts: LiftLog[];
   role: Role;
   clients: Client[];
@@ -100,6 +102,7 @@ type State = {
   closedSlotIds: string[];
   bookings: Booking[];
   food: FoodLog[];
+  dayChecks: DayCheck[];
   lifts: LiftLog[];
   clients: Client[];
   activeClientId: string;
@@ -146,6 +149,8 @@ type State = {
   addFood: (mealId: string) => void;
   addCustomFood: (meal: Omit<Meal, "id">) => void;
   removeFood: (logId: string) => void;
+  saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind">>) => void;
+  importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
   addLift: (exercise: string, weight: number, reps: number, sets: number) => void;
   toggleCheck: (item: string) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
@@ -202,6 +207,7 @@ function snap(s: State): PersistShape {
   return {
     bookings: s.bookings,
     food: s.food,
+    dayChecks: s.dayChecks,
     lifts: s.lifts,
     role: s.role,
     clients: s.clients,
@@ -320,6 +326,7 @@ export const useStudio = create<State>((set, get) => ({
   closedSlotIds: [],
   bookings: [],
   food: [],
+  dayChecks: [],
   lifts: [],
   clients: [],
   activeClientId: "",
@@ -341,6 +348,7 @@ export const useStudio = create<State>((set, get) => ({
   hydrate: () => {
     let bookings: Booking[] = [];
     let food: FoodLog[] = [];
+    let dayChecks: DayCheck[] = [];
     let lifts: LiftLog[] = [];
     let role: Role = "client";
     let clients: Client[] = [];
@@ -363,6 +371,7 @@ export const useStudio = create<State>((set, get) => ({
         const parsed = JSON.parse(raw) as Partial<PersistShape>;
         bookings = parsed.bookings ?? [];
         food = parsed.food ?? [];
+        dayChecks = parsed.dayChecks ?? [];
         lifts = parsed.lifts ?? [];
         role = parsed.role === "trainer" ? "trainer" : "client";
         clients = parsed.clients?.length
@@ -434,6 +443,7 @@ export const useStudio = create<State>((set, get) => ({
       selectedDate,
       bookings,
       food,
+      dayChecks,
       lifts,
       role,
       clients,
@@ -484,6 +494,7 @@ export const useStudio = create<State>((set, get) => ({
             : get().activeClientId,
         bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
         food: payload.food,
+        dayChecks: payload.dayChecks ?? [],
         lifts: payload.lifts,
         extraSlots: extra,
         closedSlotIds: [...new Set([...get().closedSlotIds, ...(payload.closedSlotIds ?? [])])],
@@ -534,6 +545,7 @@ export const useStudio = create<State>((set, get) => ({
         clients: next.clients,
         coaches: payload.coaches ?? get().coaches,
         food: cloud.role === "trainer" ? payload.food : payload.food.length ? payload.food : get().food,
+        dayChecks: cloud.role === "trainer" ? payload.dayChecks ?? [] : (payload.dayChecks ?? []).length ? payload.dayChecks ?? [] : get().dayChecks,
         lifts: cloud.role === "trainer" ? payload.lifts : payload.lifts.length ? payload.lifts : get().lifts,
         extraSlots: extra,
         closedSlotIds: payload.closedSlotIds.length ? [...new Set([...get().closedSlotIds, ...payload.closedSlotIds])] : get().closedSlotIds,
@@ -714,7 +726,7 @@ export const useStudio = create<State>((set, get) => ({
     if (telegramLocked()) return;
     let tab = get().tab;
     if (role === "trainer") {
-      if (tab === "food" || tab === "program" || tab === "bookings" || tab === "hall") tab = "clients";
+      if (tab === "food" || tab === "program" || tab === "bookings" || tab === "hall" || tab === "form") tab = "clients";
     } else if (tab === "clients" || tab === "signals") {
       tab = "program";
     }
@@ -1221,6 +1233,48 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast(`Добавлено: ${meal.name}`);
   },
 
+  saveDayCheck: (patch) => {
+    const clientId = get().activeClientId;
+    if (!clientId) return;
+    const date = todayIso();
+    const id = `${clientId}:${date}`;
+    const prev = get().dayChecks.find((row) => row.id === id);
+    const next: DayCheck = {
+      id,
+      clientId,
+      date,
+      steps: Math.max(0, Math.round(patch.steps ?? prev?.steps ?? 0)),
+      sleepHours: Math.max(0, Math.round((patch.sleepHours ?? prev?.sleepHours ?? 0) * 10) / 10),
+      waterMl: Math.max(0, Math.round(patch.waterMl ?? prev?.waterMl ?? 0)),
+      moveMin: Math.max(0, Math.round(patch.moveMin ?? prev?.moveMin ?? 0)),
+      moveKind: (patch.moveKind ?? prev?.moveKind ?? "Ходьба").trim() || "Ходьба",
+    };
+    set({ dayChecks: [...get().dayChecks.filter((row) => row.id !== id), next] });
+    persist(snap(get()));
+    get().showToast("День записан.");
+  },
+
+  importFatSecret: (meal) => {
+    const clientId = get().activeClientId;
+    if (!clientId) return;
+    const date = todayIso();
+    const food = get().food.filter((row) => !(row.clientId === clientId && row.date === date && row.name === "FatSecret"));
+    const entry: FoodLog = {
+      id: "fatsecret",
+      name: "FatSecret",
+      calories: Math.max(0, Math.round(meal.calories)),
+      protein: Math.max(0, Math.round(meal.protein)),
+      fat: Math.max(0, Math.round(meal.fat)),
+      carbs: Math.max(0, Math.round(meal.carbs)),
+      logId: `fatsecret_${clientId}_${date}`,
+      date,
+      clientId,
+    };
+    set({ food: [...food, entry] });
+    persist(snap(get()));
+    get().showToast("FatSecret внесён в еду.");
+  },
+
   removeFood: (logId) => {
     const food = get().food.filter((f) => f.logId !== logId);
     set({ food });
@@ -1465,6 +1519,7 @@ export const useStudio = create<State>((set, get) => ({
     const activeClientId = get().activeClientId === id ? clients[0]?.id ?? "" : get().activeClientId;
     const bookings = get().bookings.filter((b) => b.clientId !== id);
     const food = get().food.filter((f) => f.clientId !== id);
+    const dayChecks = get().dayChecks.filter((d) => d.clientId !== id);
     const lifts = get().lifts.filter((l) => l.clientId !== id);
     const notices = get().notices.filter((n) => n.clientId !== id);
     const waitlist = get().waitlist.filter((w) => w.clientId !== id);
@@ -1481,6 +1536,7 @@ export const useStudio = create<State>((set, get) => ({
       activeClientId,
       bookings,
       food,
+      dayChecks,
       lifts,
       notices,
       waitlist,
