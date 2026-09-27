@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FATSECRET_URL, FORM_GOALS, isoDate, MOVE_KINDS, TRACKABLES_URL } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { openTelegramUrl } from "@/lib/telegram";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 
+const HEALTH_APP = "https://apps.apple.com/app/id1115567069";
+
 export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
   const saveDayCheck = useStudio((s) => s.saveDayCheck);
   const importFatSecret = useStudio((s) => s.importFatSecret);
+  const ensureHealthToken = useStudio((s) => s.ensureHealthToken);
   const showToast = useStudio((s) => s.showToast);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -24,7 +27,17 @@ export function FormView() {
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
 
+  useEffect(() => {
+    if (client && !client.healthToken) ensureHealthToken();
+  }, [client, ensureHealthToken]);
+
   if (!client) return <EmptyHint>Форма откроется, когда тренер добавит вас в зал.</EmptyHint>;
+
+  const token = client.healthToken || "";
+  const hook = token ? `${window.location.origin}/api/health?token=${token}` : "";
+  const healthLink = hook
+    ? `com.HealthExport://automation?url=${encodeURIComponent(hook)}&name=${encodeURIComponent("Ruksha")}&format=json&period=today&interval=days&enabled=true&datatype=healthmetrics&aggregatedata=true`
+    : "";
 
   const week = [...Array(7)].map((_, index) => {
     const date = new Date();
@@ -38,6 +51,7 @@ export function FormView() {
       <Surface>
         <SectionLabel>Сегодня</SectionLabel>
         <p className="mt-1 text-xs text-muted-foreground">Шаги, сон и движение с часов. Вода — по стаканам. Цифры сохраняются у тренера.</p>
+        {saved?.source === "apple" ? <p className="mt-1 text-tiny text-primary">Сегодня уже пришло из Apple Health.</p> : null}
         <div className="mt-3 flex flex-col gap-3">
           <label className="block">
             <span className="text-tiny text-muted-foreground">Шаги · цель {FORM_GOALS.steps}</span>
@@ -144,12 +158,52 @@ export function FormView() {
       </Surface>
 
       <Surface>
-        <SectionLabel>Apple Watch</SectionLabel>
+        <SectionLabel>Apple Health</SectionLabel>
         <p className="mt-1 text-xs text-muted-foreground">
-          Часы пишут в Apple Health. Trackables показывает шаги, сон и активность на одном экране. Telegram это не читает: смотрите цифру там и впишите её выше.
+          Часы пишут в Здоровье. Бот сам туда зайти не может. Ссылка ниже принимает шаги, сон, воду и минуты движения.
         </p>
-        <button type="button" className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(TRACKABLES_URL)}>
-          Открыть Trackables
+        <button
+          type="button"
+          className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm"
+          onClick={() => {
+            if (!hook) return;
+            void navigator.clipboard?.writeText(hook);
+            showToast("Ссылка скопирована");
+          }}
+        >
+          Скопировать ссылку для Команд
+        </button>
+        <p className="mt-2 text-tiny text-muted-foreground">
+          Команды: «Найти образцы Здоровья» → шаги за сегодня → «Получить содержимое URL» → GET, в конец ссылки допишите &steps= и число. Так же можно &sleep=7.5 и &moveMin=30.
+        </p>
+        <button
+          type="button"
+          className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+          onClick={() => {
+            if (!healthLink) return;
+            window.location.href = healthLink;
+          }}
+        >
+          Подключить Health Auto Export
+        </button>
+        <button type="button" className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(HEALTH_APP)}>
+          Открыть Health Auto Export
+        </button>
+        <button
+          type="button"
+          className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
+          onClick={() => {
+            if (!hook) return;
+            void fetch(`${hook}&ping=1`)
+              .then((res) => res.json())
+              .then((data: { linked?: boolean }) => showToast(data.linked ? "Связь с залом есть" : "Ссылка ещё не дошла. Подождите и откройте снова."))
+              .catch(() => showToast("Связь не ответила."));
+          }}
+        >
+          Проверить связь
+        </button>
+        <button type="button" className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(TRACKABLES_URL)}>
+          Смотреть цифры в Trackables
         </button>
       </Surface>
     </div>

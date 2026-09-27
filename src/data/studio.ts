@@ -214,6 +214,7 @@ export type DayCheck = {
   waterMl: number;
   moveMin: number;
   moveKind: string;
+  source?: "apple" | "hand";
 };
 
 export const FORM_GOALS = {
@@ -349,6 +350,7 @@ export type Client = {
   telegramUsername?: string | null;
   phone?: string | null;
   coachId?: string | null;
+  healthToken?: string | null;
 };
 
 export type MachineEx = {
@@ -1007,6 +1009,7 @@ export function emptyClient(): Client {
     telegramId: null,
     telegramUsername: null,
     phone: null,
+    healthToken: null,
   };
 }
 

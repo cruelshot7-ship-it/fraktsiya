@@ -257,6 +257,30 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
   };
 }
 
+function mergeDayRows(current: DayCheck[], incoming: DayCheck[], replaceIds: Set<string>) {
+  const kept = current.filter((row) => !replaceIds.has(row.clientId));
+  const map = new Map(current.filter((row) => replaceIds.has(row.clientId)).map((row) => [row.id, row]));
+  for (const row of incoming) {
+    if (!replaceIds.has(row.clientId)) continue;
+    const prev = map.get(row.id);
+    if (!prev) {
+      map.set(row.id, row);
+      continue;
+    }
+    map.set(row.id, {
+      ...prev,
+      ...row,
+      steps: Math.max(prev.steps || 0, row.steps || 0),
+      sleepHours: Math.max(prev.sleepHours || 0, row.sleepHours || 0),
+      waterMl: Math.max(prev.waterMl || 0, row.waterMl || 0),
+      moveMin: Math.max(prev.moveMin || 0, row.moveMin || 0),
+      moveKind: row.moveKind || prev.moveKind,
+      source: prev.source === "apple" || row.source === "apple" ? "apple" : row.source || prev.source,
+    });
+  }
+  return [...kept, ...map.values()];
+}
+
 export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayload, coachId: string): StudioPayload {
   const mine = coachKey(coachId);
   const foreignIds = new Set(current.clients.filter((c) => clientCoach(c) !== mine).map((c) => c.id));
@@ -306,7 +330,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     clients,
     bookings: takeMine(current.bookings, incomingBookings),
     food: takeMine(current.food, incoming.food ?? []),
-    dayChecks: takeMine(current.dayChecks ?? [], incoming.dayChecks ?? []),
+    dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
     waitlist: takeMine(current.waitlist, incoming.waitlist ?? []),
@@ -460,6 +484,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     streak: incomingSelf.streak ?? mine.streak,
     sessionsLeft: incomingSelf.sessionsLeft ?? mine.sessionsLeft,
     ledger: incomingSelf.ledger ?? mine.ledger,
+    healthToken: incomingSelf.healthToken || mine.healthToken || null,
   };
   return {
     ...current,
@@ -469,7 +494,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...incoming.bookings.filter((b) => b.clientId === id),
     ],
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
-    dayChecks: [...(current.dayChecks ?? []).filter((d) => d.clientId !== id), ...(incoming.dayChecks ?? []).filter((d) => d.clientId === id)],
+    dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
     waitlist: [
       ...current.waitlist.filter((w) => w.clientId !== id),
