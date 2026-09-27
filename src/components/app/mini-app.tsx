@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CalendarDays, MessageCircle, Users } from "lucide-react";
+import { Bell, CalendarDays, ClipboardList, MessageCircle, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
@@ -32,13 +32,14 @@ const CLIENT_TABS: { id: TabId; label: string }[] = [
 
 const TRAINER_NAV: { id: TabId; label: string; icon: typeof Users }[] = [
   { id: "clients", label: "Клиенты", icon: Users },
+  { id: "bookings", label: "Записи", icon: ClipboardList },
   { id: "slots", label: "Слоты", icon: CalendarDays },
   { id: "signals", label: "Сигналы", icon: Bell },
 ];
 
 const TITLES: Record<TabId, string> = {
   slots: "Слоты",
-  bookings: "Мои записи",
+  bookings: "Записи",
   program: "Сегодня",
   food: "Питание",
   form: "Форма",

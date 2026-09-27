@@ -254,7 +254,11 @@ export function ClientsView() {
             Пока никого. Добавьте клиента: имя и телефон или @username.
           </p>
         ) : (
-          visible.map(({ client, flag }) => (
+          visible.map(({ client, flag }) => {
+            const next = bookings
+              .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
+              .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
+            return (
           <button
             key={client.id}
             type="button"
@@ -288,6 +292,11 @@ export function ClientsView() {
                       : client.programTitle || "без контакта"}
                   {` · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`}
                 </p>
+                {next ? (
+                  <p className="mt-0.5 text-tiny text-foreground">
+                    {next.date === today ? "Сегодня" : formatDayMonth(next.date)} · {next.time}
+                  </p>
+                ) : null}
                 {joinRequests.find((r) => r.telegramId && r.telegramId === client.telegramId && r.pack) ? (
                   <p className="mt-0.5 truncate text-tiny text-muted-foreground">
                     {joinRequests.find((r) => r.telegramId === client.telegramId)?.pack} ·{" "}
@@ -307,7 +316,9 @@ export function ClientsView() {
               </div>
             </div>
           </button>
-        )))}
+            );
+          })
+        )}
       </div>
 
       {adding ? (

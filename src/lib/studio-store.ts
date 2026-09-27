@@ -727,7 +727,7 @@ export const useStudio = create<State>((set, get) => ({
     if (telegramLocked()) return;
     let tab = get().tab;
     if (role === "trainer") {
-      if (tab === "food" || tab === "program" || tab === "bookings" || tab === "hall" || tab === "form") tab = "clients";
+      if (tab === "food" || tab === "program" || tab === "hall" || tab === "form") tab = "clients";
     } else if (tab === "clients" || tab === "signals") {
       tab = "program";
     }
