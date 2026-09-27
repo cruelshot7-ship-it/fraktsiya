@@ -39,7 +39,7 @@ export function TrainerSlots() {
   const [pickId, setPickId] = useState<string | null>(null);
 
   const start = startOfWeek(parseISODate(weekStart));
-  const minWeek = isoDate(start);
+  const minWeek = isoDate(startOfWeek(new Date()));
   const canPrev = weekStart > minWeek;
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
@@ -97,15 +97,14 @@ export function TrainerSlots() {
             const taken = slotTaken(slot, bookings);
             const people = bookings
               .filter((b) => b.slotId === slot.id)
-              .map((b) => ({ booking: b, client: clients.find((c) => c.id === b.clientId) }))
-              .filter((x) => x.client);
+              .map((b) => ({ booking: b, client: clients.find((c) => c.id === b.clientId) }));
             const expanded = openId === slot.id;
             return (
               <div key={slot.id} className="overflow-hidden rounded-xl bg-card shadow-border">
                 <button type="button" onClick={() => setOpenId(expanded ? null : slot.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
                   <span className="w-16 shrink-0 font-display text-xl font-semibold leading-none">{slot.time}</span>
                   <span className="min-w-0 flex-1 truncate text-tiny text-muted-foreground">
-                    {people.map((p) => p.client && shortName(p.client)).filter(Boolean).join(" · ") || "пусто"}
+                    {people.map((p) => (p.client ? shortName(p.client) : "Клиент")).join(" · ") || "пусто"}
                   </span>
                   <span className="text-tiny text-muted-foreground">{taken}/{slot.capacity}</span>
                 </button>
@@ -115,16 +114,14 @@ export function TrainerSlots() {
                       <p className="text-sm text-muted-foreground">Никто не записан.</p>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {people.map(({ booking, client }) =>
-                          client ? (
+                        {people.map(({ booking, client }) => (
                             <div key={booking.id} className="flex items-center justify-between gap-2">
-                              <p className="text-sm">{shortName(client)}</p>
+                              <p className="text-sm">{client ? shortName(client) : "Клиент"}</p>
                               <button type="button" className="text-tiny text-primary" onClick={() => cancelBooking(booking.id, "trainer")}>
                                 Снять
                               </button>
                             </div>
-                          ) : null,
-                        )}
+                          ))}
                       </div>
                     )}
                     {pickId === slot.id ? (

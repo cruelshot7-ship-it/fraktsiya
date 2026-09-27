@@ -235,7 +235,7 @@ export function MiniApp() {
         </header>
 
         {role === "client" && !inviteBlocked ? (
-          <div className="flex gap-1 px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
+          <div className="no-scrollbar flex gap-1 overflow-x-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
               return (
@@ -244,7 +244,7 @@ export function MiniApp() {
                   type="button"
                   onClick={() => setTab(item.id)}
                   className={cn(
-                    "min-h-11 min-w-0 flex-1 border-b-2 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                    "min-h-11 shrink-0 border-b-2 px-3 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
                     active ? "border-primary bg-primary/10 text-foreground" : "border-hairline text-muted-foreground",
                   )}
                   aria-current={active ? "page" : undefined}
