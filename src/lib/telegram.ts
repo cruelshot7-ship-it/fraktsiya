@@ -130,7 +130,6 @@ export function initTelegram() {
     tg.expand();
     tg.setHeaderColor?.("#141310");
     tg.setBackgroundColor?.("#141310");
-    tg.disableVerticalSwipes?.();
     const apply = () => {
       const h = tg.viewportStableHeight || tg.viewportHeight;
       if (h) document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);

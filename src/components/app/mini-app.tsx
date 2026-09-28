@@ -154,13 +154,13 @@ export function MiniApp() {
   }, [tab, role, inviteBlocked]);
 
   return (
-    <div className="flex min-h-dvh justify-center bg-background">
+    <div className="app-frame flex justify-center overflow-hidden bg-background">
       <HapticLayer />
-      <div className="ambient-glow relative flex min-h-dvh w-full max-w-app flex-col pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+      <div className="ambient-glow app-frame relative flex w-full max-w-app flex-col overflow-hidden">
         <Toast message={toast} />
 
         {sheetClientId ? null : (
-        <div className={cn("chrome relative z-10", scrolled && "is-scrolled")}>
+        <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>
         <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
         <header className="px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pt-[max(0.85rem,env(safe-area-inset-top,0px))] pb-3">
           {role === "trainer" ? (
@@ -263,7 +263,7 @@ export function MiniApp() {
           ref={scroller}
           onScroll={readScroll}
           className={cn(
-            "flex-1 overflow-y-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
+            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
             role === "trainer" ? "pb-24" : "pb-10",
           )}
         >
@@ -392,7 +392,7 @@ function InboxSheet({
   onRebook: () => void;
 }) {
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-background">
+    <div className="fixed inset-0 z-40 flex flex-col bg-background">
       <div className="sheet-in flex min-h-0 flex-1 flex-col px-5 pt-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-3xl">Уведомления</h2>
@@ -400,7 +400,7 @@ function InboxSheet({
             Закрыть
           </button>
         </div>
-        <div className="mt-4 flex-1 overflow-y-auto pb-8">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-8">
           {items.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               Пока тихо. Если тренер отменит или перенесёт — придёт сюда.

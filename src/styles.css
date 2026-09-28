@@ -363,3 +363,12 @@
   min-height: 100dvh;
   min-height: var(--app-height, 100dvh);
 }
+
+.app-frame {
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  max-height: 100dvh;
+  max-height: var(--app-height, 100dvh);
+  min-height: 0;
+  overflow: hidden;
+}

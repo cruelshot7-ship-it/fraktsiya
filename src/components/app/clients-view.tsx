@@ -417,7 +417,7 @@ export function ClientSheet() {
   const client = clients.find((c) => c.id === sheetClientId);
   if (!client) return null;
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="ambient-glow flex min-h-0 flex-1 flex-col">
         <ClientSheetBody client={client} onClose={() => openClientSheet(null)} />
       </div>
