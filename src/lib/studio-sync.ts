@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
 import { z } from "zod";
 import {
   clientCoach,
@@ -564,6 +565,49 @@ export async function loadStudioState(): Promise<StudioPayload> {
   }
 }
 
+const BACKUP_ID = "ruksha-backup";
+let backupFlight: Promise<void> | null = null;
+
+async function readBackupDay() {
+  try {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    const rows = await sql<{ payload: { day?: string } }>`select payload from studio_state where id = ${BACKUP_ID}`;
+    return rows[0]?.payload?.day ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeBackupDay(day: string) {
+  try {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    await sql.query(
+      "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
+      [BACKUP_ID, JSON.stringify({ day })],
+    );
+  } catch {
+    /* the marker is an optimization; the file is the copy */
+  }
+}
+
+export async function maybeDailyBackup(payload: StudioPayload) {
+  if (backupFlight) return backupFlight;
+  backupFlight = (async () => {
+    const { env } = await import("@/lib/env.server");
+    if (!env("BOT_TOKEN")) return;
+    const today = backupDay();
+    if (!shouldSendBackup(await readBackupDay(), today)) return;
+    const { sendKeeperCopy } = await import("@/lib/studio-remote");
+    const ok = await sendKeeperCopy(payload, today);
+    if (ok) await writeBackupDay(today);
+  })().finally(() => {
+    backupFlight = null;
+  });
+  return backupFlight;
+}
+
 export async function saveStudioState(payload: StudioPayload) {
   const { saveRemote } = await import("@/lib/studio-remote");
   await saveRemote(payload);
@@ -577,6 +621,11 @@ export async function saveStudioState(payload: StudioPayload) {
     );
   } catch {
     /* ignore */
+  }
+  try {
+    await maybeDailyBackup(payload);
+  } catch {
+    /* the copy must not block a save */
   }
 }
 

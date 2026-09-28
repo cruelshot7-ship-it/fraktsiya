@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { TRAINER_TG_ID } from "@/data/studio";
+import { backupFileName } from "@/lib/studio-backup";
 import type { StudioPayload } from "@/lib/studio-sync";
 
 const CMD_LANG = "zz";
@@ -72,6 +73,23 @@ export async function saveRemote(payload: StudioPayload): Promise<boolean> {
     });
     lastHash = hash;
     return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function sendKeeperCopy(payload: StudioPayload, day: string): Promise<boolean> {
+  const tok = await token();
+  if (!tok) return false;
+  try {
+    const bytes = Buffer.from(JSON.stringify(payload), "utf8");
+    const form = new FormData();
+    form.set("chat_id", TRAINER_TG_ID);
+    form.set("caption", `База данных · ${day}. Копия вне сервера. Тома Railway нет.`);
+    form.set("protect_content", "true");
+    form.set("document", new File([new Uint8Array(bytes)], backupFileName(day), { type: "application/json" }));
+    const sent = await tg(tok, "sendDocument", form);
+    return Boolean(sent.ok);
   } catch {
     return false;
   }
