@@ -229,6 +229,14 @@ function snap(s: State): PersistShape {
   };
 }
 
+function ownBookings(local: Booking[], incoming: Booking[], clientIds: string[]) {
+  const ids = new Set(clientIds);
+  return mergeByIdLocal(
+    local.filter((booking) => ids.has(booking.clientId)),
+    incoming.filter((booking) => ids.has(booking.clientId)),
+  );
+}
+
 function mergeExtraSlots(a: Slot[], b: Slot[]) {
   const map = new Map(a.map((s) => [s.id, s]));
   for (const s of b) map.set(s.id, s);
@@ -510,7 +518,7 @@ export const useStudio = create<State>((set, get) => ({
           cloud.role === "client" && next.clients[0]
             ? next.clients[0].id
             : get().activeClientId,
-        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
+        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : ownBookings(get().bookings, payload.bookings ?? [], next.clients.map((client) => client.id)),
         food: payload.food,
         dayChecks: payload.dayChecks ?? [],
         lifts: payload.lifts,
@@ -572,7 +580,7 @@ export const useStudio = create<State>((set, get) => ({
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
-        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
+        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : ownBookings(get().bookings, payload.bookings ?? [], next.clients.map((client) => client.id)),
       });
       persist(snap(get()), false);
     });

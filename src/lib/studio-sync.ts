@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
+import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import {
   clientCoach,
@@ -151,10 +152,13 @@ function clientFromTelegram(user: {
 
 function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload {
   const mine = payload.clients.find((c) => c.telegramId === telegramId);
-  const id = mine?.id;
+  const id = mine?.id ?? null;
+  const slots = clientSlotView(payload.bookings, id);
   return {
     ...payload,
     clients: mine ? [mine] : [],
+    bookings: slots.bookings,
+    foreignHolds: slots.foreignHolds,
     food: id ? payload.food.filter((f) => f.clientId === id) : [],
     dayChecks: id ? (payload.dayChecks ?? []).filter((d) => d.clientId === id) : [],
     lifts: id ? payload.lifts.filter((l) => l.clientId === id) : [],
@@ -168,6 +172,8 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
     extraSlots: slotsForCoach(payload.extraSlots, mine ? clientCoach(mine) : String(TRAINER_TG_ID)),
     trainerUsername: payload.trainerUsername ?? null,
     joinRequests: (payload.joinRequests ?? []).filter((r) => r.telegramId === telegramId),
+    coaches: [],
+    removedClientIds: [],
   };
 }
 

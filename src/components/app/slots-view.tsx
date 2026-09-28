@@ -139,7 +139,17 @@ function ClientSlots() {
                   <span className="font-display w-16 shrink-0 text-xl font-semibold">{slot.time}</span>
                   <span className="flex-1 pl-2 text-xs text-muted-foreground">{slot.duration} мин</span>
                   <span className={cn("text-xs font-medium", mine || (!full && !past) ? "text-ok" : "text-muted-foreground")}>
-                    {mine ? "вы записаны" : past ? "прошло" : waiting ? "в листе" : full ? "занято" : placesLeft(left)}
+                    {mine
+                      ? "вы записаны"
+                      : past
+                        ? "прошло"
+                        : waiting
+                          ? "в листе"
+                          : slot.capacity > 1
+                            ? `занято ${taken} из ${slot.capacity}`
+                            : full
+                              ? "занято"
+                              : placesLeft(left)}
                   </span>
                 </button>
                 {pending ? (
