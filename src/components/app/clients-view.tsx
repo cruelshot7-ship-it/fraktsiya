@@ -506,6 +506,45 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
               )}
             </Surface>
 
+            {client.sessions.length > 0 ? (
+              <Surface>
+                <SectionLabel>Программа на день прихода</SectionLabel>
+                <p className="mt-1 text-xs text-muted-foreground">Любой день записи. Без выбора идёт по порядку.</p>
+                <div className="mt-3 flex flex-col gap-3">
+                  {(bookings.some((b) => b.clientId === client.id && b.date >= today)
+                    ? [...new Set(bookings.filter((b) => b.clientId === client.id && b.date >= today).map((b) => b.date))].sort()
+                    : [today]
+                  ).map((date) => (
+                    <div key={date}>
+                      <p className="text-tiny text-muted-foreground">{date === today ? "Сегодня" : formatDayMonth(date)}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {client.sessions.map((item) => {
+                          const on = client.sessionByDate?.[date] === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={cn(
+                                "pressable h-9 rounded-lg px-2.5 text-xs",
+                                on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                              )}
+                              onClick={() =>
+                                updateClient(client.id, {
+                                  sessionByDate: { ...(client.sessionByDate ?? {}), [date]: item.id },
+                                })
+                              }
+                            >
+                              {item.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Surface>
+            ) : null}
+
             <Surface glow={frozen || client.sessionsLeft <= 2 ? "alert" : "ok"}>
               <SectionLabel>Баланс занятий</SectionLabel>
               <p className="font-display mt-2 text-3xl tabular-nums">

@@ -12,8 +12,8 @@ import {
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
-import { BOT_USERNAME } from "@/data/studio";
-import { openTelegramUrl } from "@/lib/telegram";
+import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
+import { openTelegramUrl, getTelegramUser } from "@/lib/telegram";
 
 const SLOT_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
 
@@ -57,6 +57,8 @@ export function TrainerSlots() {
     .filter((s) => s.date === selectedDate && !closedSlotIds.includes(s.id))
     .sort((a, b) => a.time.localeCompare(b.time));
 
+  const ownHall = !getTelegramUser()?.id || String(getTelegramUser()?.id) === String(TRAINER_TG_ID);
+
   return (
     <div>
       <div className="flex items-center justify-between pt-1 pb-2.5">
@@ -68,6 +70,9 @@ export function TrainerSlots() {
           ›
         </button>
       </div>
+      {ownHall ? null : (
+        <p className="pb-3 text-xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
+      )}
       <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-4">
         {days.map((day, i) => {
           const selected = selectedDate === day.key;

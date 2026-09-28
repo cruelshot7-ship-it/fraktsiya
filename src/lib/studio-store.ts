@@ -39,6 +39,7 @@ import {
   type WaitlistEntry,
   type WorkoutLog,
   workoutKcal,
+  coachKey,
   TRAINER_TG_ID,
   type Coach,
   coachPhase,
@@ -236,11 +237,27 @@ function mergeExtraSlots(a: Slot[], b: Slot[]) {
 
 let slotHolds: Record<string, number> = {};
 
-function mergeSlots(extra: Slot[]) {
-  const base = generateWindow(startOfWeek(new Date()), 42);
-  const map = new Map(base.map((s) => [s.id, s]));
-  for (const slot of extra) map.set(slot.id, slot);
-  return [...map.values()]
+function slotViewer(clients: Client[], role: Role) {
+  const me = getTelegramUser()?.id || "";
+  if (role === "trainer") return me || String(TRAINER_TG_ID);
+  const mine = clients.find((client) => me && client.telegramId === me) ?? clients[0];
+  return mine?.coachId || String(TRAINER_TG_ID);
+}
+
+function mergeSlots(extra: Slot[], viewerId?: string) {
+  const viewer = coachKey(viewerId || String(TRAINER_TG_ID));
+  const owner = String(TRAINER_TG_ID);
+  const mine = extra.filter((slot) => coachKey(slot.ownerId) === viewer);
+  const rows =
+    viewer === owner
+      ? (() => {
+          const base = generateWindow(startOfWeek(new Date()), 42);
+          const map = new Map(base.map((slot) => [slot.id, { ...slot, ownerId: owner }]));
+          for (const slot of mine) map.set(slot.id, { ...slot, ownerId: slot.ownerId || owner });
+          return [...map.values()];
+        })()
+      : mine;
+  return rows
     .map((slot) => {
       const hold = slotHolds[slot.id] ?? 0;
       return hold ? { ...slot, seeded: slot.seeded + hold } : slot;
@@ -437,7 +454,7 @@ export const useStudio = create<State>((set, get) => ({
     const selectedDate = role === "trainer" ? todayIso() : firstBookableDate();
     set({
       ready: true,
-      slots: mergeSlots(extraSlots),
+      slots: mergeSlots(extraSlots, slotViewer(clients, role)),
       extraSlots,
       closedSlotIds,
       weekStart: isoDate(startOfWeek(parseISODate(selectedDate))),
@@ -507,7 +524,7 @@ export const useStudio = create<State>((set, get) => ({
         checks: payload.checks,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
-        slots: mergeSlots(extra),
+        slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
         tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
       });
       persist(snap(get()), false);
@@ -554,7 +571,7 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs: cloud.role === "trainer" ? payload.workoutLogs : payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
-        slots: mergeSlots(extra),
+        slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
         bookings: cloud.role === "trainer" ? payload.bookings ?? [] : mergeByIdLocal(get().bookings, payload.bookings ?? []),
       });
       persist(snap(get()), false);
@@ -1378,20 +1395,27 @@ export const useStudio = create<State>((set, get) => ({
   },
 
   addSlot: (date, time, capacity) => {
-    const id = `${date}_${time}`;
-    const slot: Slot = { id, date, time, duration: 60, capacity, seeded: 0 };
+    const me = coachKey(slotViewer(get().clients, get().role));
+    const id = me === String(TRAINER_TG_ID) ? `${date}_${time}` : `${date}_${time}_${me}`;
+    const slot: Slot = { id, date, time, duration: 60, capacity, seeded: 0, ownerId: me };
     const extraSlots = [...get().extraSlots.filter((s) => s.id !== id), slot];
     const closedSlotIds = get().closedSlotIds.filter((x) => x !== id);
     set({
       extraSlots,
       closedSlotIds,
-      slots: mergeSlots(extraSlots),
+      slots: mergeSlots(extraSlots, me),
     });
     persist(snap(get()));
     get().showToast(`Слот ${time} открыт.`);
   },
 
   closeSlot: (id) => {
+    const me = coachKey(slotViewer(get().clients, get().role));
+    const slot = get().slots.find((row) => row.id === id);
+    if (slot && coachKey(slot.ownerId) !== me) {
+      get().showToast("Это слот другого тренера.");
+      return;
+    }
     const booked = get().bookings.filter((b) => b.slotId === id && !isSlotPast(b.date, b.time));
     const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
     set({ closedSlotIds });
@@ -1409,10 +1433,16 @@ export const useStudio = create<State>((set, get) => ({
   },
 
   deleteSlot: (id) => {
+    const me = coachKey(slotViewer(get().clients, get().role));
+    const slot = get().slots.find((row) => row.id === id);
+    if (slot && coachKey(slot.ownerId) !== me) {
+      get().showToast("Это слот другого тренера.");
+      return;
+    }
     get().cancelSlotBookings(id);
     const extraSlots = get().extraSlots.filter((s) => s.id !== id);
     const closedSlotIds = get().closedSlotIds.includes(id) ? get().closedSlotIds : [...get().closedSlotIds, id];
-    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots) });
+    set({ extraSlots, closedSlotIds, slots: mergeSlots(extraSlots, me) });
     persist(snap(get()));
     get().showToast("Слот удалён.");
   },
@@ -1514,7 +1544,7 @@ export const useStudio = create<State>((set, get) => ({
         activeClientId: cloud.payload.clients[0].id,
         trainerUsername: cloud.payload.trainerUsername ?? get().trainerUsername,
         extraSlots: extra,
-        slots: mergeSlots(extra),
+        slots: mergeSlots(extra, slotViewer(mergeClients(get().clients, cloud.payload.clients), "client")),
         food: cloud.payload.food.length ? cloud.payload.food : get().food,
       });
       persist(snap(get()));

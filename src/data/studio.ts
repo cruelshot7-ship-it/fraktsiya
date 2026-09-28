@@ -167,6 +167,7 @@ export type Slot = {
   duration: number;
   capacity: number;
   seeded: number;
+  ownerId?: string | null;
 };
 
 export type Booking = {
@@ -393,6 +394,7 @@ export type Client = {
   phone?: string | null;
   coachId?: string | null;
   healthToken?: string | null;
+  sessionByDate?: Record<string, string> | null;
 };
 
 export type MachineEx = {
@@ -984,9 +986,14 @@ function historyFrom(kg: number, deltas: number[]): WeightPoint[] {
   }));
 }
 
-/** Visits follow the program in order: 1st booking = day 1, 2nd = day 2, then it repeats. */
+/** A pinned day wins. Otherwise visits follow the program in order. */
 export function visitSession(client: Client, iso: string, bookings: Booking[] = []): ProgramSession | null {
   if (!client.sessions.length) return null;
+  const pinned = client.sessionByDate?.[iso];
+  if (pinned) {
+    const chosen = client.sessions.find((session) => session.id === pinned);
+    if (chosen) return chosen;
+  }
   const dates = [
     ...new Set(
       bookings
@@ -998,8 +1005,7 @@ export function visitSession(client: Client, iso: string, bookings: Booking[] = 
   const planned = client.trainDays.includes(dowIndex(iso));
   if (!bookedToday && !planned) return null;
   const doneBefore = dates.filter((d) => d < iso).length;
-  const index = bookedToday ? doneBefore : doneBefore;
-  return client.sessions[index % client.sessions.length];
+  return client.sessions[doneBefore % client.sessions.length];
 }
 
 export function epley1rm(weight: number, reps: number) {

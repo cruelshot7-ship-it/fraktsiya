@@ -164,6 +164,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
     checks: id
       ? Object.fromEntries(Object.entries(payload.checks).filter(([k]) => k.startsWith(`${id}:`)))
       : {},
+    extraSlots: slotsForCoach(payload.extraSlots, mine ? clientCoach(mine) : String(TRAINER_TG_ID)),
     trainerUsername: payload.trainerUsername ?? null,
     joinRequests: (payload.joinRequests ?? []).filter((r) => r.telegramId === telegramId),
   };
@@ -253,8 +254,34 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
       mine === String(TRAINER_TG_ID)
         ? payload.coaches ?? []
         : (payload.coaches ?? []).filter((c) => c.telegramId === mine),
+    extraSlots: slotsForCoach(payload.extraSlots, mine),
+    closedSlotIds: (payload.closedSlotIds ?? []).filter((id) => slotsForCoach(payload.extraSlots, mine).some((slot) => slot.id === id) || (mine === String(TRAINER_TG_ID) && /^\d{4}-\d{2}-\d{2}_\d{2}:\d{2}$/.test(id))),
     foreignHolds: holds,
   };
+}
+
+function slotsForCoach(slots: Slot[] | undefined, coachId: string) {
+  const mine = coachKey(coachId);
+  return (slots ?? []).filter((slot) => coachKey(slot.ownerId) === mine);
+}
+
+function mergeClosedSlots(current: string[], incoming: string[], slots: Slot[], mine: string) {
+  const owner = coachKey(mine);
+  const own = new Set(slots.filter((slot) => coachKey(slot.ownerId) === owner).map((slot) => slot.id));
+  const hall = (id: string) => owner === String(TRAINER_TG_ID) && /^\d{4}-\d{2}-\d{2}_\d{2}:\d{2}$/.test(id);
+  const touch = (id: string) => own.has(id) || hall(id);
+  return [...new Set([...current.filter((id) => !touch(id)), ...incoming.filter(touch)])];
+}
+
+function mergeOwnSlots(current: Slot[], incoming: Slot[], mine: string) {
+  const owner = coachKey(mine);
+  const foreign = current.filter((slot) => coachKey(slot.ownerId) !== owner);
+  const map = new Map(foreign.map((slot) => [slot.id, slot]));
+  for (const slot of incoming) {
+    if (coachKey(slot.ownerId) !== owner) continue;
+    map.set(slot.id, { ...slot, ownerId: owner === String(TRAINER_TG_ID) ? slot.ownerId || null : owner });
+  }
+  return [...map.values()];
 }
 
 function mergeDayRows(current: DayCheck[], incoming: DayCheck[], replaceIds: Set<string>) {
@@ -350,8 +377,8 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
         .map((r) => ({ ...r, coachId: mine })),
     ),
     removedClientIds: [...new Set([...(current.removedClientIds ?? []).filter((id) => !myOld.some((c) => isRemovedClient(c, [id]))), ...removed])],
-    extraSlots: mergeById(current.extraSlots, incoming.extraSlots ?? []),
-    closedSlotIds: [...new Set([...current.closedSlotIds, ...(incoming.closedSlotIds ?? [])])],
+    extraSlots: mergeOwnSlots(current.extraSlots, incoming.extraSlots ?? [], mine),
+    closedSlotIds: mergeClosedSlots(current.closedSlotIds, incoming.closedSlotIds ?? [], mergeOwnSlots(current.extraSlots, incoming.extraSlots ?? [], mine), mine),
     coaches:
       mine === String(TRAINER_TG_ID) && Array.isArray(incoming.coaches)
         ? keepCoach(current.coaches ?? [], incoming.coaches)
