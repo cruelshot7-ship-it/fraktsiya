@@ -277,6 +277,48 @@ export type ProgramSession = {
   items: string[];
 };
 
+export type BuildGoal = "strength" | "shape" | "cut";
+
+function plate(kg: number) {
+  return Math.max(20, Math.round(kg / 2.5) * 2.5);
+}
+
+function block(name: string, sets: string, kg: number | null, rest: number) {
+  return [name, sets, ...(kg ? [`${kg} кг`] : []), `Отдых ${rest} секунд`];
+}
+
+export function buildProgram(client: Pick<Client, "weight" | "trainDays">, goal: BuildGoal) {
+  const bw = client.weight > 0 ? client.weight : 0;
+  const days = Math.min(4, Math.max(2, client.trainDays.length || 3));
+  const scheme = goal === "strength" ? "5×5" : goal === "cut" ? "3×12" : "3×8-10";
+  const rest = goal === "strength" ? 180 : goal === "cut" ? 60 : 90;
+  const scale = goal === "strength" ? 1 : goal === "cut" ? 0.65 : 0.8;
+  const lift = (name: string, ratio: number | null) =>
+    block(name, scheme, ratio && bw ? plate(bw * ratio * scale) : null, rest);
+  const catalog: Record<number, { name: string; focus: string; items: string[] }[]> = {
+    2: [
+      { name: "Всё тело А", focus: "Присед и жим", items: [...lift("Присед", 0.7), ...lift("Жим лёжа", 0.45), ...lift("Тяга в наклоне", 0.4)] },
+      { name: "Всё тело Б", focus: "Тяга и жим стоя", items: [...lift("Становая тяга", 0.85), ...lift("Жим стоя", 0.28), ...lift("Подтягивания", null)] },
+    ],
+    3: [
+      { name: "Жим", focus: "Грудь и плечи", items: [...lift("Жим лёжа", 0.45), ...lift("Жим стоя", 0.28), ...lift("Отжимания на брусьях", null)] },
+      { name: "Тяга", focus: "Спина", items: [...lift("Становая тяга", 0.85), ...lift("Тяга в наклоне", 0.4), ...lift("Подтягивания", null)] },
+      { name: "Ноги", focus: "Присед", items: [...lift("Присед", 0.7), ...lift("Румынская тяга", 0.5), ...lift("Выпады", 0.2)] },
+    ],
+    4: [
+      { name: "Верх А", focus: "Жим", items: [...lift("Жим лёжа", 0.45), ...lift("Жим стоя", 0.28), ...lift("Отжимания на брусьях", null)] },
+      { name: "Низ А", focus: "Присед", items: [...lift("Присед", 0.7), ...lift("Выпады", 0.2), ...lift("Румынская тяга", 0.5)] },
+      { name: "Верх Б", focus: "Тяга", items: [...lift("Тяга в наклоне", 0.4), ...lift("Подтягивания", null), ...lift("Жим лёжа", 0.4)] },
+      { name: "Низ Б", focus: "Тяга", items: [...lift("Становая тяга", 0.85), ...lift("Присед", 0.55), ...lift("Выпады", 0.2)] },
+    ],
+  };
+  const title = goal === "strength" ? "Сила" : goal === "cut" ? "Снижение" : "Форма";
+  return {
+    programTitle: `${title} · ${days} в неделю`,
+    sessions: catalog[days].map((session, index) => ({ ...session, id: `built_${index + 1}` })),
+  };
+}
+
 export type WeightPoint = {
   date: string;
   kg: number;

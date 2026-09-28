@@ -8,6 +8,8 @@ import {
   type Client,
   type Kbju,
   type ProgramSession,
+  buildProgram,
+  type BuildGoal,
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -84,6 +86,7 @@ export function ProgramEditor({
   onSave: (patch: Partial<Client>) => void;
 }) {
   const [draft, setDraft] = useState(client);
+  const [goal, setGoal] = useState<BuildGoal>("shape");
   return (
     <div className="flex flex-col gap-3">
       <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
@@ -130,6 +133,40 @@ export function ProgramEditor({
         })}
       </div>
       <p className="text-tiny text-muted-foreground">Порядок блоков сверху вниз — это порядок визитов. Буквы в названии дня ни на что не влияют.</p>
+      <SectionLabel>Собрать по клиенту</SectionLabel>
+      <div className="grid grid-cols-3 gap-2">
+        {(
+          [
+            ["shape", "Форма"],
+            ["strength", "Сила"],
+            ["cut", "Легче"],
+          ] as [BuildGoal, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setGoal(id)}
+            className={cn("pressable h-11 rounded-lg text-sm", goal === id ? "bg-primary text-primary-foreground" : "bg-secondary")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="pressable h-11 rounded-xl bg-secondary text-sm"
+        onClick={() => {
+          const built = buildProgram(draft, goal);
+          setDraft({ ...draft, programTitle: built.programTitle, sessions: built.sessions });
+        }}
+      >
+        Собрать черновик
+      </button>
+      <p className="text-tiny text-muted-foreground">
+        {draft.weight > 0
+          ? `Вес ${draft.weight} кг, визитов ${draft.trainDays.length || 3}. Веса стартовые, поправь и сохрани.`
+          : "Веса клиента нет, поэтому килограммы не ставлю. Дни и схема будут, вес допишешь сам."}
+      </p>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
         {WEEKDAY_TIMES.map((t) => {

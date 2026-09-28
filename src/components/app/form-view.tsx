@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { FATSECRET_URL, FORM_GOALS, isoDate, MOVE_KINDS, TRACKABLES_URL } from "@/data/studio";
+import { FORM_GOALS, isoDate, MOVE_KINDS } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { openTelegramUrl } from "@/lib/telegram";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
-
-const HEALTH_APP = "https://apps.apple.com/app/id1115567069";
 
 export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
@@ -26,6 +23,8 @@ export function FormView() {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [paste, setPaste] = useState("");
+  const [autoOpen, setAutoOpen] = useState(false);
 
   useEffect(() => {
     if (client && !client.healthToken) ensureHealthToken();
@@ -50,8 +49,21 @@ export function FormView() {
     <div className="flex flex-col gap-3">
       <Surface>
         <SectionLabel>Сегодня</SectionLabel>
-        <p className="mt-1 text-xs text-muted-foreground">Шаги, сон и движение с часов. Вода — по стаканам. Цифры сохраняются у тренера.</p>
-        {saved?.source === "apple" ? <p className="mt-1 text-tiny text-primary">Сегодня уже пришло из Apple Health.</p> : null}
+        <p className="mt-1 text-xs text-muted-foreground">Три числа с часов или из Trackables: шаги, сон, минуты. Одной строкой.</p>
+        {saved?.source === "apple" ? <p className="mt-1 text-tiny text-primary">Сегодня уже пришло само.</p> : null}
+        <input
+          className={`${inputClass} mt-3`}
+          value={paste}
+          placeholder="8000 7.5 30"
+          onChange={(e) => {
+            const value = e.target.value;
+            setPaste(value);
+            const nums = value.replace(/,/g, ".").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+            if (nums[0] != null) setSteps(String(Math.round(nums[0])));
+            if (nums[1] != null) setSleep(String(nums[1]));
+            if (nums[2] != null) setMove(String(Math.round(nums[2])));
+          }}
+        />
         <div className="mt-3 flex flex-col gap-3">
           <label className="block">
             <span className="text-tiny text-muted-foreground">Шаги · цель {FORM_GOALS.steps}</span>
@@ -126,12 +138,9 @@ export function FormView() {
       </Surface>
 
       <Surface>
-        <SectionLabel>FatSecret</SectionLabel>
-        <p className="mt-1 text-xs text-muted-foreground">Приложение само не подключается. Откройте дневник, перенесите итог дня сюда. Он попадёт в «Еду».</p>
-        <button type="button" className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(FATSECRET_URL)}>
-          Открыть FatSecret
-        </button>
-        <div className="mt-2 grid grid-cols-4 gap-2">
+        <SectionLabel>Еда из FatSecret</SectionLabel>
+        <p className="mt-1 text-xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
+        <div className="mt-3 grid grid-cols-4 gap-2">
           <input className={inputClass} inputMode="numeric" value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="ккал" />
           <input className={inputClass} inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Б" />
           <input className={inputClass} inputMode="numeric" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Ж" />
@@ -142,7 +151,7 @@ export function FormView() {
           className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
           onClick={() => {
             if (!(Number(kcal) || 0)) {
-              showToast("Впишите калории из FatSecret.");
+              showToast("Впишите калории.");
               return;
             }
             importFatSecret({
@@ -157,55 +166,35 @@ export function FormView() {
         </button>
       </Surface>
 
-      <Surface>
-        <SectionLabel>Apple Health</SectionLabel>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Часы пишут в Здоровье. Бот сам туда зайти не может. Ссылка ниже принимает шаги, сон, воду и минуты движения.
-        </p>
-        <button
-          type="button"
-          className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm"
-          onClick={() => {
-            if (!hook) return;
-            void navigator.clipboard?.writeText(hook);
-            showToast("Ссылка скопирована");
-          }}
-        >
-          Скопировать ссылку для Команд
-        </button>
-        <p className="mt-2 text-tiny text-muted-foreground">
-          Команды: «Найти образцы Здоровья» → шаги за сегодня → «Получить содержимое URL» → GET, в конец ссылки допишите &steps= и число. Так же можно &sleep=7.5 и &moveMin=30.
-        </p>
-        <button
-          type="button"
-          className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-          onClick={() => {
-            if (!healthLink) return;
-            window.location.href = healthLink;
-          }}
-        >
-          Подключить Health Auto Export
-        </button>
-        <button type="button" className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(HEALTH_APP)}>
-          Открыть Health Auto Export
-        </button>
-        <button
-          type="button"
-          className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
-          onClick={() => {
-            if (!hook) return;
-            void fetch(`${hook}&ping=1`)
-              .then((res) => res.json())
-              .then((data: { linked?: boolean }) => showToast(data.linked ? "Связь с залом есть" : "Ссылка ещё не дошла. Подождите и откройте снова."))
-              .catch(() => showToast("Связь не ответила."));
-          }}
-        >
-          Проверить связь
-        </button>
-        <button type="button" className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm" onClick={() => openTelegramUrl(TRACKABLES_URL)}>
-          Смотреть цифры в Trackables
-        </button>
-      </Surface>
+      <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setAutoOpen((open) => !open)}>
+        {autoOpen ? "Скрыть авто" : "Само с часов"}
+      </button>
+      {autoOpen ? (
+        <Surface>
+          <p className="text-xs text-muted-foreground">Один раз вставь ссылку в Health Auto Export. Дальше цифры приходят сами.</p>
+          <button
+            type="button"
+            className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm"
+            onClick={() => {
+              if (!hook) return;
+              void navigator.clipboard?.writeText(hook);
+              showToast("Ссылка скопирована");
+            }}
+          >
+            Скопировать ссылку
+          </button>
+          <button
+            type="button"
+            className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
+            onClick={() => {
+              if (!healthLink) return;
+              window.location.href = healthLink;
+            }}
+          >
+            Открыть Health Auto Export
+          </button>
+        </Surface>
+      ) : null}
     </div>
   );
 }
