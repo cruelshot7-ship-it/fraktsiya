@@ -48,6 +48,25 @@ export function SignalsView() {
             );
           })}
         </div>
+        <p className="mt-3 text-sm leading-relaxed">Нет визита — через сколько дней писать в утренней сводке.</p>
+        <div className="mt-2 flex gap-1.5">
+          {[7, 10, 14].map((days) => {
+            const active = (notifyPrefs.absentDays || 10) === days;
+            return (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setNotifyPrefs({ absentDays: days })}
+                className={cn(
+                  "h-9 flex-1 rounded-lg text-xs font-medium",
+                  active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                )}
+              >
+                {days} дн
+              </button>
+            );
+          })}
+        </div>
         <div className="mt-3 flex flex-col gap-1">
           <PrefRow
             label="Писать мне, если клиент отменил"
