@@ -37,7 +37,8 @@ export function ProgramView() {
   const food = useStudio((s) => s.food);
   const lifts = useStudio((s) => s.lifts);
   const addLift = useStudio((s) => s.addLift);
-  const checkIn = useStudio((s) => s.checkIn);
+  const arrive = useStudio((s) => s.arrive);
+  const visits = useStudio((s) => s.visits);
   const toggleCheck = useStudio((s) => s.toggleCheck);
   const completeWorkout = useStudio((s) => s.completeWorkout);
   const checks = useStudio((s) => s.checks);
@@ -114,6 +115,7 @@ export function ProgramView() {
     ? workoutKcal(client.weight, withRest || todayBook?.duration || 60, checked.length, itemCount || 1) + Math.round(totals.volume * 0.04)
     : 0;
   const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
+  const arrived = Boolean(todayBook?.checkedIn) || visits.some((row) => row.clientId === client.id && row.date === today);
   const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
   const ritual = dayRitual({
     trainDay,
@@ -194,16 +196,16 @@ export function ProgramView() {
         {todayBook && hoursToToday !== null && hoursToToday > 0 && hoursToToday < 24 ? (
           <p className="mt-2 text-tiny text-ok">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
         ) : null}
-        {todayBook && !todayBook.checkedIn ? (
+        {(todayBook || trainDay) && !arrived ? (
           <button
             type="button"
-            onClick={() => checkIn(todayBook.id)}
+            onClick={() => arrive()}
             className="pressable mt-3 h-12 w-full rounded-xl bg-ok text-sm font-medium text-ok-foreground"
           >
             Я на месте
           </button>
-        ) : todayBook?.checkedIn ? (
-          <p className="mt-3 text-sm text-ok">Чек-ин принят. Хорошей тренировки.</p>
+        ) : arrived ? (
+          <p className="mt-3 text-sm text-ok">Вы на месте. Вода +250 мл.</p>
         ) : null}
       </Surface>
 

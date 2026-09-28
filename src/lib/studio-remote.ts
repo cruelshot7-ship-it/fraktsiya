@@ -94,3 +94,18 @@ export async function sendKeeperCopy(payload: StudioPayload, day: string): Promi
     return false;
   }
 }
+
+export async function sendMorningNote(text: string): Promise<boolean> {
+  const tok = await token();
+  if (!tok) return false;
+  try {
+    const sent = await tg(tok, "sendMessage", {
+      chat_id: TRAINER_TG_ID,
+      text: text.slice(0, 3500),
+      protect_content: true,
+    });
+    return Boolean(sent.ok);
+  } catch {
+    return false;
+  }
+}

@@ -15,6 +15,7 @@ import {
   hoursAgoIso,
   hoursUntilLabel,
   hoursUntilSlot,
+  ARRIVE_WATER,
   isoDate,
   isFrozen,
   isLateCancel,
@@ -36,6 +37,7 @@ import {
   type NotifyPrefs,
   type SessionTxn,
   type Slot,
+  type Visit,
   type WaitlistEntry,
   type WorkoutLog,
   workoutKcal,
@@ -47,6 +49,7 @@ import {
 } from "@/data/studio";
 
 import { hapticNotify } from "@/lib/haptics";
+import { withArrival } from "@/lib/studio-visits";
 import { applyTelegramIdentity, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
@@ -83,6 +86,7 @@ type PersistShape = {
   waitlist: WaitlistEntry[];
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
+  visits: Visit[];
   trainerUsername?: string | null;
   joinRequests?: JoinRequest[];
   removedClientIds?: string[];
@@ -113,6 +117,7 @@ type State = {
   waitlist: WaitlistEntry[];
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
+  visits: Visit[];
   trainerUsername: string | null;
   joinRequests: JoinRequest[];
   removedClientIds: string[];
@@ -140,6 +145,7 @@ type State = {
   joinWaitlist: (slotId: string) => void;
   leaveWaitlist: (slotId: string) => void;
   checkIn: (bookingId: string) => void;
+  arrive: () => void;
   markNoShow: (bookingId: string) => void;
   creditSessions: (clientId: string, amount: number) => void;
   freezeClient: (clientId: string, days: number) => void;
@@ -222,6 +228,7 @@ function snap(s: State): PersistShape {
     waitlist: s.waitlist,
     workoutLogs: s.workoutLogs,
     checks: s.checks,
+    visits: s.visits,
     trainerUsername: s.trainerUsername,
     joinRequests: s.joinRequests,
     removedClientIds: s.removedClientIds,
@@ -362,6 +369,7 @@ export const useStudio = create<State>((set, get) => ({
   waitlist: [],
   workoutLogs: [],
   checks: {},
+  visits: [],
   trainerUsername: null,
   joinRequests: [],
   removedClientIds: [],
@@ -387,6 +395,7 @@ export const useStudio = create<State>((set, get) => ({
     let waitlist: WaitlistEntry[] = [];
     let workoutLogs: WorkoutLog[] = [];
     let checks: Record<string, string[]> = {};
+    let visits: Visit[] = [];
     let trainerUsername: string | null = null;
     let joinRequests: JoinRequest[] = [];
     let removedClientIds: string[] = [];
@@ -420,6 +429,7 @@ export const useStudio = create<State>((set, get) => ({
         waitlist = parsed.waitlist ?? [];
         workoutLogs = parsed.workoutLogs ?? [];
         checks = parsed.checks ?? {};
+        visits = parsed.visits ?? [];
         trainerUsername = parsed.trainerUsername ?? null;
         joinRequests = parsed.joinRequests ?? [];
         removedClientIds = parsed.removedClientIds ?? [];
@@ -480,6 +490,7 @@ export const useStudio = create<State>((set, get) => ({
       waitlist,
       workoutLogs,
       checks,
+      visits,
       trainerUsername,
       joinRequests,
       removedClientIds,
@@ -530,6 +541,7 @@ export const useStudio = create<State>((set, get) => ({
         waitlist: payload.waitlist,
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
+        visits: payload.visits ?? [],
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
@@ -577,6 +589,7 @@ export const useStudio = create<State>((set, get) => ({
         closedSlotIds: payload.closedSlotIds.length ? [...new Set([...get().closedSlotIds, ...payload.closedSlotIds])] : get().closedSlotIds,
         notices: cloud.role === "trainer" ? payload.notices : payload.notices.length ? payload.notices : get().notices,
         workoutLogs: cloud.role === "trainer" ? payload.workoutLogs : payload.workoutLogs.length ? payload.workoutLogs : get().workoutLogs,
+        visits: cloud.role === "trainer" ? payload.visits ?? [] : (payload.visits ?? []).length ? payload.visits ?? [] : get().visits,
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
@@ -941,6 +954,50 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(16);
     get().showToast("Отметили: вы в зале.");
+  },
+
+  arrive: () => {
+    const clientId = get().activeClientId;
+    if (!clientId) return;
+    const today = todayIso();
+    const at = new Date().toISOString();
+    const booking = get().bookings.find((row) => row.clientId === clientId && row.date === today);
+    const already = Boolean(booking?.checkedIn) || get().visits.some((row) => row.clientId === clientId && row.date === today);
+    if (already) return;
+    const who = get().clients.find((row) => row.id === clientId);
+    const notices =
+      booking && who
+        ? pushNotice(get().notices, {
+            id: `nt_in_${booking.id}`,
+            audience: "trainer",
+            clientId,
+            kind: "checkin",
+            title: `${shortName(who)} на месте`,
+            body: `${booking.time} · вода +${ARRIVE_WATER} мл`,
+            at,
+          })
+        : get().notices;
+    const prev = get().dayChecks.find((row) => row.id === `${clientId}:${today}`);
+    const day: DayCheck = {
+      id: `${clientId}:${today}`,
+      clientId,
+      date: today,
+      steps: prev?.steps ?? 0,
+      sleepHours: prev?.sleepHours ?? 0,
+      waterMl: (prev?.waterMl ?? 0) + ARRIVE_WATER,
+      moveMin: prev?.moveMin ?? 0,
+      moveKind: prev?.moveKind || "Ходьба",
+      source: prev?.source,
+    };
+    set({
+      bookings: booking ? get().bookings.map((row) => (row.id === booking.id ? { ...row, checkedIn: true, noShow: false } : row)) : get().bookings,
+      dayChecks: [...get().dayChecks.filter((row) => row.id !== day.id), day],
+      visits: withArrival(get().visits, clientId, today, at),
+      notices,
+    });
+    persist(snap(get()));
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(16);
+    get().showToast("Вы на месте. Вода +250 мл.");
   },
 
   markNoShow: (bookingId) => {

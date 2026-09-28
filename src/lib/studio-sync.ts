@@ -24,6 +24,7 @@ import {
   type Slot,
   type WaitlistEntry,
   type WorkoutLog,
+  type Visit,
 } from "@/data/studio";
 
 export type StudioPayload = {
@@ -45,6 +46,7 @@ export type StudioPayload = {
   removedClientIds: string[];
   coaches: Coach[];
   foreignHolds?: Record<string, number>;
+  visits?: Visit[];
 };
 
 const STUDIO_ID = "ruksha";
@@ -75,6 +77,7 @@ export function emptyPayload(): StudioPayload {
       notifyClient: true,
       notifyTrainer: true,
       flagLate: true,
+      absentDays: 10,
     },
     waitlist: [],
     workoutLogs: [],
@@ -83,6 +86,7 @@ export function emptyPayload(): StudioPayload {
     joinRequests: [],
     removedClientIds: [],
     coaches: [],
+    visits: [],
   };
 }
 
@@ -101,6 +105,11 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     closedSlotIds: raw.closedSlotIds ?? [],
     dismissedSignalIds: raw.dismissedSignalIds ?? [],
     notices: raw.notices ?? [],
+    notifyPrefs: {
+      ...empty.notifyPrefs,
+      ...raw.notifyPrefs,
+      absentDays: raw.notifyPrefs?.absentDays || empty.notifyPrefs.absentDays,
+    },
     waitlist: raw.waitlist ?? [],
     workoutLogs: raw.workoutLogs ?? [],
     checks: raw.checks ?? {},
@@ -112,6 +121,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
       addedAt: coach.addedAt || new Date().toISOString(),
     })),
     foreignHolds: undefined,
+    visits: raw.visits ?? [],
     clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
   }));
 }
@@ -170,6 +180,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
       ? Object.fromEntries(Object.entries(payload.checks).filter(([k]) => k.startsWith(`${id}:`)))
       : {},
     extraSlots: slotsForCoach(payload.extraSlots, mine ? clientCoach(mine) : String(TRAINER_TG_ID)),
+    visits: id ? (payload.visits ?? []).filter((row) => row.clientId === id) : [],
     trainerUsername: payload.trainerUsername ?? null,
     joinRequests: (payload.joinRequests ?? []).filter((r) => r.telegramId === telegramId),
     coaches: [],
@@ -291,6 +302,16 @@ function mergeOwnSlots(current: Slot[], incoming: Slot[], mine: string) {
   return [...map.values()];
 }
 
+function mergeVisits(current: Visit[], incoming: Visit[], ids: Set<string>) {
+  const map = new Map(current.map((row) => [row.id, row]));
+  for (const row of incoming) {
+    if (!ids.has(row.clientId)) continue;
+    const prev = map.get(row.id);
+    map.set(row.id, prev ? { ...prev, ...row, waterMl: Math.max(prev.waterMl || 0, row.waterMl || 0) } : row);
+  }
+  return [...map.values()];
+}
+
 function mergeDayRows(current: DayCheck[], incoming: DayCheck[], replaceIds: Set<string>) {
   const kept = current.filter((row) => !replaceIds.has(row.clientId));
   const map = new Map(current.filter((row) => replaceIds.has(row.clientId)).map((row) => [row.id, row]));
@@ -367,6 +388,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
+    visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([...oldIds, ...myIds])),
     waitlist: takeMine(current.waitlist, incoming.waitlist ?? []),
     notices: mergeById(
       current.notices.filter((n) => !n.clientId || !oldIds.has(n.clientId)),
@@ -501,6 +523,7 @@ function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): S
     closedSlotIds: [...new Set([...current.closedSlotIds, ...incoming.closedSlotIds])],
     trainerUsername: incoming.trainerUsername || current.trainerUsername,
     joinRequests: mergeById(current.joinRequests ?? [], incoming.joinRequests ?? []),
+    visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], live),
   };
   return ensureApprovedClients(merged);
 }
@@ -542,6 +565,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => !k.startsWith(`${id}:`))),
       ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => k.startsWith(`${id}:`))),
     },
+    visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([id])),
   };
 }
 
@@ -605,9 +629,22 @@ export async function maybeDailyBackup(payload: StudioPayload) {
     if (!env("BOT_TOKEN")) return;
     const today = backupDay();
     if (!shouldSendBackup(await readBackupDay(), today)) return;
-    const { sendKeeperCopy } = await import("@/lib/studio-remote");
+    const { sendKeeperCopy, sendMorningNote } = await import("@/lib/studio-remote");
+    const { morningSummary } = await import("@/lib/studio-digest");
     const ok = await sendKeeperCopy(payload, today);
-    if (ok) await writeBackupDay(today);
+    if (ok) {
+      await sendMorningNote(
+        morningSummary({
+          clients: payload.clients,
+          bookings: payload.bookings,
+          visits: payload.visits,
+          food: payload.food,
+          today,
+          absentDays: payload.notifyPrefs.absentDays || 10,
+        }),
+      );
+      await writeBackupDay(today);
+    }
   })().finally(() => {
     backupFlight = null;
   });
@@ -625,6 +662,12 @@ export async function saveStudioState(payload: StudioPayload) {
       "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
       [STUDIO_ID, JSON.stringify(payload)],
     );
+    for (const visit of payload.visits ?? []) {
+      await sql.query(
+        "insert into visits (id, client_id, date, at, water_ml) values ($1, $2, $3, $4, $5) on conflict (id) do update set water_ml = excluded.water_ml, at = excluded.at",
+        [visit.id, visit.clientId, visit.date, visit.at, visit.waterMl],
+      );
+    }
   } catch {
     /* ignore */
   }

@@ -218,6 +218,16 @@ export type DayCheck = {
   source?: "apple" | "hand";
 };
 
+export type Visit = {
+  id: string;
+  clientId: string;
+  date: string;
+  at: string;
+  waterMl: number;
+};
+
+export const ARRIVE_WATER = 250;
+
 export const FORM_GOALS = {
   steps: 8000,
   sleep: 7.5,
@@ -357,6 +367,7 @@ export type NotifyPrefs = {
   notifyClient: boolean;
   notifyTrainer: boolean;
   flagLate: boolean;
+  absentDays: number;
 };
 
 export const DEFAULT_NOTIFY: NotifyPrefs = {
@@ -364,6 +375,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   notifyClient: true,
   notifyTrainer: true,
   flagLate: true,
+  absentDays: 10,
 };
 
 export const CANCEL_WINDOWS = [2, 6, 12, 24] as const;
