@@ -229,6 +229,28 @@ export function trainerActionItems(opts: {
     });
   }
 
+  const returned: string[] = [];
+  for (const c of clients) {
+    if (withUpcoming.has(c.id)) continue;
+    const past = bookings
+      .filter((b) => b.clientId === c.id && isSlotPast(b.date, b.time) && !b.noShow)
+      .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
+    const last = past[0];
+    if (!last) continue;
+    const gap = daysSince(`${last.date}T${last.time}:00`);
+    if (gap !== null && gap >= 14) returned.push(c.firstName);
+  }
+  if (returned.length) {
+    items.push({
+      id: "act_return_clients",
+      kind: "return_soft",
+      title: "Вернулись после перерыва",
+      body: returned.slice(0, 5).join(", "),
+      tab: "clients",
+      priority: 18,
+    });
+  }
+
   const openSlots = slots.filter((s) => !isSlotPast(s.date, s.time)).length;
   if (openSlots > 0) {
     items.push({
