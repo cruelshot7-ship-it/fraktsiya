@@ -34,6 +34,7 @@ export function TemplatesPanel() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const updateClient = useStudio((s) => s.updateClient);
   const showToast = useStudio((s) => s.showToast);
+  const notices = useStudio((s) => s.notices);
   const client = clients.find((c) => c.id === activeClientId);
   const [tpl] = useState(SEED);
   const preview = useMemo(() => exercisesToItems(tpl.exercises), [tpl]);
@@ -52,6 +53,16 @@ export function TemplatesPanel() {
       sessions: [...client!.sessions, day],
       programTitle: client!.programTitle || copy.title,
     });
+    const n = {
+      id: `nt_tpl_${copy.id}`,
+      audience: "client" as const,
+      clientId: client!.id,
+      kind: "reschedule" as const,
+      title: "В план добавлен шаблон",
+      body: copy.title,
+      at: new Date().toISOString(),
+    };
+    useStudio.setState({ notices: [n, ...notices].slice(0, 40) });
     showToast("Шаблон назначен клиенту (копия).");
   }
 
@@ -64,9 +75,7 @@ export function TemplatesPanel() {
           <li key={line}>{line}</li>
         ))}
       </ul>
-      <p className="mt-2 text-2xs text-muted-foreground">
-        Назначение создаёт копию у клиента.
-      </p>
+      <p className="mt-2 text-2xs text-muted-foreground">Назначение создаёт копию у клиента.</p>
       <button
         type="button"
         className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"

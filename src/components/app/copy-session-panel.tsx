@@ -3,13 +3,13 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { appendCopiedSession } from "@/lib/templates/copy-session";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
-/** Trainer: duplicate a program day onto the client's plan. */
 export function CopySessionPanel() {
   const role = useStudio((s) => s.role);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const updateClient = useStudio((s) => s.updateClient);
   const showToast = useStudio((s) => s.showToast);
+  const notices = useStudio((s) => s.notices);
   const client = activeClient({ clients, activeClientId });
   const [sourceId, setSourceId] = useState("");
 
@@ -24,6 +24,17 @@ export function CopySessionPanel() {
       return;
     }
     updateClient(client!.id, { sessions: next });
+    const day = next[next.length - 1];
+    const n = {
+      id: `nt_copy_${day.id}`,
+      audience: "client" as const,
+      clientId: client!.id,
+      kind: "reschedule" as const,
+      title: "В план добавлена копия дня",
+      body: day.name,
+      at: new Date().toISOString(),
+    };
+    useStudio.setState({ notices: [n, ...notices].slice(0, 40) });
     showToast("День скопирован в план клиента.");
   }
 
