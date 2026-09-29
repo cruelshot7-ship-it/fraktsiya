@@ -6,9 +6,11 @@ import {
   isSlotPast,
   shortName,
   type Booking,
+  TRAINER_TG_ID,
 } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
+import { SessionResultForm } from "@/components/app/session-result-form";
 import { cn } from "@/lib/utils";
 
 type Phase = "before" | "during" | "after";
@@ -23,7 +25,6 @@ function phaseOf(booking: Booking): Phase {
 
 type Props = { bookingId: string };
 
-/** One session card: before / during / after. Group: mark each participant. */
 export function SessionCard({ bookingId }: Props) {
   const bookings = useStudio((s) => s.bookings);
   const clients = useStudio((s) => s.clients);
@@ -64,6 +65,9 @@ export function SessionCard({ bookingId }: Props) {
     }
   }
 
+  const coachId = who?.coachId || String(TRAINER_TG_ID);
+  const programId = who ? `prog_${coachId}_${who.id}` : undefined;
+
   return (
     <div className="stagger-in flex flex-col gap-3">
       <Surface
@@ -87,9 +91,7 @@ export function SessionCard({ bookingId }: Props) {
 
         {phase === "before" ? (
           <div className="mt-4 space-y-2">
-            <p className="text-sm text-muted-foreground">
-              План — во вкладке «Сегодня». Состав видит тренер.
-            </p>
+            <p className="text-sm text-muted-foreground">План — во вкладке «Сегодня».</p>
             <button
               type="button"
               className="pressable h-11 w-full rounded-xl bg-secondary text-sm font-medium"
@@ -102,13 +104,12 @@ export function SessionCard({ bookingId }: Props) {
 
         {phase === "during" ? (
           <div className="mt-4 space-y-2">
-            <p className="text-sm text-muted-foreground">Ведите подходы по плану.</p>
             <button
               type="button"
               className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => setTab("program")}
             >
-              План и ввод результата
+              План
             </button>
             {role === "client" && !booking.checkedIn ? (
               <button
@@ -120,91 +121,57 @@ export function SessionCard({ bookingId }: Props) {
                 Я на месте
               </button>
             ) : null}
+            {role === "trainer" && !booking.checkedIn && !booking.noShow ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="pressable h-11 flex-1 rounded-xl bg-ok text-sm font-medium text-ok-foreground"
+                  onClick={() => markPresent(booking.id)}
+                >
+                  Был
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="pressable h-11 flex-1 rounded-xl bg-secondary text-sm"
+                  onClick={() => markNoShow(booking.id)}
+                >
+                  Неявка
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
         {phase === "after" ? (
           <div className="mt-4 space-y-3">
-            {role === "trainer" && peers.length > 1 ? (
-              <div>
-                <SectionLabel>Участники · явка</SectionLabel>
-                <ul className="mt-2 space-y-1.5">
-                  {peers.map((p) => {
-                    const c = clients.find((x) => x.id === p.clientId);
-                    return (
-                      <li
-                        key={p.id}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-sm"
-                      >
-                        <span>{c ? shortName(c) : p.clientId}</span>
-                        <span className="flex gap-1">
-                          {p.checkedIn ? (
-                            <span className="text-tiny text-ok">был</span>
-                          ) : p.noShow ? (
-                            <span className="text-tiny text-primary">неявка</span>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                disabled={busy}
-                                className="pressable rounded-md bg-ok px-2 py-1 text-2xs text-ok-foreground"
-                                onClick={() => markPresent(p.id)}
-                              >
-                                Был
-                              </button>
-                              <button
-                                type="button"
-                                disabled={busy}
-                                className="pressable rounded-md bg-secondary px-2 py-1 text-2xs"
-                                onClick={() => markNoShow(p.id)}
-                              >
-                                Нет
-                              </button>
-                            </>
-                          )}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+            {!booking.checkedIn && !booking.noShow ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  className={cn("pressable h-11 flex-1 rounded-xl text-sm font-medium bg-ok text-ok-foreground")}
+                  onClick={() => markPresent(booking.id)}
+                >
+                  Был на занятии
+                </button>
+                {role === "trainer" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="pressable h-11 flex-1 rounded-xl bg-secondary text-sm"
+                    onClick={() => markNoShow(booking.id)}
+                  >
+                    Неявка
+                  </button>
+                ) : null}
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {!booking.checkedIn && !booking.noShow ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className={cn("pressable h-11 flex-1 rounded-xl text-sm font-medium bg-ok text-ok-foreground")}
-                      onClick={() => markPresent(booking.id)}
-                    >
-                      Был на занятии
-                    </button>
-                    {role === "trainer" ? (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="pressable h-11 flex-1 rounded-xl bg-secondary text-sm"
-                        onClick={() => markNoShow(booking.id)}
-                      >
-                        Неявка
-                      </button>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="text-sm text-ok">
-                    {booking.checkedIn ? "Присутствие зафиксировано." : "Отмечена неявка."}
-                  </p>
-                )}
-              </div>
+              <p className="text-sm text-ok">
+                {booking.checkedIn ? "Присутствие зафиксировано." : "Отмечена неявка."}
+              </p>
             )}
-            <button
-              type="button"
-              className="pressable h-11 w-full rounded-xl bg-secondary text-sm font-medium"
-              onClick={() => setTab("program")}
-            >
-              Результат и прогрессия
-            </button>
             {role === "client" ? (
               <button
                 type="button"
@@ -217,6 +184,16 @@ export function SessionCard({ bookingId }: Props) {
           </div>
         ) : null}
       </Surface>
+
+      {phase !== "before" ? (
+        <SessionResultForm
+          bookingId={booking.id}
+          clientId={booking.clientId}
+          coachId={coachId}
+          attendanceConfirmed={Boolean(booking.checkedIn)}
+          programId={programId}
+        />
+      ) : null}
     </div>
   );
 }
