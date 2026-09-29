@@ -32,3 +32,16 @@ export function scheduleBookDualWrite(
     })
     .catch(() => undefined);
 }
+
+/** Fire-and-forget server attendance mark after local check-in / no-show. */
+export function scheduleAttendanceDualWrite(bookingId: string, attended: boolean) {
+  const initData = getTelegramInitData();
+  if (!initData || !bookingId) return;
+  void import("@/lib/booking/server")
+    .then(({ markAttendanceFn }) =>
+      markAttendanceFn({
+        data: { initData, bookingId, attended },
+      }),
+    )
+    .catch(() => undefined);
+}
