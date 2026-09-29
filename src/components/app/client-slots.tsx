@@ -13,6 +13,7 @@ import {
 import { activeClient, slotTaken, useStudio } from "@/lib/studio-store";
 import { EmptyHint } from "@/components/app/bits";
 import { HabitSlotChip } from "@/components/app/habit-slot-chip";
+import { enqueueBookingConfirmed } from "@/lib/notify/hook-booking";
 import { cn } from "@/lib/utils";
 
 function useWeekDays() {
@@ -122,7 +123,16 @@ export function ClientSlots() {
                         setPendingId(slot.id);
                         const ok = book(slot.id);
                         setPendingId(null);
-                        if (ok) showToast("Запись создана.");
+                        if (ok) {
+                          enqueueBookingConfirmed({
+                            telegramId: me.telegramId,
+                            bookingId: `local_${slot.id}_${me.id}`,
+                            clientId: me.id,
+                            date: slot.date,
+                            time: slot.time,
+                          });
+                          showToast("Запись создана.");
+                        }
                       }}
                     >
                       Записаться
