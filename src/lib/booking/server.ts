@@ -4,8 +4,8 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { verifyTelegramInitData } from "@/lib/auth/telegram-init";
-import { TRAINER_TG_ID } from "@/lib/auth/config";
+import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
+import { TRAINER_TG_ID } from "@/data/studio";
 
 const BookInput = z.object({
   initData: z.string().min(1),
