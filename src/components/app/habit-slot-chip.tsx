@@ -1,9 +1,9 @@
 import { isSlotPast } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { suggestNextSlot } from "@/lib/next-slot";
+import { enqueueBookingConfirmed } from "@/lib/notify/hook-booking";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
-/** One-tap rebook at client's habitual trainTimes. */
 export function HabitSlotChip() {
   const role = useStudio((s) => s.role);
   const clients = useStudio((s) => s.clients);
@@ -54,7 +54,16 @@ export function HabitSlotChip() {
         className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
         onClick={() => {
           const ok = book(habitSlot.id);
-          if (ok) showToast("Запись на привычное время.");
+          if (ok) {
+            enqueueBookingConfirmed({
+              telegramId: client.telegramId,
+              bookingId: `local_${habitSlot.id}_${client.id}`,
+              clientId: client.id,
+              date: habitSlot.date,
+              time: habitSlot.time,
+            });
+            showToast("Запись на привычное время.");
+          }
         }}
       >
         Записаться в один тап
