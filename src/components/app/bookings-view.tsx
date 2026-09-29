@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
   countdownLabel,
-  downloadIcs,
-  bookingIcs,
   formatLongDate,
   hoursUntilSlot,
   isLateCancel,
@@ -15,6 +13,7 @@ import {
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { suggestNextSlot } from "@/lib/next-slot";
+import { openCalendarEvent } from "@/lib/calendar-ics";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
 import { SessionCard } from "@/components/app/session-card";
@@ -202,7 +201,16 @@ export function BookingsView() {
                       {role === "client" ? (
                         <button
                           type="button"
-                          onClick={() => downloadIcs(`ruksha-${booking.date}.ics`, bookingIcs(booking))}
+                          onClick={() => {
+                            openCalendarEvent({
+                              id: booking.id,
+                              title: "Тренировка · Ruksha",
+                              date: booking.date,
+                              time: booking.time,
+                              durationMin: booking.duration || 60,
+                              timezone: "Europe/Minsk",
+                            });
+                          }}
                           className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
                         >
                           В календарь
