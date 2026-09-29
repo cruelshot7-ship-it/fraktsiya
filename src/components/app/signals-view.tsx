@@ -3,6 +3,7 @@ import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
+import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { cn } from "@/lib/utils";
 
 export function SignalsView() {
@@ -13,8 +14,6 @@ export function SignalsView() {
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const setNotifyPrefs = useStudio((s) => s.setNotifyPrefs);
   const setTab = useStudio((s) => s.setTab);
-  const selectDay = useStudio((s) => s.selectDay);
-  const bookings = useStudio((s) => s.bookings);
   const joinRequests = useStudio((s) => s.joinRequests);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
@@ -27,6 +26,7 @@ export function SignalsView() {
   return (
     <div className="flex flex-col gap-3">
       <ActionCenter />
+      <CsvImportPanel />
       <Surface>
         <SectionLabel>Уведомления об отмене</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed">
@@ -60,18 +60,10 @@ export function SignalsView() {
               <p className="text-sm font-medium">{req.firstName}</p>
               <p className="mt-1 whitespace-pre-line text-tiny text-muted-foreground">{req.message}</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="pressable h-10 rounded-lg bg-ok text-xs font-medium text-ok-foreground"
-                  onClick={() => approveJoin(req.id)}
-                >
+                <button type="button" className="pressable h-10 rounded-lg bg-ok text-xs font-medium text-ok-foreground" onClick={() => approveJoin(req.id)}>
                   Принять
                 </button>
-                <button
-                  type="button"
-                  className="pressable h-10 rounded-lg bg-secondary text-xs"
-                  onClick={() => rejectJoin(req.id)}
-                >
+                <button type="button" className="pressable h-10 rounded-lg bg-secondary text-xs" onClick={() => rejectJoin(req.id)}>
                   Отклонить
                 </button>
               </div>
@@ -98,11 +90,7 @@ export function SignalsView() {
                 </button>
               </div>
               {n.clientId ? (
-                <button
-                  type="button"
-                  className="pressable mt-2 text-xs text-primary"
-                  onClick={() => openClientSheet(n.clientId!)}
-                >
+                <button type="button" className="pressable mt-2 text-xs text-primary" onClick={() => openClientSheet(n.clientId!)}>
                   Карточка клиента
                 </button>
               ) : null}
@@ -111,11 +99,9 @@ export function SignalsView() {
         )}
       </div>
 
-      {bookings.filter((b) => b.date && !dismissed.includes(b.id)).length === 0 ? null : (
-        <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setTab("bookings")}>
-          К записям
-        </button>
-      )}
+      <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setTab("bookings")}>
+        К записям
+      </button>
     </div>
   );
 }

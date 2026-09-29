@@ -2,10 +2,9 @@ import { TRAINER_TG_ID, isoDate } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { DecisionBanner } from "@/components/app/decision-banner";
 import { SessionResultForm } from "@/components/app/session-result-form";
+import { SoftReturnPanel } from "@/components/app/soft-return";
 
-/**
- * Mounted above ProgramView: decision banner + server result form for today's booking.
- */
+/** Mounted above ProgramView: soft return, decision, result form. */
 export function ProgramCycleExtras() {
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -18,6 +17,7 @@ export function ProgramCycleExtras() {
 
   return (
     <div className="mb-3 flex flex-col gap-3">
+      <SoftReturnPanel />
       <DecisionBanner />
       {todayBook ? (
         <SessionResultForm
