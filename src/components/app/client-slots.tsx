@@ -3,20 +3,15 @@ import {
   addDays,
   DOW,
   formatDayMonth,
-  initials,
   isoDate,
   isFrozen,
-  isLateCancel,
   isSlotPast,
   parseISODate,
   placesLeft,
-  shortName,
   startOfWeek,
-  type Booking,
-  type Slot,
 } from "@/data/studio";
 import { activeClient, slotTaken, useStudio } from "@/lib/studio-store";
-import { Field, inputClass, EmptyHint } from "@/components/app/bits";
+import { EmptyHint } from "@/components/app/bits";
 import { HabitSlotChip } from "@/components/app/habit-slot-chip";
 import { cn } from "@/lib/utils";
 
@@ -25,18 +20,18 @@ function useWeekDays() {
   const slots = useStudio((s) => s.slots);
   const bookings = useStudio((s) => s.bookings);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
-  const clients = useStudio((s) => s.clients);
-  const activeClientId = useStudio((s) => s.activeClientId);
-  const me = activeClient({ clients, activeClientId });
   const start = startOfWeek(parseISODate(weekStart));
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(start, i);
     const key = isoDate(d);
     const daySlots = slots.filter((s) => s.date === key && !closedSlotIds.includes(s.id));
-    const free = daySlots.reduce((acc, s) => acc + Math.max(0, placesLeft(s, bookings)), 0);
+    const free = daySlots.reduce((acc, s) => {
+      const left = Math.max(0, s.capacity - (s.seeded ?? 0) - slotTaken(s, bookings));
+      return acc + left;
+    }, 0);
     return { key, dow: DOW[i], free, label: String(d.getDate()) };
   });
-  return { start, days, me };
+  return { start, days };
 }
 
 export function ClientSlots() {
@@ -46,7 +41,6 @@ export function ClientSlots() {
   const selectedDate = useStudio((s) => s.selectedDate);
   const selectDay = useStudio((s) => s.selectDay);
   const shiftWeek = useStudio((s) => s.shiftWeek);
-  const weekStart = useStudio((s) => s.weekStart);
   const book = useStudio((s) => s.book);
   const joinWaitlist = useStudio((s) => s.joinWaitlist);
   const waitlist = useStudio((s) => s.waitlist);
@@ -57,7 +51,6 @@ export function ClientSlots() {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const { start, days } = useWeekDays();
   const end = addDays(start, 6);
-  const canPrev = true;
 
   if (!me) {
     return <EmptyHint title="Нет профиля" body="Тренер добавит вас в зал." />;
@@ -73,7 +66,6 @@ export function ClientSlots() {
       <WeekStrip
         days={days}
         selectedDate={selectedDate}
-        canPrev={canPrev}
         label={`${start.getDate()}–${end.getDate()} ${formatDayMonth(isoDate(end)).split(" ").slice(1).join(" ")}`}
         onPrev={() => shiftWeek(-1)}
         onNext={() => shiftWeek(1)}
@@ -81,7 +73,6 @@ export function ClientSlots() {
           selectDay(key);
           setPendingId(null);
         }}
-        mode="client"
       />
 
       <p className="font-display mb-2.5 text-xs tracking-[0.08em] text-muted-foreground uppercase">
@@ -97,7 +88,7 @@ export function ClientSlots() {
         ) : (
           daySlots.map((slot) => {
             const taken = slotTaken(slot, bookings);
-            const left = placesLeft(slot, bookings);
+            const left = Math.max(0, slot.capacity - (slot.seeded ?? 0) - taken);
             const mine = bookings.find((b) => b.slotId === slot.id && b.clientId === me.id);
             const waiting = waitlist.some((w) => w.slotId === slot.id && w.clientId === me.id);
             const past = isSlotPast(slot.date, slot.time);
@@ -115,7 +106,7 @@ export function ClientSlots() {
                   <div>
                     <p className="font-display text-xl tabular-nums">{slot.time}</p>
                     <p className="mt-1 text-tiny text-muted-foreground">
-                      {slot.duration} мин · {left > 0 ? `${left} мест` : "занято"}
+                      {slot.duration} мин · {left > 0 ? placesLeft(left) : "занято"}
                     </p>
                   </div>
                   {mine ? (
@@ -165,26 +156,22 @@ export function ClientSlots() {
 function WeekStrip({
   days,
   selectedDate,
-  canPrev,
   label,
   onPrev,
   onNext,
   onSelect,
-  mode,
 }: {
   days: { key: string; dow: string; free: number; label: string }[];
   selectedDate: string;
-  canPrev: boolean;
   label: string;
   onPrev: () => void;
   onNext: () => void;
   onSelect: (key: string) => void;
-  mode: "client" | "trainer";
 }) {
   return (
     <div className="mb-3">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" className="pressable text-xs text-muted-foreground" onClick={onPrev} disabled={!canPrev}>
+        <button type="button" className="pressable text-xs text-muted-foreground" onClick={onPrev}>
           ←
         </button>
         <p className="text-xs text-muted-foreground">{label}</p>
@@ -207,11 +194,7 @@ function WeekStrip({
             >
               <span>{d.dow}</span>
               <span className="mt-0.5 font-medium tabular-nums">{d.label}</span>
-              {mode === "client" && d.free > 0 ? (
-                <span className="mt-0.5 size-1 rounded-full bg-ok" />
-              ) : (
-                <span className="mt-0.5 size-1" />
-              )}
+              {d.free > 0 ? <span className="mt-0.5 size-1 rounded-full bg-ok" /> : <span className="mt-0.5 size-1" />}
             </button>
           );
         })}
