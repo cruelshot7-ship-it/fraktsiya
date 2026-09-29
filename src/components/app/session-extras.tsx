@@ -18,23 +18,21 @@ export function SessionExtras({ bookingId, locationText, onlineUrl }: Props) {
   const place = locationText?.trim() || null;
   const online = onlineUrl?.trim() || null;
 
+  const event = {
+    id: booking.id,
+    title: "Тренировка · Ruksha",
+    description: "Запись через Ruksha Discipline",
+    date: booking.date,
+    time: booking.time,
+    durationMin: booking.duration || 60,
+    timezone: "Europe/Minsk" as const,
+    location: place || undefined,
+    url: online || undefined,
+  };
+
   function addToCalendar() {
-    const how = openCalendarEvent({
-      id: booking.id,
-      title: "Тренировка · Ruksha",
-      description: "Запись через Ruksha Discipline",
-      date: booking.date,
-      time: booking.time,
-      durationMin: booking.duration || 60,
-      timezone: "Europe/Minsk",
-      location: place || undefined,
-      url: online || undefined,
-    });
-    if (how === "google") {
-      showToast("Открываем Google Календарь…");
-    } else {
-      showToast("Файл календаря подготовлен.");
-    }
+    const how = openCalendarEvent(event);
+    showToast(how === "google" ? "Открываем Google Календарь…" : "Файл календаря подготовлен.");
   }
 
   return (
@@ -43,10 +41,20 @@ export function SessionExtras({ bookingId, locationText, onlineUrl }: Props) {
       <div className="mt-3 flex flex-col gap-2">
         <button
           type="button"
-          className="pressable h-11 w-full rounded-xl bg-secondary text-sm font-medium"
+          className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
           onClick={addToCalendar}
         >
-          Добавить в календарь
+          В Google Календарь
+        </button>
+        <button
+          type="button"
+          className="pressable h-11 w-full rounded-xl bg-secondary text-sm font-medium"
+          onClick={() => {
+            openCalendarEvent(event);
+            showToast("Если окно не открылось — разрешите всплывающие окна Telegram.");
+          }}
+        >
+          Ещё раз · календарь
         </button>
         {place ? (
           <button
@@ -62,7 +70,7 @@ export function SessionExtras({ bookingId, locationText, onlineUrl }: Props) {
             href={online}
             target="_blank"
             rel="noopener noreferrer"
-            className="pressable flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+            className="pressable flex h-11 w-full items-center justify-center rounded-xl bg-secondary text-sm font-medium"
           >
             Онлайн-ссылка
           </a>
