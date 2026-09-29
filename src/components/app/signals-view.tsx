@@ -6,6 +6,7 @@ import { ActionCenter } from "@/components/app/action-center";
 import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
+import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
 
 export function SignalsView() {
@@ -31,6 +32,7 @@ export function SignalsView() {
       <CsvImportPanel />
       <TrainerShareCard />
       <OutboxPanel />
+      <SyncStatusChip />
       <Surface>
         <SectionLabel>Уведомления об отмене</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed">
