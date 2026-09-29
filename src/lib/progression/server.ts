@@ -46,12 +46,32 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
     const id = `psug_${data.programId}_${Date.now()}`;
 
     await sql.query(
+      `insert into client_programs (id, coach_id, client_id, title, version, exercises, active)
+       values ($1, $2, $3, $4, 1, '[]'::jsonb, true)
+       on conflict (id) do nothing`,
+      [data.programId, data.coachId, data.clientId, "Программа"],
+    );
+    await sql.query(
+      `insert into client_programs (id, coach_id, client_id, title, version, exercises, active)
+       values ($1, $2, $3, $4, 1, '[]'::jsonb, true)
+       on conflict (coach_id, client_id, version) do nothing`,
+      [data.programId, data.coachId, data.clientId, "Программа"],
+    );
+    const programRow = await sql.query<{ id: string }>(
+      `select id from client_programs
+       where (id = $1) or (coach_id = $2 and client_id = $3 and active = true)
+       order by version desc limit 1`,
+      [data.programId, data.coachId, data.clientId],
+    );
+    const programId = programRow[0]?.id ?? data.programId;
+
+    await sql.query(
       `insert into progression_suggestions
         (id, program_id, client_id, coach_id, based_on_result_ids, explanation, proposed_change, status)
        values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
       [
         id,
-        data.programId,
+        programId,
         data.clientId,
         data.coachId,
         suggestion.basedOnResultIds,
