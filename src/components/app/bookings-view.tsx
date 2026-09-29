@@ -18,6 +18,7 @@ import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
 import { SessionCard } from "@/components/app/session-card";
 import { SoftReturnPanel } from "@/components/app/soft-return";
+import { NotifyPrefsPanel } from "@/components/app/notify-prefs-panel";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -55,6 +56,7 @@ export function BookingsView() {
     <div className="stagger-in flex flex-col gap-3">
       {role === "client" ? <ActionCenter /> : null}
       {role === "client" ? <SoftReturnPanel /> : null}
+      {role === "client" ? <NotifyPrefsPanel /> : null}
       {next ? <SessionCard bookingId={next.id} /> : null}
       {role === "client" ? (
         <Surface glow={next ? "ok" : undefined}>
