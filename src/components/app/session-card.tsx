@@ -11,6 +11,7 @@ import {
 import { useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { SessionResultForm } from "@/components/app/session-result-form";
+import { SessionExtras } from "@/components/app/session-extras";
 import { cn } from "@/lib/utils";
 
 type Phase = "before" | "during" | "after";
@@ -175,7 +176,7 @@ export function SessionCard({ bookingId }: Props) {
             {role === "client" ? (
               <button
                 type="button"
-                className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+                className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium"
                 onClick={() => setTab("slots")}
               >
                 Следующий слот
@@ -194,6 +195,7 @@ export function SessionCard({ bookingId }: Props) {
           programId={programId}
         />
       ) : null}
+      <SessionExtras bookingId={booking.id} />
     </div>
   );
 }
