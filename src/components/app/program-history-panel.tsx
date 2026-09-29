@@ -17,7 +17,11 @@ export function ProgramHistoryPanel() {
         (n.title.toLowerCase().includes("програм") ||
           n.title.toLowerCase().includes("план") ||
           n.title.toLowerCase().includes("шаблон") ||
-          n.kind === "reschedule"),
+          n.title.toLowerCase().includes("нагрузк") ||
+          n.title.toLowerCase().includes("прогресс") ||
+          n.title.toLowerCase().includes("решени") ||
+          n.kind === "reschedule" ||
+          n.kind === "progression"),
     )
     .map((n) => ({
       id: n.id,
