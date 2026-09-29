@@ -1,7 +1,7 @@
 import { isSlotPast } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { suggestNextSlot } from "@/lib/next-slot";
-import { enqueueBookingConfirmed } from "@/lib/notify/hook-booking";
+import { enqueueBookingConfirmed, tryFlushPending } from "@/lib/notify/hook-booking";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
 export function HabitSlotChip() {
@@ -62,6 +62,7 @@ export function HabitSlotChip() {
               date: habitSlot.date,
               time: habitSlot.time,
             });
+            tryFlushPending();
             showToast("Запись на привычное время.");
           }
         }}
