@@ -3,8 +3,8 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { DecisionBanner } from "@/components/app/decision-banner";
 import { SessionResultForm } from "@/components/app/session-result-form";
 import { SoftReturnPanel } from "@/components/app/soft-return";
+import { ProgramHistoryPanel } from "@/components/app/program-history-panel";
 
-/** Mounted above ProgramView: soft return, decision, result form. */
 export function ProgramCycleExtras() {
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -19,6 +19,7 @@ export function ProgramCycleExtras() {
     <div className="mb-3 flex flex-col gap-3">
       <SoftReturnPanel />
       <DecisionBanner />
+      <ProgramHistoryPanel />
       {todayBook ? (
         <SessionResultForm
           bookingId={todayBook.id}
