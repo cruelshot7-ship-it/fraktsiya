@@ -1,9 +1,10 @@
-import { Bell, X } from "lucide-react";
+import { X } from "lucide-react";
 import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
 import { CsvImportPanel } from "@/components/app/csv-import-panel";
+import { TrainerShareCard } from "@/components/app/trainer-share";
 import { cn } from "@/lib/utils";
 
 export function SignalsView() {
@@ -27,10 +28,11 @@ export function SignalsView() {
     <div className="flex flex-col gap-3">
       <ActionCenter />
       <CsvImportPanel />
+      <TrainerShareCard />
       <Surface>
         <SectionLabel>Уведомления об отмене</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed">
-          Свободная отмена — пока до слота больше {notifyPrefs.windowHours} ч. Позже клиент может отменить, но занятие сгорает.
+          Свободная отмена — пока до слота больше {notifyPrefs.windowHours} ч.
         </p>
         <div className="mt-3 flex gap-1.5">
           {CANCEL_WINDOWS.map((hours) => {
