@@ -25,9 +25,12 @@ export function DecisionBanner() {
         !dismissed.includes(n.id) &&
         (n.kind === "book" ||
           n.kind === "reschedule" ||
+          n.kind === "progression" ||
           n.title.toLowerCase().includes("програм") ||
           n.title.toLowerCase().includes("прогресс") ||
-          n.title.toLowerCase().includes("план")),
+          n.title.toLowerCase().includes("план") ||
+          n.title.toLowerCase().includes("нагрузк") ||
+          n.title.toLowerCase().includes("решени")),
     )
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 3);
