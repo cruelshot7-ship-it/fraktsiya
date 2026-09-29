@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useStudio } from "@/lib/studio-store";
 import { parseCsvPreview, suggestColumnMap } from "@/lib/csv-import/preview";
 import { rowsToClientDrafts } from "@/lib/csv-import/apply-local";
+import { findDuplicates } from "@/lib/csv-import/duplicates";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
 /** Trainer CSV → explicit confirm → local studio clients only (not Neon). */
@@ -9,6 +10,7 @@ export function CsvImportPanel() {
   const role = useStudio((s) => s.role);
   const showToast = useStudio((s) => s.showToast);
   const addClient = useStudio((s) => s.addClient);
+  const clients = useStudio((s) => s.clients);
   const [preview, setPreview] = useState<ReturnType<typeof parseCsvPreview> | null>(null);
   const [map, setMap] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -41,8 +43,16 @@ export function CsvImportPanel() {
         showToast("Нет строк с именем для импорта.");
         return;
       }
+      const dups = findDuplicates(drafts, clients);
+      const skipIdx = new Set(dups.map((d) => d.draftIndex));
       let ok = 0;
-      for (const d of drafts) {
+      let dupSkipped = 0;
+      for (let i = 0; i < drafts.length; i++) {
+        if (skipIdx.has(i)) {
+          dupSkipped += 1;
+          continue;
+        }
+        const d = drafts[i]!;
         const id = addClient({
           firstName: d.firstName,
           lastName: d.lastName,
@@ -53,7 +63,8 @@ export function CsvImportPanel() {
       }
       showToast(
         `Локально добавлено: ${ok}` +
-          (skipped ? ` · пропущено: ${skipped}` : "") +
+          (skipped ? ` · пустых: ${skipped}` : "") +
+          (dupSkipped ? ` · дубли: ${dupSkipped}` : "") +
           ". Neon не трогали.",
       );
       setPreview(null);
@@ -105,6 +116,16 @@ export function CsvImportPanel() {
               </p>
             ))}
           </div>
+          {(() => {
+            const { drafts } = rowsToClientDrafts(preview.rows, map, 30);
+            const dups = findDuplicates(drafts, clients);
+            if (!dups.length) return null;
+            return (
+              <p className="text-tiny text-primary">
+                Возможные дубликаты: {dups.slice(0, 5).map((d) => d.reason).join("; ")}
+              </p>
+            );
+          })()}
           <button
             type="button"
             disabled={busy}
