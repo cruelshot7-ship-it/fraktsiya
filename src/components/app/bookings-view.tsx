@@ -18,6 +18,7 @@ import { suggestNextSlot } from "@/lib/next-slot";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
 import { SessionCard } from "@/components/app/session-card";
+import { SoftReturnPanel } from "@/components/app/soft-return";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -54,6 +55,7 @@ export function BookingsView() {
   return (
     <div className="stagger-in flex flex-col gap-3">
       {role === "client" ? <ActionCenter /> : null}
+      {role === "client" ? <SoftReturnPanel /> : null}
       {next ? <SessionCard bookingId={next.id} /> : null}
       {role === "client" ? (
         <Surface glow={next ? "ok" : undefined}>
