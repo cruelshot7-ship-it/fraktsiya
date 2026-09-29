@@ -29,7 +29,7 @@ export function BookingsView() {
   const role = useStudio((s) => s.role);
   const slots = useStudio((s) => s.slots);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
-  const bookSlot = useStudio((s) => s.bookSlot);
+  const bookSlot = useStudio((s) => s.book);
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
@@ -171,7 +171,15 @@ export function BookingsView() {
                         <button
                           type="button"
                           onClick={() => {
+                            const client = clients.find((c) => c.id === booking.clientId);
                             cancelBooking(booking.id, role);
+                            void import("@/lib/notify/hook-booking").then(({ enqueueBookingCancelled }) => {
+                              enqueueBookingCancelled({
+                                telegramId: client?.telegramId,
+                                bookingId: booking.id,
+                                clientId: booking.clientId,
+                              });
+                            });
                             setPendingId(null);
                           }}
                           className="pressable h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
