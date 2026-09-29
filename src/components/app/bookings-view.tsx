@@ -7,6 +7,7 @@ import {
   hoursUntilSlot,
   isLateCancel,
   isSlotPast,
+  relativeDayLabel,
   sessionsRu,
   shortName,
   WEEK_GOAL,
@@ -100,15 +101,25 @@ export function BookingsView() {
         </p>
       ) : null}
 
-      {upcoming.map((booking) => {
+      {(() => {
+        const groups: { date: string; items: typeof upcoming }[] = [];
+        for (const booking of upcoming) {
+          const last = groups.at(-1);
+          if (!last || last.date !== booking.date) groups.push({ date: booking.date, items: [booking] });
+          else last.items.push(booking);
+        }
+        return groups.map((group) => (
+          <div key={group.date} className="flex flex-col gap-2">
+            <SectionLabel>{relativeDayLabel(group.date)}</SectionLabel>
+            {group.items.map((booking) => {
         const who = clients.find((c) => c.id === booking.clientId);
         const pending = pendingId === booking.id;
         const late = isLateCancel(booking.date, booking.time, notifyPrefs.windowHours);
         return (
           <Surface key={booking.id} glow={pending ? "alert" : "ok"}>
-            <p className="font-display text-lg font-semibold">{formatLongDate(booking.date)}</p>
+            <p className="font-display text-lg font-semibold">{booking.time}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {booking.time} · {booking.duration} мин
+              {formatLongDate(booking.date)} · {booking.duration} мин
               {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
               {booking.checkedIn ? " · в зале" : ""}
               {role === "client" ? ` · ${countdownLabel(booking.date, booking.time)}` : ""}
@@ -169,7 +180,10 @@ export function BookingsView() {
             )}
           </Surface>
         );
-      })}
+            })}
+          </div>
+        ));
+      })()}
 
       {past.length > 0 ? (
         <div className="mt-2 flex flex-col gap-2">

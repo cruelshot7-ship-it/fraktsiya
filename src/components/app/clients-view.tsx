@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
+  addDays,
   clientFlag,
   daysAgoPhrase,
   dayKbju,
@@ -20,7 +21,9 @@ import {
   PACKS,
   programWeek,
   sessionsRu,
+  relativeDayLabel,
   shortName,
+  startOfWeek,
   visitSession,
   weightDelta,
   type Client,
@@ -39,6 +42,8 @@ export function ClientsView() {
   const bookings = useStudio((s) => s.bookings);
   const clientFilter = useStudio((s) => s.clientFilter);
   const setClientFilter = useStudio((s) => s.setClientFilter);
+  const setTab = useStudio((s) => s.setTab);
+  const selectDay = useStudio((s) => s.selectDay);
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const addClient = useStudio((s) => s.addClient);
   const refreshCloud = useStudio((s) => s.refreshCloud);
@@ -232,6 +237,45 @@ export function ClientsView() {
         <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />
         <Kpi value={weekBookings} label={"записей\nна неделю"} />
       </div>
+
+      <Surface>
+        <SectionLabel>Записи на неделю</SectionLabel>
+        <div className="mt-2 flex flex-col gap-1.5">
+          {Array.from({ length: 7 }, (_, i) => {
+            const key = isoDate(addDays(startOfWeek(new Date()), i));
+            const rows = bookings
+              .filter((booking) => booking.date === key)
+              .sort((a, b) => a.time.localeCompare(b.time));
+            const names = rows
+              .map((booking) => {
+                const who = clients.find((client) => client.id === booking.clientId);
+                return `${booking.time} ${who ? shortName(who) : "Клиент"}`;
+              })
+              .join(" · ");
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  selectDay(key);
+                  setTab("slots");
+                }}
+                className="pressable flex min-h-11 items-baseline justify-between gap-3 rounded-lg bg-secondary px-3 py-2 text-left"
+              >
+                <span className="shrink-0 text-sm font-medium">{relativeDayLabel(key)}</span>
+                <span className="min-w-0 truncate text-tiny text-muted-foreground">{names || "пусто"}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={() => setTab("bookings")}
+          className="mt-2 h-9 w-full text-tiny text-muted-foreground"
+        >
+          Все записи списком
+        </button>
+      </Surface>
 
       <div className="flex gap-1.5">
         <FilterChip active={clientFilter === "all"} onClick={() => setClientFilter("all")}>

@@ -6,6 +6,7 @@ import {
   isFrozen,
   isSlotPast,
   parseISODate,
+  relativeDayLabel,
   shortName,
   startOfWeek,
 } from "@/data/studio";
@@ -41,6 +42,7 @@ export function TrainerSlots() {
   const start = startOfWeek(parseISODate(weekStart));
   const minWeek = isoDate(startOfWeek(new Date()));
   const canPrev = weekStart > minWeek;
+  const tomorrowKey = isoDate(addDays(new Date(), 1));
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
     const key = isoDate(date);
@@ -65,7 +67,7 @@ export function TrainerSlots() {
         <button type="button" disabled={!canPrev} onClick={() => shiftWeek(-1)} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border disabled:opacity-30">
           ‹
         </button>
-        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">Слоты зала</p>
+        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">Слоты · неделя</p>
         <button type="button" onClick={() => shiftWeek(1)} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border">
           ›
         </button>
@@ -84,14 +86,53 @@ export function TrainerSlots() {
                 selectDay(day.key);
                 setOpenId(null);
               }}
-              className={cn("min-w-11 flex-1 rounded-xl px-1 py-2 text-center shadow-border", selected ? "glow-ok bg-ok-dim" : "bg-card")}
+              className={cn(
+                "min-w-11 flex-1 rounded-xl px-1 py-2 text-center shadow-border",
+                selected ? "glow-ok bg-ok-dim" : "bg-card",
+              )}
             >
-              <span className="block text-2xs tracking-wide text-muted-foreground">{DOW[i]}</span>
+              <span className="block text-2xs tracking-wide text-muted-foreground">
+                {day.key === tomorrowKey ? "завт" : DOW[i]}
+              </span>
               <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
               <span className="mt-0.5 block text-3xs text-muted-foreground">{day.total === 0 ? "—" : `${day.booked} зап.`}</span>
             </button>
           );
         })}
+      </div>
+
+      <div className="mb-3 rounded-xl bg-card px-4 py-3 shadow-border">
+        <p className="text-tiny tracking-[0.08em] text-muted-foreground uppercase">Записи на неделю</p>
+        <div className="mt-2 flex flex-col gap-1.5">
+          {days.map((day) => {
+            const rows = bookings
+              .filter((booking) => booking.date === day.key)
+              .sort((a, b) => a.time.localeCompare(b.time));
+            const names = rows
+              .map((booking) => {
+                const who = clients.find((client) => client.id === booking.clientId);
+                return `${booking.time} ${who ? shortName(who) : "Клиент"}`;
+              })
+              .join(" · ");
+            return (
+              <button
+                key={`week-${day.key}`}
+                type="button"
+                onClick={() => {
+                  selectDay(day.key);
+                  setOpenId(null);
+                }}
+                className={cn(
+                  "flex min-h-10 items-baseline justify-between gap-3 rounded-lg px-2 py-1.5 text-left",
+                  day.key === selectedDate ? "bg-ok-dim" : "bg-secondary",
+                )}
+              >
+                <span className="shrink-0 text-sm font-medium">{relativeDayLabel(day.key)}</span>
+                <span className="min-w-0 truncate text-tiny text-muted-foreground">{names || "пусто"}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="stagger-in flex flex-col gap-2">

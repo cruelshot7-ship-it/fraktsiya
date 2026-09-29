@@ -901,6 +901,12 @@ export function formatDayMonth(iso: string) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+export function relativeDayLabel(iso: string, today = isoDate(new Date())) {
+  if (iso === today) return "Сегодня";
+  if (iso === isoDate(addDays(parseISODate(today), 1))) return "Завтра";
+  return formatWeekdayLong(iso);
+}
+
 export function placesLeft(n: number) {
   if (n === 1) return "1 место";
   if (n >= 2 && n <= 4) return `${n} места`;
