@@ -12,6 +12,7 @@ import { useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { SessionResultForm } from "@/components/app/session-result-form";
 import { SessionExtras } from "@/components/app/session-extras";
+import { PostSessionSummary } from "@/components/app/post-session-summary";
 import { cn } from "@/lib/utils";
 
 type Phase = "before" | "during" | "after";
@@ -38,11 +39,6 @@ export function SessionCard({ bookingId }: Props) {
 
   const booking = bookings.find((b) => b.id === bookingId);
   const phase = booking ? phaseOf(booking) : "before";
-
-  const peers = useMemo(() => {
-    if (!booking) return [];
-    return bookings.filter((b) => b.slotId === booking.slotId && !b.noShow);
-  }, [booking, bookings]);
 
   if (!booking) {
     return (
@@ -176,7 +172,7 @@ export function SessionCard({ bookingId }: Props) {
             {role === "client" ? (
               <button
                 type="button"
-                className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium"
+                className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
                 onClick={() => setTab("slots")}
               >
                 Следующий слот
@@ -196,6 +192,7 @@ export function SessionCard({ bookingId }: Props) {
         />
       ) : null}
       <SessionExtras bookingId={booking.id} />
+      {phase === "after" ? <PostSessionSummary bookingId={booking.id} /> : null}
     </div>
   );
 }
