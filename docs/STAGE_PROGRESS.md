@@ -1,33 +1,29 @@
-# Progress checklist (feature/action-center-session-card)
+# Progress vs instruction (feature/action-center-session-card)
 
-Do not treat as production-closed until Neon migrate + Telegram e2e are green.
+## Этап 1
+| Требование | Статус |
+|------------|--------|
+| Бронь + dual-write | Done |
+| Карточка / явка / результат | Done |
+| Прогрессия + решение | Done |
+| Центр действий | Done |
+| Unit-тесты concurrent/access | Done |
+| Neon 0004 prod | **Блокер: OK** |
+| Telegram e2e | **Владелец** |
 
-## Stage 1 — training cycle
+## Этап 2
+| Требование | Статус |
+|------------|--------|
+| Шаблоны / копия / история | Done |
+| Внимание: без записи / перерыв | Done |
+| CSV + дубликаты (локально) | Done |
+| CSV → Neon | **Нет** |
+| Habit / soft return / ICS / maps / QR | Done |
+| Outbox + bot flush | Done |
+| SyncStatusChip | Done |
 
-| Item | Status |
-|------|--------|
-| Slot → book | Done (code) |
-| Attendance before result | Done |
-| Session result form | Done |
-| Progression + trainer decide | Done |
-| Action Center / Session card | Done |
-| Production Neon migrate 0004 | **Blocked — needs OK** |
-| Telegram e2e | **Your check** |
+## Этап 3
+Не начат.
 
-## Stage 2 — trainer ops
-
-| Item | Status |
-|------|--------|
-| ICS / maps / soft return / habit 1-tap | Done |
-| Templates / copy day / history | Done |
-| Trainer QR | Done |
-| CSV → local clients (confirm) | Done |
-| CSV → Neon | **Not enabled** |
-| Notify outbox local | Done |
-| Bot worker | **Not wired** |
-
-## Stage 3
-Native — not started.
-
-## Safety
-Branch only. No prod migrations from agent.
+## Безопасность
+Feature branch. Миграции Neon агентом не применялись. Deploy: ruksha.vercel.app
