@@ -7,6 +7,7 @@ import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
 import { SyncStatusChip } from "@/components/app/sync-status";
+import { NotifyPrefsPanel } from "@/components/app/notify-prefs-panel";
 import { cn } from "@/lib/utils";
 
 export function SignalsView() {
@@ -33,6 +34,7 @@ export function SignalsView() {
       <TrainerShareCard />
       <OutboxPanel />
       <SyncStatusChip />
+      <NotifyPrefsPanel />
       <Surface>
         <SectionLabel>Уведомления об отмене</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed">
