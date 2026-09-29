@@ -13,7 +13,7 @@ import {
 import { activeClient, slotTaken, useStudio } from "@/lib/studio-store";
 import { EmptyHint } from "@/components/app/bits";
 import { HabitSlotChip } from "@/components/app/habit-slot-chip";
-import { enqueueBookingConfirmed } from "@/lib/notify/hook-booking";
+import { enqueueBookingConfirmed, tryFlushPending } from "@/lib/notify/hook-booking";
 import { cn } from "@/lib/utils";
 
 function useWeekDays() {
@@ -131,6 +131,7 @@ export function ClientSlots() {
                             date: slot.date,
                             time: slot.time,
                           });
+                          tryFlushPending();
                           showToast("Запись создана.");
                         }
                       }}
