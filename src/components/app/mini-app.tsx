@@ -21,7 +21,7 @@ import { primeFoodDb } from "@/lib/barcode";
 import { initTelegram, getStartParam, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
-import { ProgressionPanel } from "@/components/app/progression-panel";
+import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
 import { ProgramCycleExtras } from "@/components/app/program-cycle-extras";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
@@ -174,19 +174,10 @@ export function MiniApp() {
                 {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
-                <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">
-                  {title}
-                </h1>
-                <button
-                  type="button"
-                  onClick={() => setTab("signals")}
-                  className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground"
-                  aria-label="Сигналы"
-                >
+                <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
+                <button type="button" onClick={() => setTab("signals")} className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground" aria-label="Сигналы">
                   <Bell className="size-4" />
-                  {trainerBadge > 0 ? (
-                    <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-                  ) : null}
+                  {trainerBadge > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
                 </button>
               </div>
             </>
@@ -257,13 +248,7 @@ export function MiniApp() {
                 <ProgramCycleExtras />
                 <ProgramView />
                 {role === "trainer" && client ? (
-                  <div className="mt-3">
-                    <ProgressionPanel
-                      clientId={client.id}
-                      coachId={client.coachId || String(TRAINER_TG_ID)}
-                      programId={`prog_${client.coachId || TRAINER_TG_ID}_${client.id}`}
-                    />
-                  </div>
+                  <TrainerProgramTools clientId={client.id} coachId={client.coachId} />
                 ) : null}
               </>
             ) : null}
