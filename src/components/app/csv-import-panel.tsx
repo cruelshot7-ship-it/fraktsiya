@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useStudio } from "@/lib/studio-store";
 import { parseCsvPreview, suggestColumnMap } from "@/lib/csv-import/preview";
+import { rowsToClientDrafts } from "@/lib/csv-import/apply-local";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
-/** Trainer CSV preview only — no DB write until explicit confirm. */
+/** Trainer CSV → explicit confirm → local studio clients only (not Neon). */
 export function CsvImportPanel() {
   const role = useStudio((s) => s.role);
   const showToast = useStudio((s) => s.showToast);
+  const addClient = useStudio((s) => s.addClient);
   const [preview, setPreview] = useState<ReturnType<typeof parseCsvPreview> | null>(null);
   const [map, setMap] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
   if (role !== "trainer") return null;
 
@@ -23,17 +26,47 @@ export function CsvImportPanel() {
       if (result.errors.length) {
         showToast(`Предпросмотр: ${result.errors[0]}`);
       } else {
-        showToast(`Строк: ${result.rowCount}. Импорт в базу ещё не включён.`);
+        showToast(`Строк: ${result.rowCount}. Проверьте и подтвердите импорт.`);
       }
     };
     reader.readAsText(file, "utf-8");
+  }
+
+  function confirmImport() {
+    if (!preview || busy) return;
+    setBusy(true);
+    try {
+      const { drafts, skipped } = rowsToClientDrafts(preview.rows, map, 30);
+      if (!drafts.length) {
+        showToast("Нет строк с именем для импорта.");
+        return;
+      }
+      let ok = 0;
+      for (const d of drafts) {
+        const id = addClient({
+          firstName: d.firstName,
+          lastName: d.lastName,
+          telegramUsername: d.telegramUsername,
+          phone: d.phone,
+        });
+        if (id) ok += 1;
+      }
+      showToast(
+        `Локально добавлено: ${ok}` +
+          (skipped ? ` · пропущено: ${skipped}` : "") +
+          ". Neon не трогали.",
+      );
+      setPreview(null);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <Surface>
       <SectionLabel>Импорт клиентов · CSV</SectionLabel>
       <p className="mt-2 text-tiny text-muted-foreground">
-        Предпросмотр и сопоставление колонок. Запись в базу — только после подтверждения (скоро).
+        Предпросмотр → подтверждение. Только локальный список клиентов, не production Neon.
       </p>
       <label className="pressable mt-3 flex h-11 cursor-pointer items-center justify-center rounded-xl bg-secondary text-sm font-medium">
         Выбрать CSV
@@ -74,10 +107,11 @@ export function CsvImportPanel() {
           </div>
           <button
             type="button"
-            className="pressable h-11 w-full rounded-xl bg-secondary text-sm text-muted-foreground"
-            onClick={() => showToast("Импорт в базу пока отключён — только предпросмотр.")}
+            disabled={busy}
+            className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+            onClick={confirmImport}
           >
-            Подтвердить импорт (скоро)
+            {busy ? "Импорт…" : "Подтвердить · локальный список"}
           </button>
         </div>
       ) : null}

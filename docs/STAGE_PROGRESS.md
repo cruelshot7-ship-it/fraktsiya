@@ -28,8 +28,9 @@ Do not treat this as “production closed” until Neon migrate + Telegram e2e a
 | Copy program day | Done |
 | Program change history (from notices) | Done |
 | Trainer QR / share link | Done |
-| CSV preview | Done (no DB write) |
-| CSV → database | **Not enabled** |
+| CSV preview | Done |
+| CSV → local clients (explicit confirm) | Done |
+| CSV → Neon / production DB | **Not enabled** |
 | Notify outbox (local + SQL 0005 file) | Done local; bot worker **not** wired |
 | Bot delivery with retry | Partial (logic + local flush) |
 
