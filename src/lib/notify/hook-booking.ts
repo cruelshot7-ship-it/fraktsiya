@@ -36,3 +36,29 @@ export function enqueueBookingCancelled(opts: {
     payload: { bookingId: opts.bookingId, clientId: opts.clientId },
   });
 }
+
+/** Best-effort: ask server to deliver pending outbox (no throw). */
+export function tryFlushPending() {
+  if (typeof window === "undefined") return;
+  void (async () => {
+    try {
+      const { loadOutbox, flushLocal } = await import("@/lib/notify/local-outbox-store");
+      const pending = loadOutbox().filter((e) => e.status === "pending").slice(0, 10);
+      if (!pending.length) return;
+      const { flushOutboxServerFn } = await import("@/lib/notify/flush-server");
+      await flushOutboxServerFn({
+        data: {
+          events: pending.map((e) => ({
+            id: e.id,
+            kind: e.kind,
+            telegramId: e.telegramId,
+            payload: e.payload as Record<string, unknown> | undefined,
+          })),
+        },
+      });
+      await flushLocal(true);
+    } catch {
+      /* offline / no token */
+    }
+  })();
+}
