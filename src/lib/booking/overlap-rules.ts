@@ -34,3 +34,14 @@ export function clientBookingsConflict(
 ): boolean {
   return existing.some((s) => rangesOverlap(s, candidate));
 }
+
+/** Upcoming bookings on a slot (future, not no-show). */
+export function hasUpcomingBookings(
+  bookings: { slotId?: string; date: string; time: string; noShow?: boolean }[],
+  slotId: string,
+  isPast: (date: string, time: string) => boolean,
+): number {
+  return bookings.filter(
+    (b) => b.slotId === slotId && !b.noShow && !isPast(b.date, b.time),
+  ).length;
+}
