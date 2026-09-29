@@ -20,6 +20,9 @@ import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
 import { initTelegram, getStartParam, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
+import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
+import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
+import { ProgramCycleExtras } from "@/components/app/program-cycle-extras";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
   { id: "slots", label: "Слоты" },
@@ -80,6 +83,7 @@ export function MiniApp() {
   }, [role, setTab]);
 
   useEffect(() => {
+    ensureBookDualWrite();
     initTelegram();
     let tries = 0;
     let booted = false;
@@ -170,19 +174,10 @@ export function MiniApp() {
                 {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
-                <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">
-                  {title}
-                </h1>
-                <button
-                  type="button"
-                  onClick={() => setTab("signals")}
-                  className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground"
-                  aria-label="Сигналы"
-                >
+                <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
+                <button type="button" onClick={() => setTab("signals")} className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground" aria-label="Сигналы">
                   <Bell className="size-4" />
-                  {trainerBadge > 0 ? (
-                    <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-                  ) : null}
+                  {trainerBadge > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
                 </button>
               </div>
             </>
@@ -192,37 +187,21 @@ export function MiniApp() {
                 <BrandLockup />
                 <div className="flex items-center gap-1.5">
                   {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
-                  <button
-                    type="button"
-                    onClick={() => openNote()}
-                    className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok"
-                    aria-label="Написать тренеру"
-                  >
+                  <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok" aria-label="Написать тренеру">
                     <MessageCircle className="size-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setInboxOpen(true)}
-                    className="pressable relative grid size-11 place-items-center rounded-full bg-secondary text-muted-foreground"
-                    aria-label="Уведомления"
-                  >
+                  <button type="button" onClick={() => setInboxOpen(true)} className="pressable relative grid size-11 place-items-center rounded-full bg-secondary text-muted-foreground" aria-label="Уведомления">
                     <Bell className="size-4" />
-                    {clientInbox.length > 0 ? (
-                      <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-                    ) : null}
+                    {clientInbox.length > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
                   </button>
                 </div>
               </div>
               {inviteBlocked ? null : (
               <>
-              <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">
-                {title}
-              </h1>
+              <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
-                  ? inviteBlocked
-                    ? "Тренер добавит вас в зал"
-                    : "Профиль появится, когда тренер добавит вас в зал"
+                  ? inviteBlocked ? "Тренер добавит вас в зал" : "Профиль появится, когда тренер добавит вас в зал"
                   : isFrozen(client)
                   ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
                   : soon !== null && soon > 0 && soon < 24
@@ -240,16 +219,10 @@ export function MiniApp() {
             {CLIENT_TABS.map((item) => {
               const active = tab === item.id;
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={cn(
+                <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "min-h-11 shrink-0 border-b-2 px-3 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
                     active ? "border-primary bg-primary/10 text-foreground" : "border-hairline text-muted-foreground",
-                  )}
-                  aria-current={active ? "page" : undefined}
-                >
+                  )} aria-current={active ? "page" : undefined}>
                   {item.label}
                 </button>
               );
@@ -259,14 +232,10 @@ export function MiniApp() {
         </div>
         )}
 
-        <main
-          ref={scroller}
-          onScroll={readScroll}
-          className={cn(
+        <main ref={scroller} onScroll={readScroll} className={cn(
             "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
             role === "trainer" ? "pb-24" : "pb-10",
-          )}
-        >
+          )}>
           <div key={`${role}-${tab}`} className="pt-4">
             {inviteBlocked && role === "client" ? (
               <JoinGate />
@@ -274,7 +243,15 @@ export function MiniApp() {
               <>
             {tab === "slots" ? <SlotsView /> : null}
             {tab === "bookings" ? <BookingsView /> : null}
-            {tab === "program" ? <ProgramView /> : null}
+            {tab === "program" ? (
+              <>
+                <ProgramCycleExtras />
+                <ProgramView />
+                {role === "trainer" && client ? (
+                  <TrainerProgramTools clientId={client.id} coachId={client.coachId} />
+                ) : null}
+              </>
+            ) : null}
             {tab === "food" ? <NutritionView /> : null}
             {tab === "form" ? <FormView /> : null}
             {tab === "hall" ? <HallView /> : null}
@@ -297,23 +274,15 @@ export function MiniApp() {
                 const Icon = item.icon;
                 const badge = item.id === "signals" ? trainerBadge : 0;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setTab(item.id)}
-                    className={cn(
+                  <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-foreground" : "text-muted-foreground",
-                    )}
-                    aria-current={active ? "page" : undefined}
-                  >
+                    )} aria-current={active ? "page" : undefined}>
                     {active ? <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" /> : null}
                     <span className="relative">
                       <Icon className="size-5" />
                       {badge > 0 ? (
-                        <span className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground">
-                          {badge}
-                        </span>
+                        <span className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground">{badge}</span>
                       ) : null}
                     </span>
                     {item.label}
@@ -326,15 +295,7 @@ export function MiniApp() {
 
         {sheetClientId ? <ClientSheet /> : null}
         {inboxOpen && role === "client" ? (
-          <InboxSheet
-            items={clientInbox}
-            onClose={() => setInboxOpen(false)}
-            onDismiss={(id) => dismissSignal(id)}
-            onRebook={() => {
-              setInboxOpen(false);
-              setTab("slots");
-            }}
-          />
+          <InboxSheet items={clientInbox} onClose={() => setInboxOpen(false)} onDismiss={(id) => dismissSignal(id)} onRebook={() => { setInboxOpen(false); setTab("slots"); }} />
         ) : null}
         <TrainerNote />
         {guestPreview ? <GuestPreview /> : null}
@@ -343,78 +304,34 @@ export function MiniApp() {
   );
 }
 
-function RoleSwitch({
-  role,
-  onChange,
-  compact,
-}: {
-  role: "client" | "trainer";
-  onChange: (role: "client" | "trainer") => void;
-  compact?: boolean;
-}) {
+function RoleSwitch({ role, onChange, compact }: { role: "client" | "trainer"; onChange: (role: "client" | "trainer") => void; compact?: boolean }) {
   return (
     <div className={cn("grid grid-cols-2 gap-0.5 rounded-full bg-secondary p-0.5", compact && "opacity-80")}>
-      <button
-        type="button"
-        onClick={() => onChange("client")}
-        className={cn(
-          "pressable font-medium",
-          compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs",
-          role === "client" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground",
-        )}
-      >
+      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
         Клиент
       </button>
-      <button
-        type="button"
-        onClick={() => onChange("trainer")}
-        className={cn(
-          "pressable font-medium",
-          compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs",
-          role === "trainer" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground",
-        )}
-      >
+      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
         Тренер
       </button>
     </div>
   );
 }
 
-function InboxSheet({
-  items,
-  onClose,
-  onDismiss,
-  onRebook,
-}: {
-  items: Notice[];
-  onClose: () => void;
-  onDismiss: (id: string) => void;
-  onRebook: () => void;
-}) {
+function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; onClose: () => void; onDismiss: (id: string) => void; onRebook: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-background">
       <div className="sheet-in flex min-h-0 flex-1 flex-col px-5 pt-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-3xl">Уведомления</h2>
-          <button type="button" onClick={onClose} className="text-sm text-muted-foreground">
-            Закрыть
-          </button>
+          <button type="button" onClick={onClose} className="text-sm text-muted-foreground">Закрыть</button>
         </div>
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-8">
           {items.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Пока тихо. Если тренер отменит или перенесёт — придёт сюда.
-            </p>
+            <p className="py-10 text-center text-sm text-muted-foreground">Пока тихо. Если тренер отменит или перенесёт — придёт сюда.</p>
           ) : (
             <div className="stagger-in flex flex-col gap-2">
               {items.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "rounded-xl bg-card p-4",
-                    item.kind === "cancel" ? "shadow-glow-alert" : "shadow-border",
-                  )}
-                >
+                <div key={item.id} className={cn("rounded-xl bg-card p-4", item.kind === "cancel" ? "shadow-glow-alert" : "shadow-border")}>
                   {item.kind === "cancel" ? (
                     <p className="text-2xs font-medium tracking-wide text-primary uppercase">Отмена записи</p>
                   ) : item.kind === "reschedule" ? (
@@ -429,22 +346,14 @@ function InboxSheet({
                     <p className="text-2xs font-medium tracking-wide text-ok uppercase">Запись</p>
                   ) : null}
                   <p className="mt-1 text-sm font-medium">{item.title}</p>
-                  <p className="mt-1 text-tiny text-muted-foreground">{item.body}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="text-2xs text-muted-foreground">{relativeLabel(item.at)}</p>
-                    <button type="button" className="text-tiny text-muted-foreground" onClick={() => onDismiss(item.id)}>
-                      скрыть
-                    </button>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+                  <p className="mt-2 text-2xs text-muted-foreground">{relativeLabel(item.at)}</p>
+                  <div className="mt-3 flex gap-2">
+                    {(item.kind === "cancel" || item.kind === "reschedule") && (
+                      <button type="button" onClick={onRebook} className="pressable rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">К слотам</button>
+                    )}
+                    <button type="button" onClick={() => onDismiss(item.id)} className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground">Скрыть</button>
                   </div>
-                  {item.kind === "cancel" ? (
-                    <button
-                      type="button"
-                      onClick={onRebook}
-                      className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-                    >
-                      Выбрать другое время
-                    </button>
-                  ) : null}
                 </div>
               ))}
             </div>
