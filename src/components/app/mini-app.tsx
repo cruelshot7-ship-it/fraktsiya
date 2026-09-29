@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
 import { initTelegram, getStartParam, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
+import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
+import { ProgressionPanel } from "@/components/app/progression-panel";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
   { id: "slots", label: "Слоты" },
@@ -80,6 +82,7 @@ export function MiniApp() {
   }, [role, setTab]);
 
   useEffect(() => {
+    ensureBookDualWrite();
     initTelegram();
     let tries = 0;
     let booted = false;
@@ -274,7 +277,20 @@ export function MiniApp() {
               <>
             {tab === "slots" ? <SlotsView /> : null}
             {tab === "bookings" ? <BookingsView /> : null}
-            {tab === "program" ? <ProgramView /> : null}
+            {tab === "program" ? (
+              <>
+                <ProgramView />
+                {role === "trainer" && client ? (
+                  <div className="mt-3">
+                    <ProgressionPanel
+                      clientId={client.id}
+                      coachId={client.coachId || String(TRAINER_TG_ID)}
+                      programId={`prog_${client.coachId || TRAINER_TG_ID}_${client.id}`}
+                    />
+                  </div>
+                ) : null}
+              </>
+            ) : null}
             {tab === "food" ? <NutritionView /> : null}
             {tab === "form" ? <FormView /> : null}
             {tab === "hall" ? <HallView /> : null}
@@ -436,13 +452,9 @@ function InboxSheet({
                       скрыть
                     </button>
                   </div>
-                  {item.kind === "cancel" ? (
-                    <button
-                      type="button"
-                      onClick={onRebook}
-                      className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-                    >
-                      Выбрать другое время
+                  {item.kind === "cancel" || item.kind === "waitlist" ? (
+                    <button type="button" onClick={onRebook} className="pressable mt-3 h-10 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground">
+                      К слотам
                     </button>
                   ) : null}
                 </div>
