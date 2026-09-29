@@ -1,5 +1,5 @@
-import { bookingIcs, downloadIcs } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
+import { openCalendarEvent } from "@/lib/calendar-ics";
 import { openMapsRoute } from "@/lib/maps-link";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
@@ -9,14 +9,33 @@ type Props = {
   onlineUrl?: string | null;
 };
 
-/** Calendar (.ics) + route / online link for a confirmed booking. */
 export function SessionExtras({ bookingId, locationText, onlineUrl }: Props) {
   const bookings = useStudio((s) => s.bookings);
+  const showToast = useStudio((s) => s.showToast);
   const booking = bookings.find((b) => b.id === bookingId);
   if (!booking) return null;
 
   const place = locationText?.trim() || null;
   const online = onlineUrl?.trim() || null;
+
+  function addToCalendar() {
+    const how = openCalendarEvent({
+      id: booking.id,
+      title: "Тренировка · Ruksha",
+      description: "Запись через Ruksha Discipline",
+      date: booking.date,
+      time: booking.time,
+      durationMin: booking.duration || 60,
+      timezone: "Europe/Minsk",
+      location: place || undefined,
+      url: online || undefined,
+    });
+    if (how === "google") {
+      showToast("Открываем Google Календарь…");
+    } else {
+      showToast("Файл календаря подготовлен.");
+    }
+  }
 
   return (
     <Surface>
@@ -25,9 +44,9 @@ export function SessionExtras({ bookingId, locationText, onlineUrl }: Props) {
         <button
           type="button"
           className="pressable h-11 w-full rounded-xl bg-secondary text-sm font-medium"
-          onClick={() => downloadIcs(`ruksha-${booking.date}-${booking.time}.ics`, bookingIcs(booking))}
+          onClick={addToCalendar}
         >
-          Добавить в календарь (.ics)
+          Добавить в календарь
         </button>
         {place ? (
           <button
