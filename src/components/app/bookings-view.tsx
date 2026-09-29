@@ -16,6 +16,8 @@ import {
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { suggestNextSlot } from "@/lib/next-slot";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { ActionCenter } from "@/components/app/action-center";
+import { SessionCard } from "@/components/app/session-card";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -51,6 +53,8 @@ export function BookingsView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
+      {role === "client" ? <ActionCenter /> : null}
+      {next ? <SessionCard bookingId={next.id} /> : null}
       {role === "client" ? (
         <Surface glow={next ? "ok" : undefined}>
           <SectionLabel>Ближайшая запись</SectionLabel>
@@ -62,6 +66,9 @@ export function BookingsView() {
               </p>
               <p className="mt-2 text-tiny text-muted-foreground">
                 Неделя · {weekVisits} из {WEEK_GOAL}
+                {hoursToNext !== null && hoursToNext > 0 && hoursToNext < 24
+                  ? ` · через ${Math.round(hoursToNext)} ч`
+                  : ""}
               </p>
             </>
           ) : (
@@ -86,7 +93,7 @@ export function BookingsView() {
 
       {role === "client" && !upcoming.length ? (
         <p className="text-sm text-muted-foreground">
-          Ближайших записей нет. Выберите время на вкладке «Слоты» — после тапа нужно подтверждение.
+          Ближайших записей нет. Выберите время на вкладке «Слоты».
         </p>
       ) : null}
 
@@ -174,7 +181,7 @@ export function BookingsView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => setPendingId(booking.id)}
