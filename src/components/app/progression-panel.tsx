@@ -10,12 +10,12 @@ type Props = {
   programId?: string;
 };
 
-/**
- * Trainer-only: request explainable progression suggestion and accept / reject / manual.
- */
+/** Trainer-only: request explainable progression suggestion and accept / reject / manual. */
 export function ProgressionPanel({ clientId, coachId, programId }: Props) {
   const showToast = useStudio((s) => s.showToast);
   const role = useStudio((s) => s.role);
+  const notices = useStudio((s) => s.notices);
+  const setNotices = (next: typeof notices) => useStudio.setState({ notices: next });
   const [busy, setBusy] = useState(false);
   const [suggestionId, setSuggestionId] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<ProgressionSuggestion | null>(null);
@@ -82,6 +82,18 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
         );
         return;
       }
+      const title =
+        decision === "accept"
+          ? "Программа обновлена"
+          : decision === "reject"
+            ? "План без изменений"
+            : "План скорректирован вручную";
+      const body =
+        decision === "accept"
+          ? "Тренер принял предложение по нагрузке."
+          : decision === "reject"
+            ? "Тренер оставил прежние рабочие веса."
+            : note.trim() || "Тренер внёс ручную правку.";
       showToast(
         decision === "accept"
           ? "Предложение принято."
@@ -89,6 +101,16 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
             ? "Оставлен прежний план."
             : "Зафиксирована ручная правка.",
       );
+      const n = {
+        id: `nt_prog_${suggestionId}_${Date.now()}`,
+        audience: "client" as const,
+        clientId,
+        kind: "reschedule" as const,
+        title,
+        body,
+        at: new Date().toISOString(),
+      };
+      setNotices([n, ...notices].slice(0, 40));
       setSuggestionId(null);
       setSuggestion(null);
       setNote("");
