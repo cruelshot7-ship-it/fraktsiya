@@ -168,7 +168,6 @@ export const recordSessionResultFn = createServerFn({ method: "POST" })
         await sql.query("rollback");
         return { ok: false, reason: "booking-cancelled" };
       }
-      // Result only after confirmed attendance (time elapsed ≠ attendance).
       if (booking[0].status !== "attended") {
         await sql.query("rollback");
         return { ok: false, reason: "no-attendance" };
@@ -214,6 +213,82 @@ export const recordSessionResultFn = createServerFn({ method: "POST" })
         return { ok: true, resultId, created: false };
       }
       console.error("[result] failed:", msg);
+      return { ok: false, reason: "server-error" };
+    }
+  });
+
+const AttendanceInput = z.object({
+  initData: z.string().min(1),
+  bookingId: z.string().min(1),
+  attended: z.boolean(),
+  note: z.string().max(500).optional(),
+});
+
+export type MarkAttendanceResponse =
+  | { ok: true; bookingId: string; status: "attended" | "no_show" }
+  | { ok: false; reason: string };
+
+/** Confirm or deny attendance. Idempotent. Does not invent attendance from clock. */
+export const markAttendanceFn = createServerFn({ method: "POST" })
+  .validator(AttendanceInput)
+  .handler(async ({ data }): Promise<MarkAttendanceResponse> => {
+    const session = verifyTelegramInitData(data.initData);
+    if (!session) return { ok: false, reason: "no-telegram" };
+
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    const status = data.attended ? "attended" : "no_show";
+
+    try {
+      await sql.query("begin");
+      await sql.query("select pg_advisory_xact_lock(hashtext($1))", [data.bookingId]);
+
+      const booking = await sql.query<{ id: string; status: string }>(
+        "select id, status from slot_bookings where id = $1",
+        [data.bookingId],
+      );
+      if (!booking[0]) {
+        await sql.query("rollback");
+        return { ok: false, reason: "booking-missing" };
+      }
+      if (booking[0].status === "cancelled") {
+        await sql.query("rollback");
+        return { ok: false, reason: "booking-cancelled" };
+      }
+      if (booking[0].status === "attended" || booking[0].status === "no_show") {
+        await sql.query("rollback");
+        return {
+          ok: true,
+          bookingId: data.bookingId,
+          status: booking[0].status as "attended" | "no_show",
+        };
+      }
+
+      await sql.query(
+        `update slot_bookings set status = $2, updated_at = now() where id = $1`,
+        [data.bookingId, status],
+      );
+      await sql.query(
+        `insert into session_attendance (id, booking_id, marked_by, attended, note)
+         values ($1, $2, $3, $4, $5)
+         on conflict (booking_id) do update
+           set marked_by = excluded.marked_by,
+               attended = excluded.attended,
+               note = excluded.note,
+               marked_at = now()`,
+        [`att_${data.bookingId}`, data.bookingId, session.user.id, data.attended, data.note ?? null],
+      );
+
+      await sql.query("commit");
+      return { ok: true, bookingId: data.bookingId, status };
+    } catch (err) {
+      try {
+        await sql.query("rollback");
+      } catch {
+        /* ignore */
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[attendance] failed:", msg);
       return { ok: false, reason: "server-error" };
     }
   });
