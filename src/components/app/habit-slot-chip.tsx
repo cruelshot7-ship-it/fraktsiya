@@ -10,7 +10,7 @@ export function HabitSlotChip() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const slots = useStudio((s) => s.slots);
   const bookings = useStudio((s) => s.bookings);
-  const book = useStudio((s) => s.book);
+  const book = useStudio((s) => s.bookSlot);
   const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
 

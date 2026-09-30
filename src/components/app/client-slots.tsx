@@ -42,7 +42,7 @@ export function ClientSlots() {
   const selectedDate = useStudio((s) => s.selectedDate);
   const selectDay = useStudio((s) => s.selectDay);
   const shiftWeek = useStudio((s) => s.shiftWeek);
-  const book = useStudio((s) => s.book);
+  const book = useStudio((s) => s.bookSlot);
   const joinWaitlist = useStudio((s) => s.joinWaitlist);
   const waitlist = useStudio((s) => s.waitlist);
   const showToast = useStudio((s) => s.showToast);
