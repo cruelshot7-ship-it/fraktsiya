@@ -31,7 +31,7 @@ export function BookingsView() {
   const role = useStudio((s) => s.role);
   const slots = useStudio((s) => s.slots);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
-  const bookSlot = useStudio((s) => s.book);
+  const bookSlot = useStudio((s) => s.bookSlot);
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
