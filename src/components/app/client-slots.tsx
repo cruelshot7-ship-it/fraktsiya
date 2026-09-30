@@ -15,6 +15,7 @@ import { EmptyHint } from "@/components/app/bits";
 import { HabitSlotChip } from "@/components/app/habit-slot-chip";
 import { enqueueBookingConfirmed, tryFlushPending } from "@/lib/notify/hook-booking";
 import { cn } from "@/lib/utils";
+import { clientBookingsConflict } from "@/lib/booking/overlap-rules";
 
 function useWeekDays() {
   const weekStart = useStudio((s) => s.weekStart);
@@ -120,6 +121,28 @@ export function ClientSlots() {
                       className="pressable h-10 rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground"
                       disabled={pendingId === slot.id}
                       onClick={() => {
+                        if ((me.sessionsLeft ?? 0) <= 0) {
+                          showToast("На балансе нет занятий. Напишите тренеру.");
+                          return;
+                        }
+                        const overlap = clientBookingsConflict(
+                          bookings
+                            .filter((b) => b.clientId === me.id && !b.noShow)
+                            .map((b) => ({
+                              date: b.date,
+                              time: b.time,
+                              durationMin: b.duration || 60,
+                            })),
+                          {
+                            date: slot.date,
+                            time: slot.time,
+                            durationMin: slot.duration || 60,
+                          },
+                        );
+                        if (overlap) {
+                          showToast("У вас уже есть занятие в это время.");
+                          return;
+                        }
                         setPendingId(slot.id);
                         const ok = book(slot.id);
                         setPendingId(null);
@@ -136,7 +159,7 @@ export function ClientSlots() {
                         }
                       }}
                     >
-                      Записаться
+                      {(me.sessionsLeft ?? 0) <= 0 ? "Нет занятий" : "Записаться"}
                     </button>
                   ) : left <= 0 && !waiting ? (
                     <button
