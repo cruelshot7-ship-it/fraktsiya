@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CalendarDays, ClipboardList, MessageCircle, Users } from "lucide-react";
+import { Bell, CalendarDays, ClipboardList, LayoutGrid, MessageCircle, Sparkles, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
 import { BrandLockup } from "@/components/app/brand-mark";
 import { HapticLayer } from "@/components/app/haptic-layer";
-import { SlotsView } from "@/components/app/slots-view";
-import { BookingsView } from "@/components/app/bookings-view";
+import { TodayView } from "@/components/app/today-view";
+import { ScheduleView } from "@/components/app/schedule-view";
+import { MoreView } from "@/components/app/more-view";
 import { ProgramView } from "@/components/app/program-view";
-import { NutritionView } from "@/components/app/nutrition-view";
-import { FormView } from "@/components/app/form-view";
-import { HallView } from "@/components/app/hall-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
+import { CsvImportPanel } from "@/components/app/csv-import-panel";
+import { TemplatesPanel } from "@/components/app/templates-panel";
 import { JoinGate } from "@/components/app/join-gate";
 import { TrainerNote } from "@/components/app/trainer-note";
 import { GuestPreview } from "@/components/app/guest-preview";
@@ -25,25 +25,26 @@ import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
 import { ProgramCycleExtras } from "@/components/app/program-cycle-extras";
 
 const CLIENT_TABS: { id: TabId; label: string }[] = [
-  { id: "slots", label: "Слоты" },
-  { id: "bookings", label: "Записи" },
-  { id: "program", label: "Сегодня" },
-  { id: "food", label: "Еда" },
-  { id: "form", label: "Форма" },
-  { id: "hall", label: "Зал" },
+  { id: "today", label: "Сегодня" },
+  { id: "schedule", label: "Расписание" },
+  { id: "program", label: "Программа" },
+  { id: "more", label: "Ещё" },
 ];
 
 const TRAINER_NAV: { id: TabId; label: string; icon: typeof Users }[] = [
+  { id: "today", label: "Сегодня", icon: Sparkles },
   { id: "clients", label: "Клиенты", icon: Users },
-  { id: "bookings", label: "Записи", icon: ClipboardList },
-  { id: "slots", label: "Слоты", icon: CalendarDays },
+  { id: "schedule", label: "Расписание", icon: CalendarDays },
   { id: "signals", label: "Сигналы", icon: Bell },
 ];
 
-const TITLES: Record<TabId, string> = {
+const TITLES: Partial<Record<TabId, string>> = {
+  today: "Сегодня",
+  schedule: "Расписание",
+  program: "Программа",
+  more: "Ещё",
   slots: "Слоты",
   bookings: "Записи",
-  program: "Сегодня",
   food: "Питание",
   form: "Форма",
   hall: "Зал",
@@ -79,7 +80,7 @@ export function MiniApp() {
 
   useEffect(() => {
     if (role === "trainer") return;
-    if (getStartParam().toLowerCase().startsWith("m_")) setTab("hall");
+    if (getStartParam().toLowerCase().startsWith("m_")) setTab("more" as TabId);
   }, [role, setTab]);
 
   useEffect(() => {
@@ -136,11 +137,12 @@ export function MiniApp() {
   const soon = nextMine ? hoursUntilSlot(nextMine.date, nextMine.time) : null;
 
   const title = useMemo(() => {
-    if (role === "trainer") return TITLES[tab] ?? "Клиенты";
+    if (role === "trainer") return TITLES[tab] ?? "Сегодня";
     if (inviteBlocked) return "Заявка в зал";
-    if (tab === "program") return client ? `${client.firstName} · сегодня` : TITLES.program;
-    if (tab === "slots") return "Запись на тренировку";
-    return TITLES[tab];
+    if (tab === "today") return client ? `${client.firstName} · сегодня` : "Мой день";
+    if (tab === "schedule" || tab === "slots" || tab === "bookings") return "Расписание";
+    if (tab === "program") return client ? `${client.firstName} · программа` : TITLES.program;
+    return TITLES[tab] ?? "Ruksha";
   }, [tab, client, role, inviteBlocked]);
 
   function readScroll() {
@@ -217,7 +219,10 @@ export function MiniApp() {
         {role === "client" && !inviteBlocked ? (
           <div className="no-scrollbar flex gap-1 overflow-x-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
             {CLIENT_TABS.map((item) => {
-              const active = tab === item.id;
+              const active =
+                tab === item.id ||
+                (item.id === "schedule" && (tab === "slots" || tab === "bookings")) ||
+                (item.id === "more" && (tab === "food" || tab === "form" || tab === "hall"));
               return (
                 <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "min-h-11 shrink-0 border-b-2 px-3 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
@@ -241,8 +246,8 @@ export function MiniApp() {
               <JoinGate />
             ) : (
               <>
-            {tab === "slots" ? <SlotsView /> : null}
-            {tab === "bookings" ? <BookingsView /> : null}
+            {tab === "today" ? <TodayView /> : null}
+            {tab === "schedule" || tab === "slots" || tab === "bookings" ? <ScheduleView /> : null}
             {tab === "program" ? (
               <>
                 <ProgramCycleExtras />
@@ -252,10 +257,14 @@ export function MiniApp() {
                 ) : null}
               </>
             ) : null}
-            {tab === "food" ? <NutritionView /> : null}
-            {tab === "form" ? <FormView /> : null}
-            {tab === "hall" ? <HallView /> : null}
-            {tab === "clients" ? <ClientsView /> : null}
+            {tab === "more" || tab === "food" || tab === "form" || tab === "hall" ? <MoreView /> : null}
+            {tab === "clients" ? (
+              <div className="space-y-4">
+                <CsvImportPanel />
+                <TemplatesPanel />
+                <ClientsView />
+              </div>
+            ) : null}
             {tab === "signals" ? <SignalsView /> : null}
               </>
             )}
@@ -270,7 +279,9 @@ export function MiniApp() {
           <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
             <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))]">
               {TRAINER_NAV.map((item) => {
-                const active = tab === item.id;
+                const active =
+                  tab === item.id ||
+                  (item.id === "schedule" && (tab === "slots" || tab === "bookings"));
                 const Icon = item.icon;
                 const badge = item.id === "signals" ? trainerBadge : 0;
                 return (
@@ -295,7 +306,7 @@ export function MiniApp() {
 
         {sheetClientId ? <ClientSheet /> : null}
         {inboxOpen && role === "client" ? (
-          <InboxSheet items={clientInbox} onClose={() => setInboxOpen(false)} onDismiss={(id) => dismissSignal(id)} onRebook={() => { setInboxOpen(false); setTab("slots"); }} />
+          <InboxSheet items={clientInbox} onClose={() => setInboxOpen(false)} onDismiss={(id) => dismissSignal(id)} onRebook={() => { setInboxOpen(false); setTab("schedule" as TabId); }} />
         ) : null}
         <TrainerNote />
         {guestPreview ? <GuestPreview /> : null}
@@ -350,7 +361,7 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
                   <p className="mt-2 text-2xs text-muted-foreground">{relativeLabel(item.at)}</p>
                   <div className="mt-3 flex gap-2">
                     {(item.kind === "cancel" || item.kind === "reschedule") && (
-                      <button type="button" onClick={onRebook} className="pressable rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">К слотам</button>
+                      <button type="button" onClick={onRebook} className="pressable rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">К расписанию</button>
                     )}
                     <button type="button" onClick={() => onDismiss(item.id)} className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground">Скрыть</button>
                   </div>
