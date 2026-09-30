@@ -2,7 +2,10 @@ import { useState } from "react";
 import { getTelegramInitData } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
 import { Surface, SectionLabel } from "@/components/app/bits";
-import type { ProgressionSuggestion } from "@/lib/progression/engine";
+import {
+  suggestProgression,
+  type ProgressionSuggestion,
+} from "@/lib/progression/engine";
 
 type Props = {
   clientId: string;
@@ -10,20 +13,83 @@ type Props = {
   programId?: string;
 };
 
-/** Trainer-only: request explainable progression suggestion and accept / reject / manual. */
+/** Trainer-only: explainable progression; server when ready, else local results. */
 export function ProgressionPanel({ clientId, coachId, programId }: Props) {
   const showToast = useStudio((s) => s.showToast);
   const role = useStudio((s) => s.role);
   const notices = useStudio((s) => s.notices);
-  const setNotices = (next: typeof notices) => useStudio.setState({ notices: next });
   const [busy, setBusy] = useState(false);
   const [suggestionId, setSuggestionId] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<ProgressionSuggestion | null>(null);
+  const [source, setSource] = useState<"server" | "local" | null>(null);
   const [note, setNote] = useState("");
 
   if (role !== "trainer") return null;
 
   const pid = programId || `prog_${coachId}_${clientId}`;
+
+  function pushClientDecision(decision: "accept" | "reject" | "manual", text: string) {
+    const title =
+      decision === "accept"
+        ? "Решение: нагрузка обновлена"
+        : decision === "reject"
+          ? "Решение: план без изменений"
+          : "Решение: ручная правка плана";
+    const body = note.trim() || text;
+    const id = `nt_prog_${clientId}_${Date.now()}`;
+    const next = [
+      {
+        id,
+        audience: "client" as const,
+        clientId,
+        kind: "progression" as const,
+        title,
+        body,
+        at: new Date().toISOString(),
+      },
+      ...notices,
+    ].slice(0, 80);
+    useStudio.setState({ notices: next });
+    try {
+      const snap = localStorage.getItem("ruksha_studio_v1");
+      if (snap) {
+        const parsed = JSON.parse(snap) as { notices?: typeof next };
+        parsed.notices = next;
+        localStorage.setItem("ruksha_studio_v1", JSON.stringify(parsed));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function requestSuggestionLocal() {
+    const { loadLocalResults } = await import("@/lib/session-results-local");
+    const local = loadLocalResults().filter((r) => r.clientId === clientId);
+    const inputs = local.map((r) => ({
+      id: r.id,
+      recordedAt: r.at,
+      sets: r.sets.map((s) => ({
+        exercise: s.exercise,
+        load: s.load,
+        unit: (s.unit === "lb" || s.unit === "bw" ? s.unit : "kg") as "kg" | "lb" | "bw",
+        reps: s.reps,
+        targetRepsMin: s.targetRepsMin,
+        targetRepsMax: s.targetRepsMax,
+        setsCompleted: s.setsCompleted,
+        setsPlanned: s.setsPlanned,
+      })),
+      rpe: r.rpe,
+    }));
+    const sug = suggestProgression(inputs);
+    setSuggestionId(`local_sug_${clientId}_${Date.now()}`);
+    setSuggestion(sug);
+    setSource("local");
+    if (sug.status === "insufficient_data") {
+      showToast("Мало данных на устройстве. Нужно ≥2 результата с подходами.");
+    } else {
+      showToast("Предложение по локальным результатам.");
+    }
+  }
 
   async function requestSuggestion() {
     const initData = getTelegramInitData();
@@ -37,85 +103,77 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
       const res = await suggestProgressionFn({
         data: { initData, programId: pid, clientId, coachId },
       });
-      if (!res.ok) {
-        showToast(res.reason === "forbidden" ? "Нет доступа." : "Не удалось посчитать предложение.");
+      if (res.ok) {
+        setSuggestionId(res.suggestionId);
+        setSuggestion(res.suggestion);
+        setSource("server");
+        if (res.suggestion.status === "insufficient_data") {
+          showToast("Недостаточно данных на сервере — пробуем локально…");
+          await requestSuggestionLocal();
+        }
         return;
       }
-      setSuggestionId(res.suggestionId);
-      setSuggestion(res.suggestion);
-      if (res.suggestion.status === "insufficient_data") {
-        showToast("Недостаточно данных для автоматического шага.");
-      }
+      await requestSuggestionLocal();
     } catch {
-      showToast("Ошибка сети. Повторите.");
+      await requestSuggestionLocal();
     } finally {
       setBusy(false);
     }
   }
 
   async function decide(decision: "accept" | "reject" | "manual") {
-    if (!suggestionId) return;
-    const initData = getTelegramInitData();
-    if (!initData) {
-      showToast("Откройте из Telegram.");
-      return;
-    }
+    if (!suggestionId || !suggestion) return;
+    const changeText =
+      suggestion.proposedChanges
+        .map((c) => `${c.exercise}: ${c.fromLoad}→${c.toLoad} ${c.unit}`)
+        .join("; ") || "без изменения нагрузки";
+
     setBusy(true);
     try {
-      const { decideProgressionFn } = await import("@/lib/progression/server");
-      const res = await decideProgressionFn({
-        data: {
-          initData,
-          suggestionId,
-          decision,
-          note: note.trim() || undefined,
-          manualChange: decision === "manual" ? { note: note.trim() } : undefined,
-        },
-      });
-      if (!res.ok) {
-        showToast(
-          res.reason === "already-resolved"
-            ? "Решение уже принято."
-            : res.reason === "forbidden"
-              ? "Нет доступа."
-              : "Не удалось сохранить решение.",
-        );
-        return;
+      if (source === "server") {
+        const initData = getTelegramInitData();
+        if (initData) {
+          const { decideProgressionFn } = await import("@/lib/progression/server");
+          const res = await decideProgressionFn({
+            data: {
+              initData,
+              suggestionId,
+              decision,
+              note: note.trim() || undefined,
+              manualChange: decision === "manual" ? { note: note.trim() } : undefined,
+            },
+          });
+          if (res.ok) {
+            pushClientDecision(decision, changeText);
+            showToast(
+              decision === "accept"
+                ? "Принято. Клиент увидит решение."
+                : decision === "reject"
+                  ? "План без изменений."
+                  : "Ручное решение зафиксировано.",
+            );
+            setSuggestion(null);
+            setSuggestionId(null);
+            return;
+          }
+        }
       }
-      const title =
-        decision === "accept"
-          ? "Программа обновлена"
-          : decision === "reject"
-            ? "План без изменений"
-            : "План скорректирован вручную";
-      const body =
-        decision === "accept"
-          ? "Тренер принял предложение по нагрузке."
-          : decision === "reject"
-            ? "Тренер оставил прежние рабочие веса."
-            : note.trim() || "Тренер внёс ручную правку.";
+      // Local / server failed — still record trainer decision for client
+      pushClientDecision(decision, changeText);
       showToast(
         decision === "accept"
-          ? "Предложение принято."
+          ? "Принято локально. Клиент увидит решение."
           : decision === "reject"
-            ? "Оставлен прежний план."
-            : "Зафиксирована ручная правка.",
+            ? "Оставлено без изменений."
+            : "Ручное решение записано.",
       );
-      const n = {
-        id: `nt_prog_${suggestionId}_${Date.now()}`,
-        audience: "client" as const,
-        clientId,
-        kind: "reschedule" as const,
-        title,
-        body,
-        at: new Date().toISOString(),
-      };
-      setNotices([n, ...notices].slice(0, 40));
-      setSuggestionId(null);
       setSuggestion(null);
-      setNote("");
+      setSuggestionId(null);
     } catch {
-      showToast("Ошибка сети. Повторите.");
+      pushClientDecision(decision, changeText);
+      showToast("Решение записано на устройстве.");
+      setSuggestion(null);
+      setSuggestionId(null);
     } finally {
       setBusy(false);
     }
@@ -125,8 +183,8 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
     <Surface>
       <SectionLabel>Прогрессия · решение тренера</SectionLabel>
       <p className="mt-2 text-xs text-muted-foreground">
-        Система предлагает шаг нагрузки только по зафиксированным результатам. Без вашего решения план не
-        меняется.
+        Предложение только по зафиксированным результатам. Без вашего решения план не меняется.
+        {source === "local" ? " · данные с устройства" : source === "server" ? " · сервер" : ""}
       </p>
       <button
         type="button"
