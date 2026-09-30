@@ -1,39 +1,23 @@
 #!/usr/bin/env node
-/**
- * Deploy-time database migrator (node-postgres, `pg`).
- *
- * Runs during `npm run build` — on every Vercel deploy — applying pending files
- * in ../migrations to DATABASE_URL. Each file is applied in one transaction and
- * recorded in a `_migrations` table, so it runs once and is safe to re-run.
- *
- * The read is non-recursive, so the opt-in auth schema under migrations/auth/
- * is not applied to an app that never asked for sign-in.
- *
- * No DATABASE_URL (local / preview builds) -> skip; the PGLite fallback applies
- * the same files at startup instead (see src/lib/db.ts).
- */
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
 import { pendingMigrations } from "./migration-plan.mjs";
 
-const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
-if (!databaseUrl) {
-  console.log(
-    "[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).",
-  );
-  process.exit(0);
+function pickUrl() {
+  const candidates = [process.env.DATABASE_URL, process.env.DATABASE_URL_UNPOOLED];
+  for (const raw of candidates) {
+    if (!raw?.trim()) continue;
+    const s = raw.trim().replace(/^['"]|['"]$/g, "");
+    if (/^postgres(ql)?:\/\//i.test(s)) return s;
+  }
+  return undefined;
 }
 
-try {
-  const host = new URL(databaseUrl).hostname;
-  if (!host || host === "base" || host === "localhost") {
-    console.warn(`[migrate] skipping dummy DATABASE_URL host "${host}".`);
-    process.exit(0);
-  }
-} catch {
-  console.warn("[migrate] DATABASE_URL is not a valid URL — skipping.");
+const databaseUrl = pickUrl();
+if (!databaseUrl) {
+  console.log("[migrate] DATABASE_URL not set — skipping (PGLite migrates itself).");
   process.exit(0);
 }
 
@@ -52,7 +36,11 @@ async function main() {
     return;
   }
 
-  const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+  const pool = new pg.Pool({
+    connectionString: databaseUrl,
+    max: 1,
+    ssl: { rejectUnauthorized: false },
+  });
   const client = await pool.connect();
   try {
     await client.query(
@@ -74,7 +62,7 @@ async function main() {
         try {
           await client.query("ROLLBACK");
         } catch {
-          // keep original error
+          /* keep */
         }
         throw err;
       }
@@ -89,11 +77,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  const msg = String(err?.message || err);
-  console.error("[migrate] failed:", msg);
-  for (const key of ["code", "detail", "hint", "position", "where"]) {
-    if (err?.[key] != null) console.error(`[migrate]   ${key}: ${err[key]}`);
-  }
+  console.error("[migrate] failed:", String(err?.message || err));
   console.warn("[migrate] skipping unreachable database. Deploy continues.");
   process.exit(0);
 });

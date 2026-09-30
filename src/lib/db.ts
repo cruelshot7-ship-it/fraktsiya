@@ -5,25 +5,17 @@ export type DbSource = "neon" | "pglite";
 
 function resolveDatabaseUrl(raw?: string) {
   if (!raw?.trim()) return undefined;
-  const s = raw.trim();
-  // Passwords may contain @ : / — URL() fails; still a valid pg connection string.
-  if (/^postgres(ql)?:\/\//i.test(s)) {
-    try {
-      const host = new URL(s).hostname;
-      if (host === "base" || host === "localhost") return undefined;
-    } catch {
-      // keep string — node-postgres parses connection strings itself
-    }
-    return s;
-  }
+  const s = raw.trim().replace(/^['"]|['"]$/g, "");
+  if (/^postgres(ql)?:\/\//i.test(s)) return s;
   return undefined;
 }
 
-/** Read env at call time — Vercel injects secrets at runtime, not build. */
+/** Prefer pooled DATABASE_URL; if invalid/empty, try UNPOOLED (Neon integration). */
 function databaseUrlNow(): string | undefined {
   if (typeof process === "undefined") return undefined;
-  return resolveDatabaseUrl(
-    process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED,
+  return (
+    resolveDatabaseUrl(process.env.DATABASE_URL) ||
+    resolveDatabaseUrl(process.env.DATABASE_URL_UNPOOLED)
   );
 }
 
@@ -78,7 +70,7 @@ function createNeonSql(connectionString: string): Promise<Sql> {
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString });
+    const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
