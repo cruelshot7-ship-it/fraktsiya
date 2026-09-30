@@ -1,25 +1,32 @@
-# Структура ТЗ — статус (main)
+# Ruksha — статус production
 
-## ЭТАП 1. Надёжный тренировочный цикл — Done
-| § | Статус |
-|---|--------|
-| 1.1–1.6 цикл | Done |
-| Neon 0004/0005 | Done · canary ok · pooled URL |
-| dual-write book/attendance | Done (runtime patch) |
-| Telegram e2e | Владелец |
+## Работает сейчас
 
-## ЭТАП 2. Операции тренера — Done (UI blocks)
-| § | Статус |
-|---|--------|
-| 2.1 шаблоны, CSV | Done · CSV→Neon |
-| 2.2 habit, soft return, notify | Done |
-| 2.3 ICS/maps/QR/outbox | Done |
-| 2.5 durable outbox + CSV Neon | Done |
-| **UI блоки A–E** | **Done** Сегодня/Расписание/Программа|Клиенты/Ещё|Сигналы |
-| store restore | Done (c1bc436) |
+| Поток | Статус |
+|-------|--------|
+| Neon Postgres + миграции 0004/0005 | OK · canary |
+| Auth Telegram initData (server HMAC) | OK |
+| Запись на слот (local + dual-write Neon) | OK |
+| Явка / неявка → dual-write | OK |
+| Результат сессии → recordSessionResultFn | OK |
+| Прогрессия (suggestion) | OK |
+| CSV клиентов → app_users | OK |
+| Outbox уведомлений (local + notify_outbox) | OK |
+| UI блоки: Сегодня / Расписание / Программа·Клиенты / Ещё·Сигналы | OK |
+| Центр действий → schedule/today | OK |
 
-## ЭТАП 3. Натив
-Не начат.
+## Навигация
 
-## Production
-ruksha.vercel.app · `/api/db-status?canary=1`
+**Клиент:** Сегодня · Расписание · Программа · Ещё  
+**Тренер:** Сегодня · Клиенты · Расписание · Сигналы
+
+## Проверка владельцем
+
+1. Клиент: Расписание → записаться  
+2. Тренер: Сегодня → явка → результат  
+3. `/api/db-status?canary=1` → counts растут  
+4. CSV импорт → тост «Neon: N»
+
+## Не начато
+
+Этап 3 · нативные оболочки (отдельный запрос)
