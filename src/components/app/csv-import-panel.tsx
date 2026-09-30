@@ -3,9 +3,10 @@ import { useStudio } from "@/lib/studio-store";
 import { parseCsvPreview, suggestColumnMap } from "@/lib/csv-import/preview";
 import { rowsToClientDrafts } from "@/lib/csv-import/apply-local";
 import { findDuplicates } from "@/lib/csv-import/duplicates";
+import { getTelegramInitData } from "@/lib/telegram";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
-/** Trainer CSV → explicit confirm → local studio clients only (not Neon). */
+/** Trainer CSV → confirm → local clients + Neon app_users dual-write. */
 export function CsvImportPanel() {
   const role = useStudio((s) => s.role);
   const showToast = useStudio((s) => s.showToast);
@@ -34,7 +35,7 @@ export function CsvImportPanel() {
     reader.readAsText(file, "utf-8");
   }
 
-  function confirmImport() {
+  async function confirmImport() {
     if (!preview || busy) return;
     setBusy(true);
     try {
@@ -47,6 +48,14 @@ export function CsvImportPanel() {
       const skipIdx = new Set(dups.map((d) => d.draftIndex));
       let ok = 0;
       let dupSkipped = 0;
+      const created: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        telegramUsername?: string;
+        phone?: string;
+      }[] = [];
+
       for (let i = 0; i < drafts.length; i++) {
         if (skipIdx.has(i)) {
           dupSkipped += 1;
@@ -59,13 +68,41 @@ export function CsvImportPanel() {
           telegramUsername: d.telegramUsername,
           phone: d.phone,
         });
-        if (id) ok += 1;
+        if (id) {
+          ok += 1;
+          created.push({
+            id,
+            firstName: d.firstName,
+            lastName: d.lastName,
+            telegramUsername: d.telegramUsername,
+            phone: d.phone,
+          });
+        }
       }
+
+      let neonNote = "";
+      const initData = getTelegramInitData();
+      if (created.length && initData) {
+        try {
+          const { importClientsFn } = await import("@/lib/csv-import/server");
+          const res = await importClientsFn({ data: { initData, clients: created } });
+          if (res.ok && res.durable) {
+            neonNote = ` · Neon: ${res.upserted}`;
+          } else if (res.ok && !res.durable) {
+            neonNote = " · Neon offline";
+          } else {
+            neonNote = " · Neon: ошибка";
+          }
+        } catch {
+          neonNote = " · Neon: сеть";
+        }
+      }
+
       showToast(
-        `Локально добавлено: ${ok}` +
+        `Добавлено: ${ok}` +
           (skipped ? ` · пустых: ${skipped}` : "") +
           (dupSkipped ? ` · дубли: ${dupSkipped}` : "") +
-          ". Neon не трогали.",
+          neonNote,
       );
       setPreview(null);
     } finally {
@@ -77,7 +114,7 @@ export function CsvImportPanel() {
     <Surface>
       <SectionLabel>Импорт клиентов · CSV</SectionLabel>
       <p className="mt-2 text-tiny text-muted-foreground">
-        Предпросмотр → подтверждение. Только локальный список клиентов, не production Neon.
+        Предпросмотр → подтверждение. Локальный список + запись в Neon (app_users).
       </p>
       <label className="pressable mt-3 flex h-11 cursor-pointer items-center justify-center rounded-xl bg-secondary text-sm font-medium">
         Выбрать CSV
@@ -98,41 +135,23 @@ export function CsvImportPanel() {
               ))}
             </ul>
           ) : null}
-          <p className="text-xs text-muted-foreground">
-            Колонки: {preview.headers.join(", ") || "—"} · строк {preview.rowCount}
+          <p className="text-tiny text-muted-foreground">
+            Строк: {preview.rowCount} · колонок: {preview.headers.join(", ") || "—"}
           </p>
-          {Object.keys(map).length ? (
-            <p className="text-tiny text-muted-foreground">
-              Сопоставление:{" "}
-              {Object.entries(map)
-                .map(([k, v]) => `${k}→${v}`)
-                .join("; ")}
-            </p>
-          ) : null}
-          <div className="max-h-40 overflow-auto rounded-lg bg-secondary/40 p-2 text-2xs">
-            {preview.rows.slice(0, 8).map((row, i) => (
-              <p key={i} className="truncate">
-                {preview.headers.map((h) => row[h]).join(" · ")}
-              </p>
-            ))}
-          </div>
-          {(() => {
-            const { drafts } = rowsToClientDrafts(preview.rows, map, 30);
-            const dups = findDuplicates(drafts, clients);
-            if (!dups.length) return null;
-            return (
-              <p className="text-tiny text-primary">
-                Возможные дубликаты: {dups.slice(0, 5).map((d) => d.reason).join("; ")}
-              </p>
-            );
-          })()}
           <button
             type="button"
-            disabled={busy}
-            className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
-            onClick={confirmImport}
+            className="pressable h-11 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            disabled={busy || Boolean(preview.errors.length)}
+            onClick={() => void confirmImport()}
           >
-            {busy ? "Импорт…" : "Подтвердить · локальный список"}
+            {busy ? "Импорт…" : "Подтвердить импорт"}
+          </button>
+          <button
+            type="button"
+            className="pressable h-10 w-full rounded-xl bg-secondary text-sm"
+            onClick={() => setPreview(null)}
+          >
+            Отмена
           </button>
         </div>
       ) : null}
