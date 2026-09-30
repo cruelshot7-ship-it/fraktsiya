@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { dbSource, getSql } from "@/lib/db";
+import { getDbSource, getSql } from "@/lib/db";
 
 /**
  * Safe readiness probe: backend kind + whether P0 tables exist.
@@ -9,9 +9,10 @@ export const Route = createFileRoute("/api/db-status")({
   server: {
     handlers: {
       GET: async () => {
+        const source = getDbSource();
         const base = {
           ok: true as boolean,
-          source: dbSource,
+          source,
           tables: {} as Record<string, boolean>,
           migrateHint: "",
         };
@@ -47,12 +48,13 @@ export const Route = createFileRoute("/api/db-status")({
             base.tables.slot_bookings &&
             base.tables.session_results;
 
-          if (dbSource === "pglite") {
+          if (source === "pglite") {
             base.migrateHint =
-              "DATABASE_URL not set — in-memory PGLite. Set Neon URL on Vercel Production.";
+              "No DATABASE_URL / DATABASE_URL_UNPOOLED at runtime. Check Vercel env for Production.";
+            base.ok = false;
           } else if (!coreOk) {
             base.migrateHint =
-              "Neon connected but core tables missing — check build log for [migrate].";
+              "Neon connected but core tables missing — redeploy so migrate.mjs runs.";
             base.ok = false;
           } else {
             base.migrateHint = "Neon + core booking schema present.";
@@ -63,7 +65,7 @@ export const Route = createFileRoute("/api/db-status")({
           return Response.json(
             {
               ok: false,
-              source: dbSource,
+              source,
               tables: {},
               migrateHint: String((err as Error)?.message || err).slice(0, 200),
             },
