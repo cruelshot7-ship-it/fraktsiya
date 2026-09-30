@@ -1,18 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getDbSource, getSql } from "@/lib/db";
 
-/**
- * Safe readiness probe: backend kind + whether P0 tables exist.
- * Does not return connection strings or row data.
- */
 export const Route = createFileRoute("/api/db-status")({
   server: {
     handlers: {
       GET: async () => {
+        const envKeys = {
+          DATABASE_URL: Boolean(
+            typeof process !== "undefined" && process.env.DATABASE_URL?.trim(),
+          ),
+          DATABASE_URL_UNPOOLED: Boolean(
+            typeof process !== "undefined" && process.env.DATABASE_URL_UNPOOLED?.trim(),
+          ),
+        };
         const source = getDbSource();
         const base = {
           ok: true as boolean,
           source,
+          envKeys,
           tables: {} as Record<string, boolean>,
           migrateHint: "",
         };
@@ -49,8 +54,9 @@ export const Route = createFileRoute("/api/db-status")({
             base.tables.session_results;
 
           if (source === "pglite") {
-            base.migrateHint =
-              "No DATABASE_URL / DATABASE_URL_UNPOOLED at runtime. Check Vercel env for Production.";
+            base.migrateHint = envKeys.DATABASE_URL || envKeys.DATABASE_URL_UNPOOLED
+              ? "Env present but URL rejected (invalid host?)."
+              : "No DATABASE_URL / DATABASE_URL_UNPOOLED in Production runtime. In Vercel: Neon integration → enable Production for DATABASE_URL, then Redeploy.";
             base.ok = false;
           } else if (!coreOk) {
             base.migrateHint =
@@ -66,6 +72,7 @@ export const Route = createFileRoute("/api/db-status")({
             {
               ok: false,
               source,
+              envKeys,
               tables: {},
               migrateHint: String((err as Error)?.message || err).slice(0, 200),
             },
