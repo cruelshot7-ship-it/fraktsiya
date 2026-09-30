@@ -26,6 +26,7 @@ import {
   workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
+import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Check, Flame } from "lucide-react";
@@ -43,6 +44,7 @@ export function ProgramView() {
   const completeWorkout = useStudio((s) => s.completeWorkout);
   const checks = useStudio((s) => s.checks);
   const workoutLogs = useStudio((s) => s.workoutLogs);
+  const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const [exercise, setExercise] = useState("жим");
   const [kg, setKg] = useState("60");
   const [reps, setReps] = useState("6");
@@ -195,6 +197,16 @@ export function ProgramView() {
         </div>
         {todayBook && hoursToToday !== null && hoursToToday > 0 && hoursToToday < 24 ? (
           <p className="mt-2 text-tiny text-ok">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
+        ) : null}
+        {todayBook && mapsUrl(notifyPrefs.address || "") ? (
+          <a
+            href={mapsUrl(notifyPrefs.address)}
+            target="_blank"
+            rel="noreferrer"
+            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-secondary text-sm"
+          >
+            Маршрут
+          </a>
         ) : null}
         {(todayBook || trainDay) && !arrived ? (
           <button

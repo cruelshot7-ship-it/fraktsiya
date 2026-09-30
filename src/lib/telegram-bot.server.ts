@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { applyOfferBooking, BOT_USERNAME, clientCoach, coachPhase, COACH_TRIAL_CAP, emptyClient, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, clientCoach, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { dueReminders, findByToken, markReminder, remindToken } from "@/lib/studio-remind";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
 
 const APP_URL = "https://ruksha.vercel.app";
@@ -226,9 +227,62 @@ type TgUpdate = {
 };
 
 export async function handleTelegramUpdate(update: TgUpdate) {
+  try {
+    const current = await loadStudioState();
+    const next = await sendDueReminders(current);
+    if (next !== current) await saveStudioState(next);
+  } catch {
+    /* a missed ping must not block /start */
+  }
+
   const cb = update.callback_query;
   if (cb?.data) {
-    const [action, id] = cb.data.split(":");
+    const cut = cb.data.indexOf(":");
+    const action = cut < 0 ? cb.data : cb.data.slice(0, cut);
+    const id = cut < 0 ? "" : cb.data.slice(cut + 1);
+    if ((action === "y" || action === "m") && id) {
+      let payload = emptyPayload();
+      try {
+        payload = await loadStudioState();
+      } catch {
+        payload = emptyPayload();
+      }
+      const booking = findByToken(payload.bookings, id);
+      const fromId = String(cb.from.id);
+      const client = booking ? payload.clients.find((row) => row.id === booking.clientId) : undefined;
+      if (!booking || client?.telegramId !== fromId) {
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Запись не найдена.", show_alert: true });
+        return;
+      }
+      if (action === "y") {
+        payload = {
+          ...payload,
+          bookings: payload.bookings.map((row) => (row.id === booking.id ? { ...row, confirmed: true } : row)),
+        };
+        await saveStudioState(payload);
+        const coach = clientCoach(client);
+        await tg("sendMessage", {
+          chat_id: coach,
+          text: `${client.firstName} подтвердил ${formatLongDate(booking.date)} · ${booking.time}`,
+        });
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Принято. Ждём вас." });
+      } else {
+        await tg("sendMessage", {
+          chat_id: fromId,
+          text: "Откройте слоты и выберите другое время. Текущая запись пока на месте — отмените её в приложении, если переносите.",
+          reply_markup: webAppKeyboard("Открыть слоты"),
+        });
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Откройте слоты" });
+      }
+      if (cb.message) {
+        await tg("editMessageReplyMarkup", {
+          chat_id: cb.message.chat.id,
+          message_id: cb.message.message_id,
+          reply_markup: { inline_keyboard: [] },
+        });
+      }
+      return;
+    }
     if ((action === "ok" || action === "no") && id) {
       let payload = emptyPayload();
       try {
@@ -326,4 +380,44 @@ export async function sendBotLink(telegramId: string, text: string) {
     text,
     reply_markup: webAppKeyboard("Открыть зал"),
   });
+}
+
+let remindBusy = false;
+
+export async function sendDueReminders(payload: import("@/lib/studio-sync").StudioPayload) {
+  if (remindBusy) return payload;
+  const due = dueReminders(payload.bookings, Date.now());
+  if (!due.length) return payload;
+  remindBusy = true;
+  let bookings = payload.bookings;
+  try {
+    for (const item of due) {
+      const booking = bookings.find((row) => row.id === item.id);
+      const client = payload.clients.find((row) => row.id === booking?.clientId);
+      if (!booking || !client?.telegramId) continue;
+      const when = `${formatLongDate(booking.date)} · ${booking.time}`;
+      const text =
+        item.kind === "2"
+          ? `Через пару часов тренировка\n${when}\nПодтвердите или перенесите.`
+          : `Завтра тренировка\n${when}\nПодтвердите или перенесите.`;
+      const token = remindToken(booking.id);
+      const sent = await tg("sendMessage", {
+        chat_id: client.telegramId,
+        text,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "Подтверждаю", callback_data: `y:${token}` },
+              { text: "Перенести", callback_data: `m:${token}` },
+            ],
+          ],
+        },
+      });
+      if (sent.ok) bookings = markReminder(bookings, booking.id, item.kind);
+    }
+  } finally {
+    remindBusy = false;
+  }
+  if (bookings === payload.bookings) return payload;
+  return { ...payload, bookings };
 }

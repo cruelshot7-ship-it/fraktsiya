@@ -180,6 +180,9 @@ export type Booking = {
   held?: boolean;
   checkedIn?: boolean;
   noShow?: boolean;
+  reminded24?: boolean;
+  reminded2?: boolean;
+  confirmed?: boolean;
 };
 
 export type SessionTxn = {
@@ -368,6 +371,7 @@ export type NotifyPrefs = {
   notifyTrainer: boolean;
   flagLate: boolean;
   absentDays: number;
+  address: string;
 };
 
 export const DEFAULT_NOTIFY: NotifyPrefs = {
@@ -376,6 +380,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   notifyTrainer: true,
   flagLate: true,
   absentDays: 10,
+  address: "",
 };
 
 export const CANCEL_WINDOWS = [2, 6, 12, 24] as const;

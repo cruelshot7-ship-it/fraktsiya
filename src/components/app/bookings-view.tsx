@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
   countdownLabel,
+  downloadIcs,
+  bookingIcs,
   formatLongDate,
   hoursUntilSlot,
   isLateCancel,
@@ -12,16 +14,10 @@ import {
   weekVisitCount,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { suggestNextSlot } from "@/lib/next-slot";
-import { openCalendarEvent } from "@/lib/calendar-ics";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
-import { ActionCenter } from "@/components/app/action-center";
-import { SessionCard } from "@/components/app/session-card";
-import { SoftReturnPanel } from "@/components/app/soft-return";
-import { NotifyPrefsPanel } from "@/components/app/notify-prefs-panel";
-import { DecisionBanner } from "@/components/app/decision-banner";
+import { mapsUrl } from "@/lib/studio-repeat";
 
-export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
+export function BookingsView() {
   const all = useStudio((s) => s.bookings);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -29,9 +25,6 @@ export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
   const markNoShow = useStudio((s) => s.markNoShow);
   const setTab = useStudio((s) => s.setTab);
   const role = useStudio((s) => s.role);
-  const slots = useStudio((s) => s.slots);
-  const closedSlotIds = useStudio((s) => s.closedSlotIds);
-  const bookSlot = useStudio((s) => s.bookSlot);
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
@@ -44,7 +37,7 @@ export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
     .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`));
   const past = bookings
     .filter((b) => isSlotPast(b.date, b.time))
-    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
+    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${b.time}`));
   const next = upcoming[0];
   const weekVisits = weekVisitCount(all, me?.id ?? "");
   const hoursToNext = next ? hoursUntilSlot(next.date, next.time) : null;
@@ -55,83 +48,69 @@ export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
-      {!compact ? <ActionCenter /> : null}
-      {!compact && role === "client" ? <SoftReturnPanel /> : null}
-      {!compact && role === "client" ? <DecisionBanner /> : null}
-      {!compact && role === "client" ? <NotifyPrefsPanel /> : null}
-      {next ? <SessionCard bookingId={next.id} /> : null}
-      {role === "client" && !compact ? (
-        <Surface glow={next ? "ok" : undefined}>
-          <SectionLabel>Ближайшая запись</SectionLabel>
-          {next ? (
-            <>
-              <p className="font-display mt-2 text-xl">{next.time}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {formatLongDate(next.date)} · {countdownLabel(next.date, next.time)}
-              </p>
-              <p className="mt-2 text-tiny text-muted-foreground">
-                Неделя · {weekVisits} из {WEEK_GOAL}
-                {hoursToNext !== null && hoursToNext > 0 && hoursToNext < 24
-                  ? ` · через ${Math.round(hoursToNext)} ч`
-                  : ""}
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">Пока пусто — выберите слот.</p>
-          )}
+      {role === "client" ? (
+        <Surface glow={(me?.sessionsLeft ?? 0) <= 2 ? "alert" : "ok"}>
+          <SectionLabel>Баланс занятий</SectionLabel>
+          <p className="font-display mt-1 text-3xl tabular-nums">
+            {me?.sessionsLeft ?? 0}
+            <span className="ml-2 text-base font-sans font-normal text-muted-foreground">{sessionsRu(me?.sessionsLeft ?? 0)}</span>
+          </p>
+          <p className="mt-1 text-tiny text-muted-foreground">
+            Отмена меньше чем за {notifyPrefs.windowHours} ч — занятие сгорает. Раньше — возвращается на баланс.
+          </p>
+          <div className="mt-3">
+            <p className="text-tiny text-muted-foreground">
+              Неделя · {weekVisits} из {WEEK_GOAL} визитов
+            </p>
+            <div className="mt-1.5 flex gap-1.5">
+              {Array.from({ length: WEEK_GOAL }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 flex-1 rounded-full ${i < weekVisits ? "bg-ok" : "bg-secondary"}`}
+                />
+              ))}
+            </div>
+          </div>
         </Surface>
       ) : null}
 
-      {inbox.length > 0 && !compact ? (
-        <Surface>
-          <SectionLabel>Сообщения</SectionLabel>
-          <ul className="mt-2 space-y-2">
-            {inbox.slice(0, 5).map((n) => (
-              <li key={n.id} className="text-sm">
-                <span className="font-medium">{n.title}</span>
-                <span className="text-muted-foreground"> · {n.body}</span>
-              </li>
-            ))}
-          </ul>
+      {role === "client" && next && hoursToNext !== null && hoursToNext < 24 && hoursToNext > 0 ? (
+        <Surface glow="ok">
+          <SectionLabel>Скоро тренировка</SectionLabel>
+          <p className="font-display mt-1 text-xl">{next.time}</p>
+          <p className="mt-1 text-tiny text-muted-foreground">
+            {formatLongDate(next.date)} · {countdownLabel(next.date, next.time)}
+          </p>
+          {mapsUrl(notifyPrefs.address || "") ? (
+            <a
+              href={mapsUrl(notifyPrefs.address)}
+              target="_blank"
+              rel="noreferrer"
+              className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-ok text-sm font-medium text-ok-foreground"
+            >
+              Маршрут · {notifyPrefs.address}
+            </a>
+          ) : null}
         </Surface>
       ) : null}
 
-      {role === "client" && !upcoming.length && !compact ? (
-        <p className="text-sm text-muted-foreground">
-          Ближайших записей нет. Выберите время в «Расписание».
+      {role === "client" && inbox.length > 0 ? (
+        <Surface glow="alert">
+          <SectionLabel>От тренера</SectionLabel>
+          {inbox.slice(0, 3).map((n) => (
+            <p key={n.id} className="mt-2 text-sm">
+              {n.title}
+              <span className="mt-0.5 block text-tiny text-muted-foreground">{n.body}</span>
+            </p>
+          ))}
+        </Surface>
+      ) : null}
+
+      {upcoming.length === 0 ? (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Ближайших записей нет. Выберите время на вкладке «Слоты» — после тапа нужно подтверждение.
         </p>
       ) : null}
-
-      {role === "client" && me && next && !compact
-        ? (() => {
-            const suggestion = suggestNextSlot({
-              slots,
-              bookings: all,
-              clientId: me.id,
-              closedSlotIds,
-              afterDate: next.date,
-              afterTime: next.time,
-              coachId: me.coachId,
-            });
-            if (!suggestion) return null;
-            return (
-              <Surface>
-                <SectionLabel>Следующий шаг</SectionLabel>
-                <p className="mt-2 text-sm">{suggestion.reason}</p>
-                <button
-                  type="button"
-                  className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={() => {
-                    const ok = bookSlot(suggestion.slot.id);
-                    if (ok) setTab("schedule");
-                  }}
-                >
-                  Записаться · {suggestion.slot.time}
-                </button>
-              </Surface>
-            );
-          })()
-        : null}
 
       {(() => {
         const groups: { date: string; items: typeof upcoming }[] = [];
@@ -144,127 +123,115 @@ export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
           <div key={group.date} className="flex flex-col gap-2">
             <SectionLabel>{relativeDayLabel(group.date)}</SectionLabel>
             {group.items.map((booking) => {
-              const who = clients.find((c) => c.id === booking.clientId);
-              const pending = pendingId === booking.id;
-              const late = isLateCancel(booking.date, booking.time, notifyPrefs.windowHours);
-              return (
-                <Surface key={booking.id} glow={pending ? "alert" : "ok"}>
-                  <p className="font-display text-lg font-semibold">{booking.time}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatLongDate(booking.date)} · {booking.duration} мин
-                    {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
-                    {booking.checkedIn ? " · в зале" : ""}
-                    {role === "client" ? ` · ${countdownLabel(booking.date, booking.time)}` : ""}
-                  </p>
-                  {pending ? (
-                    <div className="mt-3 border-t border-primary/30 pt-3">
-                      <p className="text-sm">
-                        {role === "trainer"
-                          ? "Отменить и вернуть занятие клиенту?"
-                          : late
-                            ? `До тренировки меньше ${notifyPrefs.windowHours} ч. Занятие будет списано.`
-                            : "Занятие вернётся на баланс. Тренер получит уведомление."}
-                      </p>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPendingId(null)}
-                          className="pressable h-11 rounded-lg bg-secondary text-sm text-muted-foreground"
-                        >
-                          Назад
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const client = clients.find((c) => c.id === booking.clientId);
-                            cancelBooking(booking.id, role);
-                            void import("@/lib/notify/hook-booking").then(({ enqueueBookingCancelled }) => {
-                              enqueueBookingCancelled({
-                                telegramId: client?.telegramId,
-                                bookingId: booking.id,
-                                clientId: booking.clientId,
-                              });
-                            });
-                            setPendingId(null);
-                          }}
-                          className="pressable h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
-                        >
-                          Подтвердить
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPendingId(booking.id)}
-                        className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                      >
-                        {role === "trainer" ? "Отменить · вернуть занятие" : "Отменить запись"}
-                      </button>
-                      {role === "client" ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            openCalendarEvent({
-                              id: booking.id,
-                              title: "Тренировка · Ruksha",
-                              date: booking.date,
-                              time: booking.time,
-                              durationMin: booking.duration || 60,
-                              timezone: "Europe/Minsk",
-                            });
-                          }}
-                          className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                        >
-                          В календарь
-                        </button>
-                      ) : null}
-                      {role === "trainer" && !booking.checkedIn && !booking.noShow ? (
-                        <button
-                          type="button"
-                          onClick={() => markNoShow(booking.id)}
-                          className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                        >
-                          Неявка
-                        </button>
-                      ) : null}
-                    </div>
-                  )}
-                </Surface>
-              );
+        const who = clients.find((c) => c.id === booking.clientId);
+        const pending = pendingId === booking.id;
+        const late = isLateCancel(booking.date, booking.time, notifyPrefs.windowHours);
+        return (
+          <Surface key={booking.id} glow={pending ? "alert" : "ok"}>
+            <p className="font-display text-lg font-semibold">{booking.time}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatLongDate(booking.date)} · {booking.duration} мин
+              {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
+              {booking.checkedIn ? " · в зале" : ""}
+              {role === "trainer" && booking.confirmed ? " · подтвердил" : ""}
+              {role === "client" ? ` · ${countdownLabel(booking.date, booking.time)}` : ""}
+            </p>
+            {pending ? (
+              <div className="mt-3 border-t border-primary/30 pt-3">
+                <p className="text-sm">
+                  {role === "trainer"
+                    ? "Отменить и вернуть занятие клиенту?"
+                    : late
+                      ? `До тренировки меньше ${notifyPrefs.windowHours} ч. Занятие будет списано.`
+                      : "Занятие вернётся на баланс. Тренер получит уведомление."}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingId(null)}
+                    className="pressable h-11 rounded-lg bg-secondary text-sm text-muted-foreground"
+                  >
+                    Назад
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      cancelBooking(booking.id, role);
+                      setPendingId(null);
+                    }}
+                    className="pressable h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
+                  >
+                    Подтвердить
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingId(booking.id)}
+                  className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                >
+                  {role === "trainer" ? "Отменить · вернуть занятие" : "Отменить запись"}
+                </button>
+                {role === "client" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadIcs(
+                        `ruksha-${booking.date}.ics`,
+                        bookingIcs(booking),
+                      )
+                    }
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    В календарь
+                  </button>
+                ) : null}
+              </div>
+            )}
+          </Surface>
+        );
             })}
           </div>
         ));
       })()}
 
-      {past.length > 0 && !compact ? (
+      {past.length > 0 ? (
         <div className="mt-2 flex flex-col gap-2">
           <SectionLabel>Прошедшие</SectionLabel>
-          {past.slice(0, 8).map((booking) => {
+          {past.map((booking) => {
             const who = clients.find((c) => c.id === booking.clientId);
             return (
-              <Surface key={booking.id}>
-                <p className="text-sm">
-                  {booking.time} · {formatLongDate(booking.date)}
-                  {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
-                  {booking.noShow ? " · неявка" : booking.checkedIn ? " · был" : ""}
-                </p>
-              </Surface>
+            <Surface key={booking.id} className="opacity-80">
+              <p className="font-display text-base font-semibold">{formatLongDate(booking.date)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {booking.time} · {booking.duration} мин
+                {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
+                {booking.checkedIn ? " · чек-ин" : booking.noShow ? " · неявка" : ""}
+              </p>
+              {role === "trainer" && !booking.checkedIn && !booking.noShow ? (
+                <button
+                  type="button"
+                  onClick={() => markNoShow(booking.id)}
+                  className="pressable mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                >
+                  Отметить неявку
+                </button>
+              ) : null}
+            </Surface>
             );
           })}
         </div>
       ) : null}
 
-      {!compact ? (
-        <button
-          type="button"
-          onClick={() => setTab("schedule")}
-          className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          К расписанию
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={() => setTab("slots")}
+        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        К слотам
+      </button>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MACHINES, machineFromScan, type Machine, type MachineEx } from "@/data/studio";
 import { SectionLabel, Surface } from "@/components/app/bits";
+import { mapsUrl } from "@/lib/studio-repeat";
 import { extractTelegramScan, getBarcodeDetector } from "@/lib/barcode";
 import { getStartParam } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export function HallView() {
   const showToast = useStudio((s) => s.showToast);
+  const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const [machine, setMachine] = useState<Machine | null>(null);
   const [ex, setEx] = useState<MachineEx | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,6 +83,20 @@ export function HallView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
+      {mapsUrl(notifyPrefs.address || "") ? (
+        <Surface>
+          <SectionLabel>Как добраться</SectionLabel>
+          <p className="mt-2 text-sm">{notifyPrefs.address}</p>
+          <a
+            href={mapsUrl(notifyPrefs.address)}
+            target="_blank"
+            rel="noreferrer"
+            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-ok text-sm font-medium text-ok-foreground"
+          >
+            Маршрут
+          </a>
+        </Surface>
+      ) : null}
       <Surface glow="soft">
         <SectionLabel>Зал</SectionLabel>
         <h2 className="font-display mt-1 text-xl">Наклейка на стойке</h2>

@@ -9,13 +9,11 @@ import {
   relativeDayLabel,
   shortName,
   startOfWeek,
-  BOT_USERNAME,
-  TRAINER_TG_ID,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
-import { hasUpcomingBookings, trainerSlotsConflict } from "@/lib/booking/overlap-rules";
+import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
 import { openTelegramUrl, getTelegramUser } from "@/lib/telegram";
 
 const SLOT_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
@@ -30,6 +28,7 @@ export function TrainerSlots() {
   const shiftWeek = useStudio((s) => s.shiftWeek);
   const selectDay = useStudio((s) => s.selectDay);
   const addSlot = useStudio((s) => s.addSlot);
+  const repeatWeek = useStudio((s) => s.repeatWeek);
   const showToast = useStudio((s) => s.showToast);
   const closeSlot = useStudio((s) => s.closeSlot);
   const cancelSlotBookings = useStudio((s) => s.cancelSlotBookings);
@@ -147,7 +146,6 @@ export function TrainerSlots() {
               .filter((b) => b.slotId === slot.id)
               .map((b) => ({ booking: b, client: clients.find((c) => c.id === b.clientId) }));
             const expanded = openId === slot.id;
-            const upcomingN = hasUpcomingBookings(bookings, slot.id, isSlotPast);
             return (
               <div key={slot.id} className="overflow-hidden rounded-xl bg-card shadow-border">
                 <button type="button" onClick={() => setOpenId(expanded ? null : slot.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
@@ -211,21 +209,13 @@ export function TrainerSlots() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (upcomingN > 0) {
-                          showToast(
-                            `Есть записи (${upcomingN}). Снимите их по одной или закройте слот для новых — без тихого переноса.`,
-                          );
-                          closeSlot(slot.id);
-                          setOpenId(null);
-                          return;
-                        }
                         cancelSlotBookings(slot.id);
                         closeSlot(slot.id);
                         setOpenId(null);
                       }}
                       className="pressable mt-2 h-11 w-full rounded-lg bg-primary-dim text-sm text-primary"
                     >
-                      {upcomingN > 0 ? "Закрыть для новых" : "Удалить слот"}
+                      Удалить слот
                     </button>
                   </div>
                 ) : null}
@@ -275,18 +265,6 @@ export function TrainerSlots() {
                   showToast("Укажите время и число мест.");
                   return;
                 }
-                const mine = slots.filter(
-                  (s) => !closedSlotIds.includes(s.id) && s.date === selectedDate,
-                );
-                if (
-                  trainerSlotsConflict(
-                    mine.map((s) => ({ date: s.date, time: s.time, durationMin: s.duration || 60 })),
-                    { date: selectedDate, time: hhmm, durationMin: 60 },
-                  )
-                ) {
-                  showToast("Пересечение со своим слотом — так нельзя.");
-                  return;
-                }
                 addSlot(selectedDate, hhmm, capacity);
                 setAdding(false);
               }}
@@ -296,9 +274,18 @@ export function TrainerSlots() {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable mt-3 h-12 w-full rounded-xl bg-card text-sm shadow-border">
-          Добавить слот
-        </button>
+        <>
+          <button type="button" onClick={() => setAdding(true)} className="pressable mt-3 h-12 w-full rounded-xl bg-card text-sm shadow-border">
+            Добавить слот
+          </button>
+          <button
+            type="button"
+            onClick={() => repeatWeek()}
+            className="pressable mt-2 h-12 w-full rounded-xl bg-card text-sm shadow-border"
+          >
+            Повторить неделю
+          </button>
+        </>
       )}
     </div>
   );

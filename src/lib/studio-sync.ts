@@ -78,6 +78,7 @@ export function emptyPayload(): StudioPayload {
       notifyTrainer: true,
       flagLate: true,
       absentDays: 10,
+      address: "",
     },
     waitlist: [],
     workoutLogs: [],
@@ -109,6 +110,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
       ...empty.notifyPrefs,
       ...raw.notifyPrefs,
       absentDays: raw.notifyPrefs?.absentDays || empty.notifyPrefs.absentDays,
+      address: raw.notifyPrefs?.address ?? empty.notifyPrefs.address,
     },
     waitlist: raw.waitlist ?? [],
     workoutLogs: raw.workoutLogs ?? [],
@@ -548,7 +550,15 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     clients: current.clients.map((c) => (c.id === id ? nextSelf : c)),
     bookings: [
       ...current.bookings.filter((b) => b.clientId !== id),
-      ...incoming.bookings.filter((b) => b.clientId === id),
+      ...incoming.bookings.filter((b) => b.clientId === id).map((row) => {
+        const prev = current.bookings.find((item) => item.id === row.id);
+        return {
+          ...row,
+          reminded24: row.reminded24 || prev?.reminded24,
+          reminded2: row.reminded2 || prev?.reminded2,
+          confirmed: row.confirmed || prev?.confirmed,
+        };
+      }),
     ],
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
@@ -652,17 +662,24 @@ export async function maybeDailyBackup(payload: StudioPayload) {
 }
 
 export async function saveStudioState(payload: StudioPayload) {
+  let next = payload;
+  try {
+    const { sendDueReminders } = await import("@/lib/telegram-bot.server");
+    next = await sendDueReminders(payload);
+  } catch {
+    next = payload;
+  }
   const { saveRemote } = await import("@/lib/studio-remote");
-  await saveRemote(payload);
+  await saveRemote(next);
   try {
     const { getSql, dbSource } = await import("@/lib/db");
     if (dbSource !== "neon") return;
     const sql = await getSql();
     await sql.query(
       "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-      [STUDIO_ID, JSON.stringify(payload)],
+      [STUDIO_ID, JSON.stringify(next)],
     );
-    for (const visit of payload.visits ?? []) {
+    for (const visit of next.visits ?? []) {
       await sql.query(
         "insert into visits (id, client_id, date, at, water_ml) values ($1, $2, $3, $4, $5) on conflict (id) do update set water_ml = excluded.water_ml, at = excluded.at",
         [visit.id, visit.clientId, visit.date, visit.at, visit.waterMl],
@@ -672,7 +689,7 @@ export async function saveStudioState(payload: StudioPayload) {
     /* ignore */
   }
   try {
-    await maybeDailyBackup(payload);
+    await maybeDailyBackup(next);
   } catch {
     /* the copy must not block a save */
   }
@@ -686,6 +703,16 @@ export const pullStudio = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     let payload = await loadStudioState();
+    try {
+      const { sendDueReminders } = await import("@/lib/telegram-bot.server");
+      const reminded = await sendDueReminders(payload);
+      if (reminded !== payload) {
+        payload = reminded;
+        await saveStudioState(payload);
+      }
+    } catch {
+      /* a missed ping must not block the cabinet */
+    }
     const bound = bindCoach(payload, session.user);
     if (bound !== payload) {
       payload = bound;
