@@ -4,13 +4,24 @@ import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const b64Path = path.join(root, "scripts/studio-store.b64");
+const scripts = path.join(root, "scripts");
 const outPath = path.join(root, "src/lib/studio-store.ts");
-if (!fs.existsSync(b64Path)) {
+
+const parts = [];
+for (let i = 0; i < 20; i++) {
+  const p = path.join(scripts, `studio-store.b64.${i}`);
+  if (!fs.existsSync(p)) break;
+  parts.push(fs.readFileSync(p, "utf8").trim());
+}
+let b64 = parts.join("");
+if (!b64) {
+  const single = path.join(scripts, "studio-store.b64");
+  if (fs.existsSync(single)) b64 = fs.readFileSync(single, "utf8").trim();
+}
+if (!b64) {
   console.log("[expand-store] no b64, skip");
   process.exit(0);
 }
-const b64 = fs.readFileSync(b64Path, "utf8").trim();
 const text = zlib.gunzipSync(Buffer.from(b64, "base64")).toString("utf8");
 if (!text.includes("export const useStudio")) {
   console.error("[expand-store] invalid payload");
