@@ -1,10 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getDbSource, getSql } from "@/lib/db";
 
+function schemeHint(raw?: string): string {
+  if (!raw?.trim()) return "empty";
+  const s = raw.trim().replace(/^['"]|['"]$/g, "");
+  const m = s.match(/^(postgres(?:ql)?:\/\/)/i);
+  if (m) return m[1].toLowerCase();
+  return `other:${s.slice(0, 16)}`;
+}
+
 export const Route = createFileRoute("/api/db-status")({
   server: {
     handlers: {
       GET: async () => {
+        const rawUrl =
+          typeof process !== "undefined"
+            ? process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED
+            : undefined;
         const envKeys = {
           DATABASE_URL: Boolean(
             typeof process !== "undefined" && process.env.DATABASE_URL?.trim(),
@@ -12,6 +24,7 @@ export const Route = createFileRoute("/api/db-status")({
           DATABASE_URL_UNPOOLED: Boolean(
             typeof process !== "undefined" && process.env.DATABASE_URL_UNPOOLED?.trim(),
           ),
+          scheme: schemeHint(rawUrl),
         };
         const source = getDbSource();
         const base = {
@@ -54,9 +67,7 @@ export const Route = createFileRoute("/api/db-status")({
             base.tables.session_results;
 
           if (source === "pglite") {
-            base.migrateHint = envKeys.DATABASE_URL || envKeys.DATABASE_URL_UNPOOLED
-              ? "Env present but URL rejected (invalid host?)."
-              : "No DATABASE_URL / DATABASE_URL_UNPOOLED in Production runtime. In Vercel: Neon integration → enable Production for DATABASE_URL, then Redeploy.";
+            base.migrateHint = `Runtime env scheme=${envKeys.scheme}. Expected postgresql://…`;
             base.ok = false;
           } else if (!coreOk) {
             base.migrateHint =
