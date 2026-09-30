@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   countdownLabel,
   formatLongDate,
@@ -96,6 +96,29 @@ export function SessionCard({ bookingId }: Props) {
             >
               Открыть план
             </button>
+            {role === "trainer" && !booking.checkedIn && !booking.noShow ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="pressable h-11 flex-1 rounded-xl bg-ok text-sm font-medium text-ok-foreground"
+                  onClick={() => markPresent(booking.id)}
+                >
+                  Был
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="pressable h-11 flex-1 rounded-xl bg-secondary text-sm"
+                  onClick={() => markNoShow(booking.id)}
+                >
+                  Неявка
+                </button>
+              </div>
+            ) : null}
+            {booking.checkedIn ? (
+              <p className="text-sm text-ok">Присутствие зафиксировано.</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -182,7 +205,7 @@ export function SessionCard({ bookingId }: Props) {
         ) : null}
       </Surface>
 
-      {phase !== "before" ? (
+      {booking.checkedIn || phase !== "before" ? (
         <SessionResultForm
           bookingId={booking.id}
           clientId={booking.clientId}
