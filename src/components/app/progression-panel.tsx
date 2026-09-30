@@ -42,7 +42,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
         id,
         audience: "client" as const,
         clientId,
-        kind: "progression" as const,
+        kind: "alert" as const,
         title,
         body,
         at: new Date().toISOString(),
@@ -158,7 +158,6 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
           }
         }
       }
-      // Local / server failed — still record trainer decision for client
       pushClientDecision(decision, changeText);
       showToast(
         decision === "accept"
