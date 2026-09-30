@@ -1,3 +1,4 @@
-// PLACEHOLDER - will be expanded by build script from correct b64
-// Temporary: keep expand path
-export const useStudio = () => ({});
+// PLACEHOLDER — expanded at build by scripts/expand-studio-store.mjs from studio-store.b64.*
+export const useStudio = () => {
+  throw new Error("studio-store not expanded — run node scripts/expand-studio-store.mjs");
+};
