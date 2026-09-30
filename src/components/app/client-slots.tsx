@@ -81,6 +81,13 @@ export function ClientSlots() {
         {formatDayMonth(selectedDate)}
         {me.trainDays.includes((parseISODate(selectedDate).getDay() + 6) % 7) ? ` · день ${me.firstName}` : ""}
       </p>
+      <p className="mb-2 text-tiny text-muted-foreground">
+        Баланс:{" "}
+        <span className={(me.sessionsLeft ?? 0) <= 0 ? "font-medium text-primary" : "font-medium text-foreground"}>
+          {me.sessionsLeft ?? 0}
+        </span>{" "}
+        {(me.sessionsLeft ?? 0) <= 0 ? "· запись недоступна без пакета" : "зан."}
+      </p>
 
       <div className="stagger-in flex flex-col gap-2">
         {daySlots.length === 0 ? (
