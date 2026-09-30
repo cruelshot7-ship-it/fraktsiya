@@ -33,7 +33,7 @@ type Props = {
   programId?: string;
 };
 
-/** Fact for a completed session → server session_results. Requires attendance. */
+/** Fact for session → server when available, else device. Requires attendance. */
 export function SessionResultForm({
   bookingId,
   clientId,
@@ -56,7 +56,7 @@ export function SessionResultForm({
         <p className="mt-2 text-sm text-muted-foreground">
           {role === "trainer"
             ? "Отметьте явку участника, затем зафиксируйте подходы. Истечение времени слота ≠ посещение."
-            : "Сначала отметьте присутствие («Я на месте» / «Был»). Без явки результат на сервер не записывается."}
+            : "Сначала отметьте присутствие («Я на месте» / «Был»). Без явки результат не сохраняется."}
         </p>
       </Surface>
     );
@@ -106,21 +106,60 @@ export function SessionResultForm({
           notes: notes.trim() || undefined,
         },
       });
-      if (!res.ok) {
-        const map: Record<string, string> = {
-          "no-attendance": "Сначала зафиксируйте явку на сервере.",
-          "no-telegram": "Нет подписи Telegram.",
-          "booking-missing": "Запись не найдена на сервере.",
-          "booking-cancelled": "Запись отменена.",
-          "client-mismatch": "Клиент не совпадает.",
-        };
-        showToast(map[res.reason] ?? `Не сохранено: ${res.reason}`);
+      if (res.ok) {
+        setSavedId(res.resultId);
+        showToast(res.created ? "Результат сохранён на сервере." : "Результат уже был (без дубля).");
         return;
       }
-      setSavedId(res.resultId);
-      showToast(res.created ? "Результат сохранён на сервере." : "Результат уже был (без дубля).");
+      if (res.reason === "no-attendance") {
+        showToast("Сначала отметьте явку («Я на месте» / «Был»).");
+        return;
+      }
+      const { saveLocalResult, findLocalResult } = await import("@/lib/session-results-local");
+      const existing = findLocalResult(bookingId);
+      if (existing) {
+        setSavedId(existing.id);
+        showToast("Уже сохранено на устройстве (без дубля).");
+        return;
+      }
+      const local = saveLocalResult({
+        id: `local_res_${bookingId}`,
+        bookingId,
+        clientId,
+        coachId,
+        programId,
+        sets,
+        rpe: rpe ? Number(rpe) : undefined,
+        notes: notes.trim() || undefined,
+        at: new Date().toISOString(),
+      });
+      setSavedId(local.id);
+      showToast("Сохранено на устройстве. Сервер — после Neon.");
     } catch {
-      showToast("Сеть: не удалось сохранить. Повторите.");
+      try {
+        const { saveLocalResult, findLocalResult } = await import("@/lib/session-results-local");
+        const existing = findLocalResult(bookingId);
+        if (existing) {
+          setSavedId(existing.id);
+          showToast("Уже на устройстве.");
+          return;
+        }
+        const local = saveLocalResult({
+          id: `local_res_${bookingId}`,
+          bookingId,
+          clientId,
+          coachId,
+          programId,
+          sets,
+          rpe: rpe ? Number(rpe) : undefined,
+          notes: notes.trim() || undefined,
+          at: new Date().toISOString(),
+        });
+        setSavedId(local.id);
+        showToast("Сохранено на устройстве (офлайн).");
+      } catch {
+        showToast("Не удалось сохранить. Повторите.");
+      }
     } finally {
       setBusy(false);
     }
@@ -128,9 +167,9 @@ export function SessionResultForm({
 
   return (
     <Surface glow={savedId ? "ok" : undefined}>
-      <SectionLabel>Результат занятия · сервер</SectionLabel>
+      <SectionLabel>Результат занятия</SectionLabel>
       <p className="mt-1 text-tiny text-muted-foreground">
-        Факт привязан к этой записи. Повторная отправка не создаёт вторую тренировку.
+        Факт привязан к этой записи. Повтор не создаёт дубль.
       </p>
       {savedId ? <p className="mt-3 text-sm text-ok">Сохранено · {savedId}</p> : null}
       <div className="mt-3 space-y-3">
@@ -229,7 +268,7 @@ export function SessionResultForm({
         onClick={() => void submit()}
         className="pressable mt-3 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {busy ? "Сохраняем…" : "Сохранить результат на сервере"}
+        {busy ? "Сохраняем…" : "Сохранить результат"}
       </button>
     </Surface>
   );
