@@ -1,56 +1,46 @@
-import { isSlotPast } from "@/data/studio";
+import { hoursUntilSlot } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { Surface, SectionLabel } from "@/components/app/bits";
 
-/** After a long break: calm return, no automatic load restore. */
+/** Soft return nudge when client has gap since last visit. */
 export function SoftReturnPanel() {
   const role = useStudio((s) => s.role);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const bookings = useStudio((s) => s.bookings);
   const setTab = useStudio((s) => s.setTab);
-  const client = activeClient({ clients, activeClientId });
+  const me = activeClient({ clients, activeClientId });
 
-  if (role !== "client" || !client) return null;
+  if (role !== "client" || !me) return null;
 
-  const mine = bookings.filter((b) => b.clientId === client.id && !b.noShow);
-  const upcoming = mine.filter((b) => !isSlotPast(b.date, b.time));
-  if (upcoming.length) return null;
+  const upcoming = bookings
+    .filter((b) => b.clientId === me.id && hoursUntilSlot(b.date, b.time) > 0)
+    .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`));
 
-  const past = mine
-    .filter((b) => isSlotPast(b.date, b.time))
+  if (upcoming.length > 0) return null;
+
+  const past = bookings
+    .filter((b) => b.clientId === me.id && hoursUntilSlot(b.date, b.time) <= 0)
     .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
   const last = past[0];
   if (!last) return null;
 
-  const days = Math.floor(
-    (Date.now() - Date.parse(`${last.date}T${last.time}:00`)) / (24 * 60 * 60 * 1000),
-  );
-  if (Number.isNaN(days) || days < 14) return null;
+  const hours = Math.abs(hoursUntilSlot(last.date, last.time));
+  if (hours < 72) return null;
 
   return (
-    <Surface glow="soft">
-      <SectionLabel>Возвращение после перерыва</SectionLabel>
-      <p className="mt-2 text-sm leading-relaxed">
-        Последнее занятие было {days} дн. назад. Нагрузку не поднимаем автоматически — начните с
-        удобного слота и обсудите план с тренером.
+    <Surface glow="ok">
+      <SectionLabel>Мягкий возврат</SectionLabel>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Давно не было записи. Выберите удобный слот в расписании.
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-          onClick={() => setTab("slots")}
-        >
-          Выбрать слот
-        </button>
-        <button
-          type="button"
-          className="pressable h-11 rounded-xl bg-secondary text-sm font-medium"
-          onClick={() => setTab("program")}
-        >
-          Контекст плана
-        </button>
-      </div>
+      <button
+        type="button"
+        className="pressable mt-3 h-10 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+        onClick={() => setTab("schedule")}
+      >
+        К расписанию
+      </button>
     </Surface>
   );
 }
