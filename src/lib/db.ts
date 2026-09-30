@@ -5,13 +5,18 @@ export type DbSource = "neon" | "pglite";
 
 function resolveDatabaseUrl(raw?: string) {
   if (!raw?.trim()) return undefined;
-  try {
-    const host = new URL(raw.trim()).hostname;
-    if (!host || host === "base") return undefined;
-    return raw.trim();
-  } catch {
-    return undefined;
+  const s = raw.trim();
+  // Passwords may contain @ : / — URL() fails; still a valid pg connection string.
+  if (/^postgres(ql)?:\/\//i.test(s)) {
+    try {
+      const host = new URL(s).hostname;
+      if (host === "base" || host === "localhost") return undefined;
+    } catch {
+      // keep string — node-postgres parses connection strings itself
+    }
+    return s;
   }
+  return undefined;
 }
 
 /** Read env at call time — Vercel injects secrets at runtime, not build. */
@@ -22,12 +27,11 @@ function databaseUrlNow(): string | undefined {
   );
 }
 
-/** Lazy: do not freeze to pglite at module load / build. */
 export function getDbSource(): DbSource {
   return databaseUrlNow() ? "neon" : "pglite";
 }
 
-/** @deprecated use getDbSource() — kept for callers; may be wrong if read at import. */
+/** @deprecated use getDbSource() */
 export const dbSource: DbSource = getDbSource();
 
 export interface Sql {
@@ -176,13 +180,14 @@ const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
 if (typeof window === "undefined") {
-  // Defer: only boot PGLite if still no URL at first tick of runtime.
-  globalBoot.__pgBootstrapPromise__ ??= Promise.resolve().then(() => {
-    if (getDbSource() !== "pglite") return;
-    return ensureDbReady();
-  }).catch((err) => {
-    globalBoot.__pgBootstrapPromise__ = undefined;
-    console.error("[db] PGLite bootstrap failed:", err);
-    throw err;
-  });
+  globalBoot.__pgBootstrapPromise__ ??= Promise.resolve()
+    .then(() => {
+      if (getDbSource() !== "pglite") return;
+      return ensureDbReady();
+    })
+    .catch((err) => {
+      globalBoot.__pgBootstrapPromise__ = undefined;
+      console.error("[db] PGLite bootstrap failed:", err);
+      throw err;
+    });
 }
