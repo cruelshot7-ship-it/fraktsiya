@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getTelegramInitData } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
+import { neonBookingId } from "@/lib/booking/client-dual-write";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
 type SetRow = {
@@ -94,10 +95,16 @@ export function SessionResultForm({
     setBusy(true);
     try {
       const { recordSessionResultFn } = await import("@/lib/booking/server");
+      const store = useStudio.getState();
+      const local = store.bookings.find((b) => b.id === bookingId);
+      const serverBookingId =
+        local?.slotId && local?.clientId
+          ? neonBookingId(local.slotId, local.clientId)
+          : bookingId;
       const res = await recordSessionResultFn({
         data: {
           initData,
-          bookingId,
+          bookingId: serverBookingId,
           clientId,
           coachId,
           programId,
@@ -122,7 +129,7 @@ export function SessionResultForm({
         showToast("Уже сохранено на устройстве (без дубля).");
         return;
       }
-      const local = saveLocalResult({
+      const localRes = saveLocalResult({
         id: `local_res_${bookingId}`,
         bookingId,
         clientId,
@@ -133,7 +140,7 @@ export function SessionResultForm({
         notes: notes.trim() || undefined,
         at: new Date().toISOString(),
       });
-      setSavedId(local.id);
+      setSavedId(localRes.id);
       showToast("Сохранено на устройстве. Сервер — после Neon.");
     } catch {
       try {
@@ -144,7 +151,7 @@ export function SessionResultForm({
           showToast("Уже на устройстве.");
           return;
         }
-        const local = saveLocalResult({
+        const localRes = saveLocalResult({
           id: `local_res_${bookingId}`,
           bookingId,
           clientId,
@@ -155,7 +162,7 @@ export function SessionResultForm({
           notes: notes.trim() || undefined,
           at: new Date().toISOString(),
         });
-        setSavedId(local.id);
+        setSavedId(localRes.id);
         showToast("Сохранено на устройстве (офлайн).");
       } catch {
         showToast("Не удалось сохранить. Повторите.");
