@@ -107,8 +107,8 @@ export function SignalsView() {
         )}
       </div>
 
-      <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setTab("bookings")}>
-        К записям
+      <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setTab("schedule")}>
+        К расписанию
       </button>
     </div>
   );
