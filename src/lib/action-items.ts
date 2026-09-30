@@ -55,7 +55,7 @@ export type ActionItem = {
   kind: ActionKind;
   title: string;
   body: string;
-  tab: "slots" | "bookings" | "program" | "clients" | "signals" | "hall";
+  tab: "today" | "schedule" | "program" | "clients" | "signals" | "hall" | "more" | "slots" | "bookings";
   clientId?: string;
   bookingId?: string;
   priority: number;
@@ -93,7 +93,7 @@ export function clientActionItems(opts: {
       kind: "next_session",
       title: `Ближайшая · ${next.time}`,
       body: `${next.date === today ? "Сегодня" : next.date} · ${next.duration} мин`,
-      tab: "bookings",
+      tab: "schedule",
       bookingId: next.id,
       clientId: client.id,
       priority: 10,
@@ -118,7 +118,7 @@ export function clientActionItems(opts: {
         kind: "return_soft",
         title: "Спокойный возврат",
         body: "После перерыва нагрузку не поднимаем автоматически — выберите удобный слот.",
-        tab: "slots",
+        tab: "schedule",
         clientId: client.id,
         priority: 15,
       });
@@ -126,46 +126,44 @@ export function clientActionItems(opts: {
       items.push({
         id: `act_book_${client.id}`,
         kind: "book_next",
-        title: "Записаться",
-        body: "Свободные окна вашего тренера",
-        tab: "slots",
+        title: "Записаться на тренировку",
+        body: "Выберите свободный слот в расписании",
+        tab: "schedule",
         clientId: client.id,
         priority: 25,
       });
     }
   }
 
-  if (last && !last.checkedIn && !last.noShow) {
-    const age = daysSince(`${last.date}T${last.time}:00`);
-    if (age !== null && age <= 2) {
-      items.push({
-        id: `act_log_${last.id}`,
-        kind: "log_result",
-        title: "Итог занятия",
-        body: "Зафиксируйте подходы — тренер увидит факт",
-        tab: "program",
-        bookingId: last.id,
-        clientId: client.id,
-        priority: 18,
-      });
-    }
-  }
-
-  for (const n of notices
-    .filter((x) => x.clientId === client.id && x.audience === "client")
-    .slice(0, 2)) {
+  if (last?.checkedIn) {
     items.push({
-      id: `act_notice_${n.id}`,
-      kind: "progression_decision",
-      title: n.title,
-      body: n.body,
+      id: `act_log_${last.id}`,
+      kind: "log_result",
+      title: "Зафиксировать результат",
+      body: "После занятия — факты для прогрессии",
       tab: "program",
+      bookingId: last.id,
       clientId: client.id,
-      priority: 30,
+      priority: 18,
     });
   }
 
-  return items.sort((a, b) => a.priority - b.priority).slice(0, 8);
+  const clientNotices = notices.filter(
+    (n) => n.audience === "client" && n.clientId === client.id && (n.kind === "cancel" || n.kind === "reschedule"),
+  );
+  for (const n of clientNotices.slice(0, 2)) {
+    items.push({
+      id: `act_n_${n.id}`,
+      kind: "book_next",
+      title: n.title,
+      body: n.body,
+      tab: "schedule",
+      clientId: client.id,
+      priority: 12,
+    });
+  }
+
+  return items.sort((a, b) => a.priority - b.priority).slice(0, 6);
 }
 
 export function trainerActionItems(opts: {
@@ -174,117 +172,82 @@ export function trainerActionItems(opts: {
   slots: Slot[];
   notices: Notice[];
   joinPendingCount: number;
-  coachId?: string | null;
 }): ActionItem[] {
   const { clients, bookings, slots, notices, joinPendingCount } = opts;
   const today = isoDate(new Date());
   const items: ActionItem[] = [];
 
-  const todayBookings = bookings
-    .filter((b) => b.date === today && !b.noShow)
-    .sort((a, b) => a.time.localeCompare(b.time));
-
+  const todayBookings = bookings.filter((b) => b.date === today && !b.noShow);
   if (todayBookings.length) {
-    const first = todayBookings[0];
-    const who = clients.find((c) => c.id === first.clientId);
     items.push({
-      id: `act_sched_${today}`,
+      id: "act_tr_today",
       kind: "trainer_schedule",
-      title: `Сегодня · ${todayBookings.length} зан.`,
-      body: who ? `Первый: ${who.firstName} · ${first.time}` : `Первое в ${first.time}`,
-      tab: "bookings",
-      bookingId: first.id,
-      priority: 5,
+      title: `Сегодня · ${todayBookings.length} записей`,
+      body: "Отметьте явку и результаты",
+      tab: "schedule",
+      priority: 10,
     });
   }
 
-  const recentPast = bookings.filter((b) => {
-    if (!isSlotPast(b.date, b.time) || b.noShow) return false;
-    const age = daysSince(`${b.date}T${b.time}:00`);
-    return age !== null && age <= 3 && !b.checkedIn;
-  });
-  if (recentPast.length) {
+  const needResult = todayBookings.filter((b) => b.checkedIn);
+  if (needResult.length) {
     items.push({
-      id: "act_review_results",
+      id: "act_tr_results",
       kind: "review_results",
-      title: "Нужна отметка присутствия",
-      body: `${recentPast.length} занят. без явки`,
-      tab: "bookings",
-      priority: 12,
+      title: "Результаты после явки",
+      body: `${needResult.length} с отмеченной явкой",
+      tab: "schedule",
+      priority: 14,
     });
   }
 
-  const withUpcoming = new Set(
-    bookings.filter((b) => !isSlotPast(b.date, b.time) && !b.noShow).map((b) => b.clientId),
-  );
-  const orphan = clients.filter((c) => !withUpcoming.has(c.id)).slice(0, 5);
-  if (orphan.length) {
+  const withoutBooking = clients.filter((c) => !bookings.some((b) => b.clientId === c.id && !isSlotPast(b.date, b.time)));
+  if (withoutBooking.length) {
     items.push({
-      id: "act_orphan_clients",
+      id: "act_tr_nobook",
       kind: "client_without_booking",
-      title: "Без следующей записи",
-      body: orphan.map((c) => c.firstName).join(", "),
+      title: "Без ближайшей записи",
+      body: `${withoutBooking.length} клиентов · предложите слот`,
       tab: "clients",
+      clientId: withoutBooking[0]?.id,
       priority: 22,
     });
   }
 
-  const returned: string[] = [];
-  for (const c of clients) {
-    if (withUpcoming.has(c.id)) continue;
-    const past = bookings
-      .filter((b) => b.clientId === c.id && isSlotPast(b.date, b.time) && !b.noShow)
-      .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
-    const last = past[0];
-    if (!last) continue;
-    const gap = daysSince(`${last.date}T${last.time}:00`);
-    if (gap !== null && gap >= 14) returned.push(c.firstName);
-  }
-  if (returned.length) {
+  const openSlots = slots.filter((s) => !isSlotPast(String(s.date), String(s.time)));
+  if (openSlots.length === 0) {
     items.push({
-      id: "act_return_clients",
-      kind: "return_soft",
-      title: "Вернулись после перерыва",
-      body: returned.slice(0, 5).join(", "),
-      tab: "clients",
-      priority: 18,
-    });
-  }
-
-  const openSlots = slots.filter((s) => !isSlotPast(s.date, s.time)).length;
-  if (openSlots > 0) {
-    items.push({
-      id: "act_open_slots",
+      id: "act_tr_openslot",
       kind: "open_slot",
-      title: "Свободные слоты",
-      body: `${openSlots} в окне расписания`,
-      tab: "slots",
-      priority: 40,
+      title: "Добавьте слоты",
+      body: "В расписании нет открытых окон",
+      tab: "schedule",
+      priority: 28,
     });
   }
 
   if (joinPendingCount > 0) {
     items.push({
-      id: "act_joins",
+      id: "act_tr_join",
       kind: "pending_join",
-      title: "Заявки в зал",
-      body: `${joinPendingCount} ожидают решения`,
+      title: `Заявки в зал · ${joinPendingCount}`,
+      body: "Примите или отклоните",
       tab: "signals",
       priority: 8,
     });
   }
 
-  for (const n of notices.filter((x) => x.audience === "trainer").slice(0, 3)) {
+  const trainerSignals = notices.filter((n) => n.audience === "trainer" && n.kind !== "join");
+  if (trainerSignals.length) {
     items.push({
-      id: `act_tn_${n.id}`,
+      id: "act_tr_signals",
       kind: "missing_note",
-      title: n.title,
-      body: n.body,
+      title: "Сигналы",
+      body: `${trainerSignals.length} без разбора`,
       tab: "signals",
-      clientId: n.clientId,
-      priority: 28,
+      priority: 16,
     });
   }
 
-  return items.sort((a, b) => a.priority - b.priority).slice(0, 10);
+  return items.sort((a, b) => a.priority - b.priority).slice(0, 8);
 }
