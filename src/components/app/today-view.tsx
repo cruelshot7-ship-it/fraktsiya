@@ -1,5 +1,5 @@
 import { ActionCenter } from "@/components/app/action-center";
-import { SoftReturnBanner } from "@/components/app/soft-return";
+import { SoftReturnPanel } from "@/components/app/soft-return";
 import { ProgramView } from "@/components/app/program-view";
 import { BookingsView } from "@/components/app/bookings-view";
 import { useStudio } from "@/lib/studio-store";
@@ -36,7 +36,7 @@ export function TodayView() {
           Что сделать сейчас · программа · прогресс
         </p>
       </div>
-      <SoftReturnBanner />
+      <SoftReturnPanel />
       <ActionCenter />
       <ProgramView />
     </div>
