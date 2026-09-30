@@ -21,7 +21,7 @@ import { SoftReturnPanel } from "@/components/app/soft-return";
 import { NotifyPrefsPanel } from "@/components/app/notify-prefs-panel";
 import { DecisionBanner } from "@/components/app/decision-banner";
 
-export function BookingsView() {
+export function BookingsView({ compact = false }: { compact?: boolean } = {}) {
   const all = useStudio((s) => s.bookings);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -55,12 +55,12 @@ export function BookingsView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
-      <ActionCenter />
-      {role === "client" ? <SoftReturnPanel /> : null}
-      {role === "client" ? <DecisionBanner /> : null}
-      {role === "client" ? <NotifyPrefsPanel /> : null}
+      {!compact ? <ActionCenter /> : null}
+      {!compact && role === "client" ? <SoftReturnPanel /> : null}
+      {!compact && role === "client" ? <DecisionBanner /> : null}
+      {!compact && role === "client" ? <NotifyPrefsPanel /> : null}
       {next ? <SessionCard bookingId={next.id} /> : null}
-      {role === "client" ? (
+      {role === "client" && !compact ? (
         <Surface glow={next ? "ok" : undefined}>
           <SectionLabel>Ближайшая запись</SectionLabel>
           {next ? (
@@ -82,7 +82,7 @@ export function BookingsView() {
         </Surface>
       ) : null}
 
-      {inbox.length > 0 ? (
+      {inbox.length > 0 && !compact ? (
         <Surface>
           <SectionLabel>Сообщения</SectionLabel>
           <ul className="mt-2 space-y-2">
@@ -96,13 +96,13 @@ export function BookingsView() {
         </Surface>
       ) : null}
 
-      {role === "client" && !upcoming.length ? (
+      {role === "client" && !upcoming.length && !compact ? (
         <p className="text-sm text-muted-foreground">
-          Ближайших записей нет. Выберите время на вкладке «Слоты».
+          Ближайших записей нет. Выберите время в «Расписание».
         </p>
       ) : null}
 
-      {role === "client" && me && next
+      {role === "client" && me && next && !compact
         ? (() => {
             const suggestion = suggestNextSlot({
               slots,
@@ -123,7 +123,7 @@ export function BookingsView() {
                   className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
                   onClick={() => {
                     const ok = bookSlot(suggestion.slot.id);
-                    if (ok) setTab("bookings");
+                    if (ok) setTab("schedule");
                   }}
                 >
                   Записаться · {suggestion.slot.time}
@@ -238,7 +238,7 @@ export function BookingsView() {
         ));
       })()}
 
-      {past.length > 0 ? (
+      {past.length > 0 && !compact ? (
         <div className="mt-2 flex flex-col gap-2">
           <SectionLabel>Прошедшие</SectionLabel>
           {past.slice(0, 8).map((booking) => {
@@ -256,13 +256,15 @@ export function BookingsView() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => setTab("slots")}
-        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-      >
-        К слотам
-      </button>
+      {!compact ? (
+        <button
+          type="button"
+          onClick={() => setTab("schedule")}
+          className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          К расписанию
+        </button>
+      ) : null}
     </div>
   );
 }
