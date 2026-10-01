@@ -94,10 +94,10 @@ export function ClientsView() {
           className="pressable flex w-full items-center gap-3 rounded-xl bg-card p-3 text-left shadow-border"
           onClick={() => openClientSheet(client.id)}
         >
-          <Avatar name={initials(client)} />
+          <Avatar initials={initials(client)} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{shortName(client)}</p>
-            <p className="text-tiny text-muted-foreground">{flag}</p>
+            <p className="text-tiny text-muted-foreground">{flag.badge ?? ""}</p>
           </div>
           <span className="text-xs tabular-nums text-muted-foreground">
             {client.sessionsLeft ?? 0}

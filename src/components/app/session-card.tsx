@@ -32,7 +32,7 @@ export function SessionCard({ bookingId }: Props) {
 
   const slot = slots.find((s) => s.id === booking.slotId);
   const client = clients.find((c) => c.id === booking.clientId);
-  const coachId = booking.coachId || client?.coachId || String(TRAINER_TG_ID);
+  const coachId = client?.coachId || String(TRAINER_TG_ID);
   const programId = `prog_${coachId}_${booking.clientId}`;
 
   const hours = slot ? hoursUntilSlot(String(slot.date), String(slot.time)) : 999;

@@ -56,7 +56,7 @@ import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemo
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
-export type TabId = "slots" | "bookings" | "program" | "food" | "form" | "hall" | "clients" | "signals";
+export type TabId = "today" | "schedule" | "program" | "more" | "slots" | "bookings" | "food" | "form" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
 export type ClientFilter = "all" | "attention" | "today";
 
