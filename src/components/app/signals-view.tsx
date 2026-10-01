@@ -2,6 +2,11 @@ import { Bell, X } from "lucide-react";
 import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
+import { ActionCenter } from "@/components/app/action-center";
+import { CsvImportPanel } from "@/components/app/csv-import-panel";
+import { TrainerShareCard } from "@/components/app/trainer-share";
+import { OutboxPanel } from "@/components/app/outbox-panel";
+import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
 
 export function SignalsView() {
@@ -25,6 +30,11 @@ export function SignalsView() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ActionCenter />
+      <CsvImportPanel />
+      <TrainerShareCard />
+      <OutboxPanel />
+      <SyncStatusChip />
       <Surface>
         <SectionLabel>Уведомления об отмене</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed">
