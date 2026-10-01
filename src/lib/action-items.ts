@@ -195,7 +195,7 @@ export function trainerActionItems(opts: {
       id: "act_tr_results",
       kind: "review_results",
       title: "Результаты после явки",
-      body: `${needResult.length} с отмеченной явкой",
+      body: `${needResult.length} с отмеченной явкой`,
       tab: "schedule",
       priority: 14,
     });
