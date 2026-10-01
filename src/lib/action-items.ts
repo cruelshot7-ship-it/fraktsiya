@@ -1,7 +1,4 @@
-/**
- * Situational action items for the Action Center.
- * Pure helpers — no server calls. UI routes via setTab / ids.
- */
+import type { TabId } from "@/lib/studio-store";
 
 type Booking = {
   id: string;
@@ -55,7 +52,7 @@ export type ActionItem = {
   kind: ActionKind;
   title: string;
   body: string;
-  tab: "today" | "schedule" | "program" | "clients" | "signals" | "hall" | "more" | "slots" | "bookings";
+  tab: TabId;
   clientId?: string;
   bookingId?: string;
   priority: number;
@@ -93,7 +90,7 @@ export function clientActionItems(opts: {
       kind: "next_session",
       title: `Ближайшая · ${next.time}`,
       body: `${next.date === today ? "Сегодня" : next.date} · ${next.duration} мин`,
-      tab: "schedule",
+      tab: "bookings",
       bookingId: next.id,
       clientId: client.id,
       priority: 10,
@@ -118,7 +115,7 @@ export function clientActionItems(opts: {
         kind: "return_soft",
         title: "Спокойный возврат",
         body: "После перерыва нагрузку не поднимаем автоматически — выберите удобный слот.",
-        tab: "schedule",
+        tab: "slots",
         clientId: client.id,
         priority: 15,
       });
@@ -128,7 +125,7 @@ export function clientActionItems(opts: {
         kind: "book_next",
         title: "Записаться на тренировку",
         body: "Выберите свободный слот в расписании",
-        tab: "schedule",
+        tab: "slots",
         clientId: client.id,
         priority: 25,
       });
@@ -157,7 +154,7 @@ export function clientActionItems(opts: {
       kind: "book_next",
       title: n.title,
       body: n.body,
-      tab: "schedule",
+      tab: "slots",
       clientId: client.id,
       priority: 12,
     });
@@ -184,7 +181,7 @@ export function trainerActionItems(opts: {
       kind: "trainer_schedule",
       title: `Сегодня · ${todayBookings.length} записей`,
       body: "Отметьте явку и результаты",
-      tab: "schedule",
+      tab: "bookings",
       priority: 10,
     });
   }
@@ -196,7 +193,7 @@ export function trainerActionItems(opts: {
       kind: "review_results",
       title: "Результаты после явки",
       body: `${needResult.length} с отмеченной явкой`,
-      tab: "schedule",
+      tab: "program",
       priority: 14,
     });
   }
@@ -221,7 +218,7 @@ export function trainerActionItems(opts: {
       kind: "open_slot",
       title: "Добавьте слоты",
       body: "В расписании нет открытых окон",
-      tab: "schedule",
+      tab: "slots",
       priority: 28,
     });
   }
