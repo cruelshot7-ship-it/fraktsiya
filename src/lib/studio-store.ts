@@ -840,7 +840,7 @@ export const useStudio = create<State>((set, get) => ({
       return false;
     }
     const booking: Booking = {
-      id: `bk_${slot.id}_${client.id}_${Date.now()}`,
+      id: `bk_${slot.id}_${client.id}`,
       slotId: slot.id,
       clientId: client.id,
       date: slot.date,
@@ -1179,7 +1179,7 @@ export const useStudio = create<State>((set, get) => ({
         const guest = nextClients.find((c) => c.id === pick.clientId);
         if (guest) {
           const auto: Booking = {
-            id: `bk_auto_${slot.id}_${guest.id}_${Date.now()}`,
+            id: `bk_${slot.id}_${guest.id}`,
             slotId: slot.id,
             clientId: guest.id,
             date: slot.date,
