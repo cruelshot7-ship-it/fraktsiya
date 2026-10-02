@@ -64,6 +64,16 @@ export const bookSlotFn = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     const ownerCoachId = data.ownerCoachId || String(TRAINER_TG_ID);
+    if (ownerCoachId !== String(TRAINER_TG_ID)) {
+      const { loadStudioState } = await import("@/lib/studio-sync");
+      const { coachPhase } = await import("@/data/studio");
+      const payload = await loadStudioState();
+      const row = (payload.coaches ?? []).find((c) => c.telegramId === ownerCoachId);
+      const phase = row ? coachPhase(row) : "expired";
+      if (phase !== "trial" && phase !== "paid") {
+        return { ok: false, reason: "paused" };
+      }
+    }
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
 

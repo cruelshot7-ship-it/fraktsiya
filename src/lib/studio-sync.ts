@@ -719,7 +719,7 @@ export const pullStudio = createServerFn({ method: "POST" })
       await saveStudioState(payload);
     }
     const trainer = isCoachUser(payload, session.user);
-    let created = false;
+    const created = false;
 
     if (!trainer) {
       const byId = payload.clients.some((c) => c.telegramId === session.user.id);

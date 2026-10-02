@@ -36,7 +36,7 @@ export function rowsToClientDrafts(
       skipped += 1;
       continue;
     }
-    let lastName = values.lastName || "";
+    const lastName = values.lastName || "";
     if (!lastName && firstName.includes(" ")) {
       const parts = firstName.split(/\s+/);
       drafts.push({
