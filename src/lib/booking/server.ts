@@ -155,7 +155,7 @@ const ResultInput = z.object({
 
 export type RecordResultResponse =
   | { ok: true; resultId: string; created: boolean }
-  | { ok: false; reason: string };
+  | { ok: false; reason: "no-telegram" | "forbidden" | "booking-missing" | "client-mismatch" | "booking-cancelled" | "no-attendance" | "server-error" | string };
 
 export const recordSessionResultFn = createServerFn({ method: "POST" })
   .validator(ResultInput)
