@@ -1,0 +1,43 @@
+name: Cleanup stale branches
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-stale-branches.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  delete-stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged / broken feature branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BRANCHES=(
+            hotfix/studio-sync-real
+            hotfix/restore-studio-sync
+            fix/p0-auth-balance
+            fix/p0-booking-auth-only
+            fix/p0-live-telegram
+            fix/build-recovery
+            feature/shader-hero-bg
+            feature/shader-hero-main
+            design/schedule-ds
+            release/p0-end-to-end
+            restore-store
+            tmp-delete-test-do-not-use
+          )
+          for b in "${BRANCHES[@]}"; do
+            if git ls-remote --heads origin "$b" | grep -q "$b"; then
+              echo "Deleting origin/$b"
+              git push origin --delete "$b" || echo "skip $b"
+            else
+              echo "already gone: $b"
+            fi
+          done
