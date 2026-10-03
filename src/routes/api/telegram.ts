@@ -15,7 +15,10 @@ export const Route = createFileRoute("/api/telegram")({
         const tok = env("BOT_TOKEN");
         if (!tok) return new Response("no bot", { status: 503 });
         const secret = request.headers.get("x-telegram-bot-api-secret-token");
-        if (secret && secret !== webhookSecret(tok)) return new Response("forbidden", { status: 403 });
+        const expected = webhookSecret(tok);
+        if (secret !== expected) {
+          return new Response("Forbidden", { status: 403 });
+        }
         try {
           const update = (await request.json()) as Parameters<typeof handleTelegramUpdate>[0];
           await handleTelegramUpdate(update);

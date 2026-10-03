@@ -78,6 +78,5 @@ async function main() {
 
 main().catch((err) => {
   console.error("[migrate] failed:", String(err?.message || err));
-  console.warn("[migrate] skipping unreachable database. Deploy continues.");
-  process.exit(0);
+  process.exit(1);
 });
