@@ -16,6 +16,9 @@ import {
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { suggestNextSlot } from "@/lib/next-slot";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { ActionCenter } from "@/components/app/action-center";
+import { SessionCard } from "@/components/app/session-card";
+import { SoftReturnPanel } from "@/components/app/soft-return";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -27,7 +30,7 @@ export function BookingsView() {
   const role = useStudio((s) => s.role);
   const slots = useStudio((s) => s.slots);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
-  const bookSlot = useStudio((s) => s.bookSlot);
+  const bookSlot = useStudio((s) => s.book);
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
@@ -51,6 +54,9 @@ export function BookingsView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
+      {role === "client" ? <ActionCenter /> : null}
+      {role === "client" ? <SoftReturnPanel /> : null}
+      {next ? <SessionCard bookingId={next.id} /> : null}
       {role === "client" ? (
         <Surface glow={next ? "ok" : undefined}>
           <SectionLabel>Ближайшая запись</SectionLabel>
@@ -62,6 +68,9 @@ export function BookingsView() {
               </p>
               <p className="mt-2 text-tiny text-muted-foreground">
                 Неделя · {weekVisits} из {WEEK_GOAL}
+                {hoursToNext !== null && hoursToNext > 0 && hoursToNext < 24
+                  ? ` · через ${Math.round(hoursToNext)} ч`
+                  : ""}
               </p>
             </>
           ) : (
@@ -86,7 +95,7 @@ export function BookingsView() {
 
       {role === "client" && !upcoming.length ? (
         <p className="text-sm text-muted-foreground">
-          Ближайших записей нет. Выберите время на вкладке «Слоты» — после тапа нужно подтверждение.
+          Ближайших записей нет. Выберите время на вкладке «Слоты».
         </p>
       ) : null}
 
@@ -164,7 +173,15 @@ export function BookingsView() {
                         <button
                           type="button"
                           onClick={() => {
+                            const client = clients.find((c) => c.id === booking.clientId);
                             cancelBooking(booking.id, role);
+                            void import("@/lib/notify/hook-booking").then(({ enqueueBookingCancelled }) => {
+                              enqueueBookingCancelled({
+                                telegramId: client?.telegramId,
+                                bookingId: booking.id,
+                                clientId: booking.clientId,
+                              });
+                            });
                             setPendingId(null);
                           }}
                           className="pressable h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
@@ -174,7 +191,7 @@ export function BookingsView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => setPendingId(booking.id)}

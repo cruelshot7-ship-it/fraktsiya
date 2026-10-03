@@ -68,13 +68,13 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
     await sql.query(
       `insert into progression_suggestions
         (id, program_id, client_id, coach_id, based_on_result_ids, explanation, proposed_change, status)
-       values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+       values ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb, $8)`,
       [
         id,
         programId,
         data.clientId,
         data.coachId,
-        suggestion.basedOnResultIds,
+        JSON.stringify(suggestion.basedOnResultIds),
         suggestion.explanation,
         JSON.stringify({ changes: suggestion.proposedChanges }),
         suggestion.status === "pending" ? "pending" : "insufficient_data",
@@ -106,7 +106,10 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
       [data.suggestionId],
     );
     if (!row[0]) return { ok: false as const, reason: "missing" };
-    if (row[0].coach_id !== session.user.id && session.role !== "trainer") {
+    // Only the owning coach may resolve (or platform admin if role set).
+    const isOwner = row[0].coach_id === session.user.id;
+    const isAdmin = session.role === "admin";
+    if (!isOwner && !isAdmin) {
       return { ok: false as const, reason: "forbidden" };
     }
     if (row[0].status !== "pending" && row[0].status !== "insufficient_data") {
