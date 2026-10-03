@@ -63,6 +63,15 @@ export const bookSlotFn = createServerFn({ method: "POST" })
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
 
+    const selfClientId = `tg_${session.user.id}`;
+    let effectiveClientId = data.clientId;
+    if (session.role === "client") {
+      if (data.clientId !== selfClientId && data.clientId !== session.user.id) {
+        return { ok: false, reason: "forbidden" };
+      }
+      effectiveClientId = selfClientId;
+    }
+
     const ownerCoachId = data.ownerCoachId || String(TRAINER_TG_ID);
     if (ownerCoachId !== String(TRAINER_TG_ID)) {
       const { loadStudioState } = await import("@/lib/studio-sync");
@@ -93,7 +102,7 @@ export const bookSlotFn = createServerFn({ method: "POST" })
 
       const prior = await sql.query<{ id: string }>(
         "select id from slot_bookings where slot_id = $1 and client_id = $2 and status <> 'cancelled'",
-        [data.slotId, data.clientId],
+        [data.slotId, effectiveClientId],
       );
       if (prior[0]) {
         await sql.query("rollback");
@@ -110,12 +119,12 @@ export const bookSlotFn = createServerFn({ method: "POST" })
         return { ok: false, reason: "full" };
       }
 
-      const bookingId = `bk_${data.slotId}_${data.clientId}`;
+      const bookingId = `bk_${data.slotId}_${effectiveClientId}`;
       await sql.query(
         `insert into slot_bookings (id, slot_id, client_id, status)
          values ($1, $2, $3, 'confirmed')
          on conflict (slot_id, client_id) do update set status = 'confirmed', updated_at = now()`,
-        [bookingId, data.slotId, data.clientId],
+        [bookingId, data.slotId, effectiveClientId],
       );
 
       await sql.query("commit");
@@ -146,13 +155,14 @@ const ResultInput = z.object({
 
 export type RecordResultResponse =
   | { ok: true; resultId: string; created: boolean }
-  | { ok: false; reason: string };
+  | { ok: false; reason: "no-telegram" | "forbidden" | "booking-missing" | "client-mismatch" | "booking-cancelled" | "no-attendance" | "server-error" | string };
 
 export const recordSessionResultFn = createServerFn({ method: "POST" })
   .validator(ResultInput)
   .handler(async ({ data }): Promise<RecordResultResponse> => {
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
+    if (session.role === "client") return { ok: false, reason: "forbidden" };
 
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
@@ -244,6 +254,7 @@ export const markAttendanceFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<MarkAttendanceResponse> => {
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
+    if (session.role === "client") return { ok: false, reason: "forbidden" };
 
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
