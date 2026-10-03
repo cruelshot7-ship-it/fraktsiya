@@ -4,6 +4,7 @@ import { slotTaken, useStudio } from "@/lib/studio-store";
 import { requestJoin } from "@/lib/studio-sync";
 import { getTelegramInitData } from "@/lib/telegram";
 import { SectionLabel } from "@/components/app/bits";
+import { BrandShaderHero } from "@/components/app/brand-shader-hero";
 import { cn } from "@/lib/utils";
 
 const GOALS = ["Похудеть", "Сила", "Форма"] as const;
@@ -90,8 +91,9 @@ export function OfferLanding({ live }: { live: boolean }) {
   }
 
   return (
-    <div className={cn(!live && "fixed inset-0 z-40 overflow-y-auto bg-background")}>
-      <div className={cn("mx-auto flex w-full max-w-app flex-col", !live && "min-h-dvh px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-8")}>
+    <div className={cn("relative", !live && "fixed inset-0 z-40 overflow-y-auto bg-background")}>
+      {step === "intro" ? <BrandShaderHero /> : null}
+      <div className={cn("relative z-10 mx-auto flex w-full max-w-app flex-col", !live && "min-h-dvh px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-8")}>
         {!live ? (
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-tiny text-primary">Показ</p>
@@ -103,7 +105,7 @@ export function OfferLanding({ live }: { live: boolean }) {
 
         {step === "intro" ? (
           <>
-            <h1 className="font-display text-4xl leading-[0.95] tracking-wide">
+            <h1 className="font-display text-4xl leading-[0.95] tracking-wide text-foreground drop-shadow-sm">
               Первая
               <br />
               бесплатно
