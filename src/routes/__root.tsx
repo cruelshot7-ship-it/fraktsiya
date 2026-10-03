@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         name: "description",
         content: "Ruksha Discipline — запись на тренировки, программа, КБЖУ и дисциплина зала.",
       },
-      { name: "theme-color", content: "#141310" },
+      { name: "theme-color", content: "#15171b" },
       { name: "color-scheme", content: "dark" },
       { name: "application-name", content: APP_NAME },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -37,7 +37,7 @@ export const Route = createRootRoute({
       },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap",
       },
     ],
     scripts: [{ src: "https://telegram.org/js/telegram-web-app.js" }],
