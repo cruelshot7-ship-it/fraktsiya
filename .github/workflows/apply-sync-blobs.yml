@@ -1,0 +1,34 @@
+name: Apply sync blobs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/sync-marks-and-dismissals]
+    paths:
+      - "scripts/ci/**"
+      - ".github/workflows/apply-sync-blobs.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/sync-marks-and-dismissals
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply blobs
+        run: bash scripts/ci/apply-sync-blobs.sh
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/studio-sync.ts src/lib/studio-store.ts package.json
+          if git diff --staged --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git commit -m "fix(sync): apply studio-sync + studio-store merge/push durability"
+          git push origin HEAD:fix/sync-marks-and-dismissals
