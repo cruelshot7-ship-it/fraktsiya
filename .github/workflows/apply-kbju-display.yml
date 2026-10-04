@@ -3,9 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - scripts/ci/nutrition-view.tsx.b64
-      - scripts/ci/program-view.tsx.b64.0
-      - scripts/ci/program-view.tsx.b64.1
+      - scripts/ci/patch-kbju-display.py
       - .github/workflows/apply-kbju-display.yml
   workflow_dispatch:
 permissions:
@@ -17,18 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Decode views
-        run: |
-          python3 << 'PY'
-          import base64
-          from pathlib import Path
-          nut = Path("scripts/ci/nutrition-view.tsx.b64").read_text().strip()
-          Path("src/components/app/nutrition-view.tsx").write_bytes(base64.b64decode(nut))
-          a = Path("scripts/ci/program-view.tsx.b64.0").read_text().strip()
-          b = Path("scripts/ci/program-view.tsx.b64.1").read_text().strip()
-          Path("src/components/app/program-view.tsx").write_bytes(base64.b64decode(a + b))
-          print("decoded ok")
-          PY
+      - run: python3 scripts/ci/patch-kbju-display.py
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
