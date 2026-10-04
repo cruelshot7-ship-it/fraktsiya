@@ -2,41 +2,6 @@ from pathlib import Path
 
 p = Path("src/components/app/program-view.tsx")
 t = p.read_text()
-if "strokeDashoffset={c * (1 - ratio)}" in t:
-    print("already")
-    raise SystemExit(0)
-
-# Replace entire Macro function by markers
-start = t.find("function Macro(")
-if start < 0:
-    raise SystemExit("Macro start missing")
-# find next function after Macro body — RitualTick is before Macro, next after is end of file or export
-end = t.find("\nfunction ", start + 1)
-if end < 0:
-    end = t.find("\nexport ", start + 1)
-if end < 0:
-    # Macro is last function — find closing of file component
-    end = len(t)
-    # walk back to last closing brace of Macro only: from start, count braces
-    pass
-
-# Safer: find from function Macro to the line after its closing `}\n` matching depth
-i = start
-depth = 0
-began = False
-while i < len(t):
-    ch = t[i]
-    if ch == "{":
-        depth += 1
-        began = True
-    elif ch == "}":
-        depth -= 1
-        if began and depth == 0:
-            end = i + 1
-            break
-    i += 1
-else:
-    raise SystemExit("Macro end not found")
 
 new_macro = '''function Macro({
   label,
@@ -80,13 +45,49 @@ new_macro = '''function Macro({
       <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
     </div>
   );
-}'''
+}
+'''
 
-t = t[:start] + new_macro + t[end:]
-t = t.replace(
-    "<SectionLabel>КБЖУ · ваша цель</SectionLabel>",
-    '<SectionLabel>КБЖУ · {t.calories > 0 ? "ваша цель" : "сегодня"}</SectionLabel>',
-    1,
-)
+start = t.find("function Macro(")
+if start < 0:
+    raise SystemExit("Macro missing")
+
+# Prefer removing corrupted duplicate if present
+junk = t.find("const shown = value > 0 ? value : current", start)
+if junk >= 0:
+    end = t.find("  );\n}", junk) + len("  );\n}")
+    t = t[:start] + new_macro + t[end:]
+    print("removed junk duplicate")
+elif "strokeDashoffset={c * (1 - ratio)}" in t and t.count("function Macro(") == 1 and "const shown = value > 0" not in t:
+    print("already clean")
+    raise SystemExit(0)
+else:
+    # replace single Macro by brace-depth from start
+    i = start
+    depth = 0
+    began = False
+    end = None
+    while i < len(t):
+        if t[i] == "{":
+            depth += 1
+            began = True
+        elif t[i] == "}":
+            depth -= 1
+            if began and depth == 0:
+                end = i + 1
+                break
+        i += 1
+    if end is None:
+        raise SystemExit("Macro end missing")
+    t = t[:start] + new_macro + t[end:]
+    print("replaced Macro")
+
+if "const shown = value > 0" in t:
+    raise SystemExit("junk still present")
+if t.count("function Macro(") != 1:
+    raise SystemExit("Macro count != 1")
+if "strokeDashoffset={c * (1 - ratio)}" not in t:
+    raise SystemExit("strokeDashoffset missing")
+
 p.write_text(t)
-print("patched", "strokeDashoffset" in t)
+print("ok")
