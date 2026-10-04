@@ -15,28 +15,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Patch studio-sync balance ownership
         run: |
-          python3 << 'PY'
+          set -e
+          FILE=src/lib/studio-sync.ts
+          if ! grep -q 'sessionsLeft: incomingSelf.sessionsLeft' "$FILE"; then
+            echo "already patched or pattern absent"
+            grep -n 'server-owned\|sessionsLeft' "$FILE" | head -20 || true
+            exit 0
+          fi
+          python3 - <<'PY'
           from pathlib import Path
           p = Path("src/lib/studio-sync.ts")
           t = p.read_text()
-          old = """    streak: incomingSelf.streak ?? mine.streak,
-    sessionsLeft: incomingSelf.sessionsLeft ?? mine.sessionsLeft,
-    ledger: incomingSelf.ledger ?? mine.ledger,
-    healthToken: incomingSelf.healthToken || mine.healthToken || null,
-"""
-          new = """    streak: incomingSelf.streak ?? mine.streak,
-    // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them
-    healthToken: incomingSelf.healthToken || mine.healthToken || null,
-"""
-          if old not in t:
-              if "sessionsLeft: incomingSelf" not in t:
-                  print("already patched")
-                  raise SystemExit(0)
-              raise SystemExit("pattern not found")
-          p.write_text(t.replace(old, new, 1))
-          print("patched ok")
+          lines = t.splitlines(keepends=True)
+          out = []
+          i = 0
+          while i < len(lines):
+              line = lines[i]
+              if "sessionsLeft: incomingSelf.sessionsLeft" in line:
+                  # skip this and optional following ledger line
+                  i += 1
+                  if i < len(lines) and "ledger: incomingSelf.ledger" in lines[i]:
+                      i += 1
+                  # insert comment once after streak line (already in out)
+                  if out and "server-owned" not in "".join(out[-3:]):
+                      out.append("    // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them\n")
+                  continue
+              if "ledger: incomingSelf.ledger" in line and "incomingSelf" in line:
+                  i += 1
+                  continue
+              out.append(line)
+              i += 1
+          p.write_text("".join(out))
+          assert "sessionsLeft: incomingSelf" not in p.read_text()
+          print("patched", p.stat().st_size)
           PY
       - name: Commit and push
         run: |
@@ -44,8 +59,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/lib/studio-sync.ts
           if git diff --staged --quiet; then
-            echo "no changes"
+            echo "no changes to commit"
             exit 0
           fi
-          git commit -m "fix(P0.2): sessionsLeft/ledger server-owned — client push cannot change balance"
-          git push origin HEAD:main
+          git commit -m "fix(P0.2): sessionsLeft/ledger server-owned — client cannot change balance"
+          git push
