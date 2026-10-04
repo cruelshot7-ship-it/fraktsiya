@@ -1,0 +1,27 @@
+name: Vercel production redeploy
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/vercel-redeploy.yml
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::Secret VERCEL_DEPLOY_HOOK is not set."
+            echo "Add it: Vercel → Project ruksha → Settings → Git → Deploy Hooks"
+            echo "Create hook for Production / main, paste URL into GitHub Secret VERCEL_DEPLOY_HOOK"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/vh -w "%{http_code}" -X POST "$HOOK")
+          echo "Deploy hook HTTP $code"
+          cat /tmp/vh || true
+          if [ "$code" != "201" ] && [ "$code" != "200" ]; then
+            exit 1
+          fi
