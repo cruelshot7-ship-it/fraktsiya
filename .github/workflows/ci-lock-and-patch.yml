@@ -1,0 +1,38 @@
+name: CI green patch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/ci-green]
+    paths:
+      - ".github/workflows/ci-lock-and-patch.yml"
+      - "scripts/ci/patch-ci-green.py"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-green
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch progression + MARIA export + db assert
+        run: python3 scripts/ci/patch-ci-green.py
+      - name: Generate package-lock.json
+        run: npm install --package-lock-only --no-audit --no-fund
+      - name: Typecheck
+        run: npm install --no-audit --no-fund && npm run typecheck
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json src/lib/progression/server.ts src/data/studio.ts src/lib/db.ts || true
+          if git diff --staged --quiet; then echo no changes; exit 0; fi
+          git commit -m "fix(ci): package-lock + remaining type/db patches"
+          git push origin HEAD:fix/ci-green
