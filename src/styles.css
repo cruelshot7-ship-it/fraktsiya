@@ -1,36 +1,12 @@
 @import "tailwindcss";
 @import "./styles/ds-schedule.css";
 
+/*
+ * Цвета и шрифты живут в ./styles/ds-schedule.css (дизайн-система).
+ * Здесь только размеры, радиусы, тени и анимации. Не дублировать --color-* и --font-*:
+ * последний @theme перебивает предыдущие.
+ */
 @theme {
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Oswald", ui-sans-serif, system-ui, -apple-system, sans-serif;
-
-  --color-background: #141310;
-  --color-foreground: #ece7dc;
-  --color-card: #1c1a16;
-  --color-card-foreground: #ece7dc;
-  --color-popover: #26241f;
-  --color-popover-foreground: #ece7dc;
-  --color-primary: #b23b2e;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #26241f;
-  --color-secondary-foreground: #ece7dc;
-  --color-muted: #26241f;
-  --color-muted-foreground: #8a8377;
-  --color-accent: #b23b2e;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #b23b2e;
-  --color-border: #332f28;
-  --color-input: #332f28;
-  --color-ring: #b23b2e;
-  --color-ok: #c4b08a;
-  --color-ok-foreground: #141310;
-  --color-ok-dim: rgb(196 176 138 / 0.16);
-  --color-primary-dim: rgb(178 59 46 / 0.16);
-  --color-hairline: #332f28;
-  --color-surface-alt: #26241f;
-  --color-glow: rgb(236 231 220 / 0.06);
-
   --text-3xs: 0.5625rem;
   --text-2xs: 0.625rem;
   --text-tiny: 0.6875rem;
@@ -43,11 +19,11 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 1.75rem;
 
-  --shadow-border: inset 0 1px 0 rgb(236 231 220 / 0.07), 0 0 0 1px rgb(236 231 220 / 0.055), 0 10px 28px rgb(0 0 0 / 0.28);
-  --shadow-border-hover: inset 0 1px 0 rgb(236 231 220 / 0.1), 0 0 0 1px rgb(236 231 220 / 0.1), 0 14px 32px rgb(0 0 0 / 0.34);
-  --shadow-glow-ok: 0 0 0 1px rgb(196 176 138 / 0.24), 0 0 22px rgb(196 176 138 / 0.12);
-  --shadow-glow-alert: 0 0 0 1px rgb(178 59 46 / 0.26), 0 0 22px rgb(178 59 46 / 0.12);
-  --shadow-popover: 0 0 0 1px #332f28, 0 18px 40px rgb(0 0 0 / 0.45);
+  --shadow-border: inset 0 1px 0 rgb(237 239 242 / 0.07), 0 0 0 1px rgb(237 239 242 / 0.055), 0 10px 28px rgb(0 0 0 / 0.28);
+  --shadow-border-hover: inset 0 1px 0 rgb(237 239 242 / 0.1), 0 0 0 1px rgb(237 239 242 / 0.1), 0 14px 32px rgb(0 0 0 / 0.34);
+  --shadow-glow-ok: 0 0 0 1px rgb(69 212 228 / 0.24), 0 0 22px rgb(69 212 228 / 0.12);
+  --shadow-glow-alert: 0 0 0 1px rgb(221 51 42 / 0.26), 0 0 22px rgb(221 51 42 / 0.12);
+  --shadow-popover: 0 0 0 1px #2f343d, 0 18px 40px rgb(0 0 0 / 0.45);
 
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-press: cubic-bezier(0.2, 0, 0, 1);
@@ -121,7 +97,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
 }
@@ -189,12 +165,7 @@
   animation: sheet-in 480ms var(--ease-apple) both;
 }
 
-.ambient-glow {
-  background:
-    radial-gradient(820px 280px at 12% -60px, rgb(196 176 138 / 0.14), transparent 64%),
-    radial-gradient(720px 260px at 108% -40px, rgb(178 59 46 / 0.14), transparent 60%),
-    var(--color-background);
-}
+/* .ambient-glow задан в ds-schedule.css (красный сверху справа, голубой снизу слева) */
 
 .title-in {
   animation: rise-in 560ms var(--ease-apple) both;
@@ -221,7 +192,7 @@
   isolation: isolate;
   border-radius: 1.375rem;
   background:
-    linear-gradient(180deg, rgb(236 231 220 / 0.05), transparent 32%),
+    linear-gradient(180deg, rgb(237 239 242 / 0.05), transparent 32%),
     var(--color-card);
   box-shadow: var(--shadow-border);
   transition: transform 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
@@ -234,7 +205,7 @@
 }
 
 .nav-blur {
-  background: rgb(20 19 16 / 0.88);
+  background: rgb(21 23 27 / 0.88);
   -webkit-backdrop-filter: blur(16px) saturate(1.45);
   backdrop-filter: blur(16px) saturate(1.45);
 }
@@ -244,10 +215,10 @@
 }
 
 .chrome.is-scrolled {
-  background: rgb(20 19 16 / 0.78);
+  background: rgb(21 23 27 / 0.78);
   -webkit-backdrop-filter: blur(18px) saturate(1.35);
   backdrop-filter: blur(18px) saturate(1.35);
-  box-shadow: inset 0 -1px 0 rgb(236 231 220 / 0.08);
+  box-shadow: inset 0 -1px 0 rgb(237 239 242 / 0.08);
 }
 
 .chrome header {
@@ -316,7 +287,7 @@
 
 @media (min-width: 768px) {
   .ambient-glow {
-    box-shadow: 0 0 0 1px rgb(236 231 220 / 0.06), 0 40px 80px rgb(0 0 0 / 0.35);
+    box-shadow: 0 0 0 1px rgb(237 239 242 / 0.06), 0 40px 80px rgb(0 0 0 / 0.35);
   }
 }
 
