@@ -4,7 +4,8 @@ on:
     branches: [main]
     paths:
       - scripts/ci/patch-food-constructor.py
-      - scripts/ci/nutrition-view.tsx.b64
+      - scripts/ci/nutrition-view.tsx.b64.0
+      - scripts/ci/nutrition-view.tsx.b64.1
       - .github/workflows/apply-food-constructor.yml
   workflow_dispatch:
 permissions:
