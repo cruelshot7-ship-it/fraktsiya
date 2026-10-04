@@ -504,32 +504,5 @@ function Macro({
       <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
     </div>
   );
-}: {
-  label: string;
-  value: number;
-  current: number;
-}) {
-  const ratio = value > 0 ? Math.min(1, current / value) : current > 0 ? 1 : 0;
-  const shown = value > 0 ? value : current;
-  const r = 16;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 40 40" className="size-12 -rotate-90">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
-        <circle
-          cx="20"
-          cy="20"
-          r={r}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="3"
-          strokeDasharray={`${c * ratio} ${c}`}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="font-display text-sm tabular-nums">{shown}</span>
-      <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
-    </div>
-  );
 }
+
