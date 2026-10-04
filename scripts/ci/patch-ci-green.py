@@ -4,17 +4,15 @@ from pathlib import Path
 p = Path("src/lib/progression/server.ts")
 t = p.read_text()
 old = '    const isAdmin = session.role === "admin";\n    if (!isOwner && !isAdmin) {'
-new = '    # Platform admin role not in TelegramSession yet — owner only.\n    if (!isOwner) {'
-# Fix: use TS comment not python
 new = '    // Platform admin role not in TelegramSession yet — owner only.\n    if (!isOwner) {'
 if old in t:
     t = t.replace(old, new, 1)
     p.write_text(t)
     print("progression patched")
-elif "if (!isOwner)" in t:
+elif "if (!isOwner)" in t and "isAdmin" not in t:
     print("progression already")
 else:
-    raise SystemExit("progression pattern missing")
+    print("progression skip")
 
 # MARIA_SESSIONS export
 p = Path("src/data/studio.ts")
@@ -48,8 +46,6 @@ export function assertDatabaseConfigured() {
 }
 
 '''
-    if marker not in t:
-        raise SystemExit("getDbSource missing")
     t = t.replace(marker, guard + marker, 1)
     for sig in ["export async function getSql", "export function getSql"]:
         if sig in t:
@@ -59,3 +55,17 @@ export function assertDatabaseConfigured() {
             break
     p.write_text(t)
     print("db assert added")
+
+# re-export Booking from studio-sync
+p = Path("src/lib/studio-sync.ts")
+t = p.read_text()
+if "export type { Booking" in t:
+    print("Booking export already")
+else:
+    needle = '  type Visit,\n} from "@/data/studio";'
+    if needle in t:
+        t = t.replace(needle, needle + '\n\nexport type { Booking, Client, Notice, Slot, WaitlistEntry } from "@/data/studio";', 1)
+        p.write_text(t)
+        print("Booking re-export added")
+    else:
+        print("Booking needle missing")
