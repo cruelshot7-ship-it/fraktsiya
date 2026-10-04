@@ -37,7 +37,7 @@ export function BookingsView() {
     .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`));
   const past = bookings
     .filter((b) => isSlotPast(b.date, b.time))
-    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${b.time}`));
+    .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
   const next = upcoming[0];
   const weekVisits = weekVisitCount(all, me?.id ?? "");
   const hoursToNext = next ? hoursUntilSlot(next.date, next.time) : null;
@@ -74,7 +74,7 @@ export function BookingsView() {
         </Surface>
       ) : null}
 
-      {role === "client" && next && hoursToNext !== null && hoursToNext < 24 && hoursToNext > 0 ? (
+      {role === "client" && next && hoursToNext !== null && hoursToNext > 0 && hoursToNext < 24 ? (
         <Surface glow="ok">
           <SectionLabel>Скоро тренировка</SectionLabel>
           <p className="font-display mt-1 text-xl">{next.time}</p>
