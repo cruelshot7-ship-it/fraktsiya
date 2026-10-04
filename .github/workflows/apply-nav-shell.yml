@@ -5,7 +5,7 @@ on:
   push:
     branches: [fix/nav-shell]
     paths:
-      - "scripts/ci/mini-app.patch"
+      - "scripts/ci/patch-nav-shell.py"
       - ".github/workflows/apply-nav-shell.yml"
 
 permissions:
@@ -19,9 +19,7 @@ jobs:
         with:
           ref: fix/nav-shell
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Apply mini-app patch
-        run: |
-          git apply scripts/ci/mini-app.patch || git apply -3 scripts/ci/mini-app.patch
+      - run: python3 scripts/ci/patch-nav-shell.py
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
