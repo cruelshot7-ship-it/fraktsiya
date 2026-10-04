@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
 import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
+import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import {
   clientCoach,
   coachKey,
@@ -416,6 +417,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
         ? keepCoach(current.coaches ?? [], incoming.coaches)
         : current.coaches ?? [],
     trainerUsername: mine === String(TRAINER_TG_ID) ? incoming.trainerUsername || current.trainerUsername : current.trainerUsername,
+    dismissedSignalIds: unionIds(current.dismissedSignalIds, incoming.dismissedSignalIds),
   });
 }
 
@@ -552,12 +554,14 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...current.bookings.filter((b) => b.clientId !== id),
       ...incoming.bookings.filter((b) => b.clientId === id).map((row) => {
         const prev = current.bookings.find((item) => item.id === row.id);
-        return {
-          ...row,
-          reminded24: row.reminded24 || prev?.reminded24,
-          reminded2: row.reminded2 || prev?.reminded2,
-          confirmed: row.confirmed || prev?.confirmed,
-        };
+        return mergeBookingFlags(
+          {
+            ...row,
+            reminded24: row.reminded24 || prev?.reminded24,
+            reminded2: row.reminded2 || prev?.reminded2,
+          },
+          prev,
+        );
       }),
     ],
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
@@ -576,6 +580,12 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => k.startsWith(`${id}:`))),
     },
     visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([id])),
+    dismissedSignalIds: ownDismissed(
+      current.dismissedSignalIds ?? [],
+      incoming.dismissedSignalIds ?? [],
+      current.notices,
+      id,
+    ),
   };
 }
 
@@ -685,13 +695,13 @@ export async function saveStudioState(payload: StudioPayload) {
         [visit.id, visit.clientId, visit.date, visit.at, visit.waterMl],
       );
     }
-  } catch {
-    /* ignore */
+  } catch (err) {
+    console.error("[studio-save]", err);
   }
   try {
     await maybeDailyBackup(next);
-  } catch {
-    /* the copy must not block a save */
+  } catch (err) {
+    console.error("[studio-save]", err);
   }
 }
 
@@ -890,7 +900,12 @@ export const pushStudio = createServerFn({ method: "POST" })
       next = mergeClientWrite(bound, incoming, session.user.id);
     }
 
-    await saveStudioState(next);
+    try {
+      await saveStudioState(next);
+    } catch (err) {
+      console.error("[studio-save]", err);
+      return { ok: false, reason: "save-failed" };
+    }
     return { ok: true };
   });
 
