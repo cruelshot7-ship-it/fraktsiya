@@ -355,7 +355,7 @@ export function ProgramView() {
       <Surface>
         <SectionLabel>КБЖУ · ваша цель</SectionLabel>
         <div className="mt-3">
-          <ProgressRail value={eaten.calories} max={t.calories} />
+          <ProgressRail value={eaten.calories} max={t.calories > 0 ? t.calories : Math.max(eaten.calories, 1)} />
         </div>
         <div className="mt-4 grid grid-cols-4 gap-2">
           <Macro label="ккал" value={t.calories} current={eaten.calories} />
@@ -364,7 +364,11 @@ export function ProgramView() {
           <Macro label="У" value={t.carbs} current={eaten.carbs} />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Сегодня: {eaten.calories} ккал. Тренер выставил индивидуально.
+          {t.calories > 0
+            ? `Сегодня: ${eaten.calories} из ${t.calories} ккал. Цель от тренера.`
+            : eaten.calories > 0
+              ? `Сегодня: ${eaten.calories} ккал по вашим записям. Цель тренер ещё не задал.`
+              : "Добавьте еду во вкладке «Еда» — цифры появятся здесь."}
         </p>
       </Surface>
 
@@ -467,7 +471,8 @@ function Macro({
   value: number;
   current: number;
 }) {
-  const ratio = Math.min(1, current / value);
+  const ratio = value > 0 ? Math.min(1, current / value) : current > 0 ? 1 : 0;
+  const shown = value > 0 ? value : current;
   const r = 16;
   const c = 2 * Math.PI * r;
   return (
@@ -485,7 +490,7 @@ function Macro({
           strokeLinecap="round"
         />
       </svg>
-      <span className="font-display text-sm tabular-nums">{value}</span>
+      <span className="font-display text-sm tabular-nums">{shown}</span>
       <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
     </div>
   );

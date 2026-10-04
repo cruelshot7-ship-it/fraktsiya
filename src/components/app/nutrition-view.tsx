@@ -52,15 +52,15 @@ export function NutritionView() {
         <SectionLabel>Сегодня · {goal.train ? "тренировка" : "отдых"}</SectionLabel>
         <p className="font-display mt-2 text-3xl tabular-nums">
           {totals.calories}
-          <span className="ml-1 text-base text-muted-foreground">/ {goal.kbju.calories} ккал</span>
+          <span className="ml-1 text-base text-muted-foreground">{goal.kbju.calories > 0 ? `/ ${goal.kbju.calories} ккал` : "ккал сегодня"}</span>
         </p>
         <div className="mt-3">
-          <ProgressRail value={totals.calories} max={goal.kbju.calories} tone={low ? "alert" : "ok"} />
+          <ProgressRail value={totals.calories} max={goal.kbju.calories > 0 ? goal.kbju.calories : Math.max(totals.calories, 1)} tone={low ? "alert" : "ok"} />
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-tiny text-muted-foreground">
-          <span>Б {totals.protein}/{goal.kbju.protein}</span>
-          <span>Ж {totals.fat}/{goal.kbju.fat}</span>
-          <span>У {totals.carbs}/{goal.kbju.carbs}</span>
+          <span>Б {totals.protein}{goal.kbju.protein > 0 ? `/${goal.kbju.protein}` : ""}</span>
+          <span>Ж {totals.fat}{goal.kbju.fat > 0 ? `/${goal.kbju.fat}` : ""}</span>
+          <span>У {totals.carbs}{goal.kbju.carbs > 0 ? `/${goal.kbju.carbs}` : ""}</span>
         </div>
       </Surface>
 
