@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 # --- bits.tsx ---
 p = Path("src/components/app/bits.tsx")
@@ -55,7 +56,6 @@ else:
   );
 }
 
-/** Animated ring: fills as current approaches target (or full when no target). */
 export function KbjuMacroRing({
   label,
   current,
@@ -132,7 +132,6 @@ export function KbjuMacroRing({
   );
 }
 
-/** Four macro rings + rail — shared by Program and Nutrition. */
 export function KbjuMeters({
   eaten,
   target,
@@ -180,28 +179,8 @@ else:
         'import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";',
         1,
     )
-    # also if already mixed
-    t = t.replace(
-        'import { Field, inputClass, KbjuMeters, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";',
-        'import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";',
-        1,
-    )
-    import re
-    # Replace KBJU surface block flexibly
-    m = re.search(
-        r'<Surface>\s*<SectionLabel>КБЖУ[^<]*</SectionLabel>[\s\S]*?</Surface>',
-        t,
-        count=1,
-    )
-    # Python re doesn't have count in search - use search once
-    m = re.search(r'<Surface>\s*<SectionLabel>КБЖУ[\s\S]*?</Surface>', t)
-    if not m:
-        # maybe already KbjuMeters
-        if "KbjuMeters" in t:
-            print("program block already meters")
-        else:
-            raise SystemExit("program KBJU surface missing")
-    else:
+    m = re.search(r"<Surface>\s*<SectionLabel>КБЖУ[\s\S]*?</Surface>", t)
+    if m:
         new_block = '''<Surface>
         <KbjuMeters
           title={`КБЖУ · ${t.calories > 0 ? "ваша цель" : "сегодня"}`}
@@ -217,7 +196,8 @@ else:
         </p>
       </Surface>'''
         t = t[: m.start()] + new_block + t[m.end() :]
-    # remove Macro function
+    elif "KbjuMeters" not in t:
+        raise SystemExit("program KBJU surface missing")
     start = t.find("function Macro(")
     if start >= 0:
         i = start
@@ -252,14 +232,7 @@ else:
         'import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";',
         1,
     )
-    import re
-    m = re.search(
-        r'<Surface glow=\{low \? "alert" : "ok"\}>[\s\S]*?Осталось[\s\S]*?</Surface>|<Surface glow=\{low \? "alert" : "ok"\}>[\s\S]*?Цель КБЖУ[\s\S]*?</Surface>',
-        t,
-    )
-    if not m:
-        # try simpler: first Surface with SectionLabel Сегодня
-        m = re.search(r'<Surface glow=\{low \? "alert" : "ok"\}>[\s\S]*?</Surface>', t)
+    m = re.search(r'<Surface glow=\{low \? "alert" : "ok"\}>[\s\S]*?</Surface>', t)
     if not m:
         raise SystemExit("nutrition surface missing")
     new_s = '''<Surface glow={low ? "alert" : "ok"}>
