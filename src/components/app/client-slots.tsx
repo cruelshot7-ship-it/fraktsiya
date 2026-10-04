@@ -106,9 +106,9 @@ export function ClientSlots() {
               <div
                 key={slot.id}
                 className={cn(
-                  "rounded-xl bg-card p-4 shadow-border",
-                  mine && "ring-1 ring-ok/40",
-                  past && "opacity-60",
+                  "ds-slot bg-card p-4",
+                  mine && "is-mine",
+                  past && "is-past",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -125,7 +125,7 @@ export function ClientSlots() {
                   ) : left > 0 && !frozen ? (
                     <button
                       type="button"
-                      className="pressable h-10 rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground"
+                      className="pressable ds-cta"
                       disabled={pendingId === slot.id}
                       onClick={() => {
                         if ((me.sessionsLeft ?? 0) <= 0) {
@@ -171,7 +171,7 @@ export function ClientSlots() {
                   ) : left <= 0 && !waiting ? (
                     <button
                       type="button"
-                      className="pressable h-10 rounded-xl bg-secondary px-3 text-xs"
+                      className="pressable ds-cta-ghost"
                       onClick={() => {
                         joinWaitlist(slot.id);
                         showToast("В листе ожидания.");
@@ -228,14 +228,11 @@ function WeekStrip({
               key={d.key}
               type="button"
               onClick={() => onSelect(d.key)}
-              className={cn(
-                "pressable flex flex-col items-center rounded-lg py-2 text-2xs",
-                active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
-              )}
+              className={cn("pressable ds-day", active && "is-active")}
             >
               <span>{d.dow}</span>
               <span className="mt-0.5 font-medium tabular-nums">{d.label}</span>
-              {d.free > 0 ? <span className="mt-0.5 size-1 rounded-full bg-ok" /> : <span className="mt-0.5 size-1" />}
+              {d.free > 0 ? <span className="ds-dot" /> : <span className="mt-0.5 size-1" />}
             </button>
           );
         })}
