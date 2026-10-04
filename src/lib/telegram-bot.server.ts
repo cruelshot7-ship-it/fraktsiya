@@ -96,7 +96,7 @@ export async function registerJoin(
   if (!coachId) {
     await tg("sendMessage", {
       chat_id: user.id,
-      text: "Нужна личная ссылка тренера. Общая ссылка бота заявку не создаёт.",
+      text: "Не удалось определить тренера. Откройте зал из меню бота и отправьте заявку ещё раз.",
     });
     return { ok: false, already: false };
   }

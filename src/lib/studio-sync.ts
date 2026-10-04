@@ -228,12 +228,14 @@ function coachRow(payload: StudioPayload, user: { id: string; username: string |
 }
 
 export function coachFromStart(start: string, payload: StudioPayload) {
-  const match = /^c_([a-z0-9]+)$/i.exec((start ?? "").trim());
-  if (!match) return "";
+  const raw = (start ?? "").trim();
+  const match = /^c_([a-z0-9]+)$/i.exec(raw);
+  // No deep-link (opened Mini App / bot without c_CODE) → main trainer (Ruksha).
+  if (!match) return String(TRAINER_TG_ID);
   const token = match[1];
   if (token === String(TRAINER_TG_ID)) return String(TRAINER_TG_ID);
   const coach = (payload.coaches ?? []).find((c) => c.code === token || c.telegramId === token);
-  if (!coach?.telegramId) return "";
+  if (!coach?.telegramId) return String(TRAINER_TG_ID);
   const phase = coachPhase(coach);
   if (phase !== "trial" && phase !== "paid") return "";
   return coach.telegramId;
