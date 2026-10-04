@@ -27,7 +27,7 @@ import {
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { mapsUrl } from "@/lib/studio-repeat";
-import { Field, inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Check, Flame } from "lucide-react";
 
@@ -353,16 +353,11 @@ export function ProgramView() {
       ) : null}
 
       <Surface>
-        <SectionLabel>КБЖУ · {t.calories > 0 ? "ваша цель" : "сегодня"}</SectionLabel>
-        <div className="mt-3">
-          <ProgressRail value={eaten.calories} max={t.calories > 0 ? t.calories : Math.max(eaten.calories, 1)} />
-        </div>
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <Macro label="ккал" value={t.calories} current={eaten.calories} />
-          <Macro label="Б" value={t.protein} current={eaten.protein} />
-          <Macro label="Ж" value={t.fat} current={eaten.fat} />
-          <Macro label="У" value={t.carbs} current={eaten.carbs} />
-        </div>
+        <KbjuMeters
+          title={`КБЖУ · ${t.calories > 0 ? "ваша цель" : "сегодня"}`}
+          eaten={eaten}
+          target={t}
+        />
         <p className="mt-3 text-xs text-muted-foreground">
           {t.calories > 0
             ? `Сегодня: ${eaten.calories} из ${t.calories} ккал. Цель от тренера.`
@@ -462,11 +457,7 @@ function RitualTick({ on, label }: { on: boolean; label: string }) {
   );
 }
 
-function Macro({
-  label,
-  value,
-  current,
-}: {
+: {
   label: string;
   value: number;
   current: number;
