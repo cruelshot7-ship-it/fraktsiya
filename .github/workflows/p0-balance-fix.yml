@@ -1,0 +1,51 @@
+name: P0 balance fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/p0-balance-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch studio-sync balance ownership
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+          p = Path("src/lib/studio-sync.ts")
+          t = p.read_text()
+          old = """    streak: incomingSelf.streak ?? mine.streak,
+    sessionsLeft: incomingSelf.sessionsLeft ?? mine.sessionsLeft,
+    ledger: incomingSelf.ledger ?? mine.ledger,
+    healthToken: incomingSelf.healthToken || mine.healthToken || null,
+"""
+          new = """    streak: incomingSelf.streak ?? mine.streak,
+    // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them
+    healthToken: incomingSelf.healthToken || mine.healthToken || null,
+"""
+          if old not in t:
+              if "sessionsLeft: incomingSelf" not in t:
+                  print("already patched")
+                  raise SystemExit(0)
+              raise SystemExit("pattern not found")
+          p.write_text(t.replace(old, new, 1))
+          print("patched ok")
+          PY
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/studio-sync.ts
+          if git diff --staged --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git commit -m "fix(P0.2): sessionsLeft/ledger server-owned — client push cannot change balance"
+          git push origin HEAD:main
