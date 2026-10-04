@@ -55,7 +55,7 @@ export function NutritionView() {
   const showToast = useStudio((s) => s.showToast);
   const client = activeClient({ clients, activeClientId });
   const [query, setQuery] = useState("");
-  const [slot, setSlot] = useState<Slot>(() => hourSlot(new Date().getHours()));
+  const [slot, setSlot] = useState<Slot>("all");
   const [customOpen, setCustomOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [name, setName] = useState("");
@@ -80,7 +80,10 @@ export function NutritionView() {
 
   const suggestions = useMemo(() => {
     let pool = MEALS;
-    if (slot !== "all") pool = pool.filter((m) => (m.kind ?? "snack") === slot);
+    if (slot !== "all") {
+      const tagged = pool.some((m) => m.kind);
+      if (tagged) pool = pool.filter((m) => (m.kind ?? slot) === slot);
+    }
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       pool = pool.filter((m) => m.name.toLowerCase().includes(q));
