@@ -23,7 +23,7 @@ export function TodayView() {
           </p>
         </div>
         <ActionCenter />
-        <BookingsView compact />
+        <BookingsView />
       </div>
     );
   }

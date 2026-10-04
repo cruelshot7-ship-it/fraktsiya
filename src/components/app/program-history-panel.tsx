@@ -21,7 +21,7 @@ export function ProgramHistoryPanel() {
           n.title.toLowerCase().includes("прогресс") ||
           n.title.toLowerCase().includes("решени") ||
           n.kind === "reschedule" ||
-          n.kind === "progression"),
+          n.kind === "alert"),
     )
     .map((n) => ({
       id: n.id,

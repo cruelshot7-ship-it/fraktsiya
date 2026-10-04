@@ -25,7 +25,7 @@ export function DecisionBanner() {
         !dismissed.includes(n.id) &&
         (n.kind === "book" ||
           n.kind === "reschedule" ||
-          n.kind === "progression" ||
+          n.kind === "alert" ||
           n.title.toLowerCase().includes("програм") ||
           n.title.toLowerCase().includes("прогресс") ||
           n.title.toLowerCase().includes("план") ||

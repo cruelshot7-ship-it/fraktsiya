@@ -55,7 +55,7 @@ export function ClientSlots() {
   const end = addDays(start, 6);
 
   if (!me) {
-    return <EmptyHint title="Нет профиля" body="Тренер добавит вас в зал." />;
+    return <EmptyHint>Нет профиля. Тренер добавит вас в зал.</EmptyHint>;
   }
 
   const daySlots = slots
