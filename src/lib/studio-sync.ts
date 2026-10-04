@@ -542,8 +542,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     weightHistory: incomingSelf.weightHistory?.length ? incomingSelf.weightHistory : mine.weightHistory,
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
-    sessionsLeft: incomingSelf.sessionsLeft ?? mine.sessionsLeft,
-    ledger: incomingSelf.ledger ?? mine.ledger,
+    // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them
     healthToken: incomingSelf.healthToken || mine.healthToken || null,
   };
   return {
