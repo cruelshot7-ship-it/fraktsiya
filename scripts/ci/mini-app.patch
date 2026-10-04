@@ -1,0 +1,142 @@
+diff --git a/src/components/app/mini-app.tsx b/src/components/app/mini-app.tsx
+index 9f2cf79..d1d3e53 100644
+--- a/src/components/app/mini-app.tsx
++++ b/src/components/app/mini-app.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useMemo, useRef, useState } from "react";
+-import { Bell, CalendarDays, ClipboardList, LayoutGrid, MessageCircle, Sparkles, Users } from "lucide-react";
++import { Bell, CalendarDays, ClipboardList, LayoutGrid, MessageCircle, Sparkles, Users, Utensils } from "lucide-react";
+ import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
+ import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
+ import { Toast } from "@/components/app/bits";
+@@ -8,6 +8,7 @@ import { HapticLayer } from "@/components/app/haptic-layer";
+ import { TodayView } from "@/components/app/today-view";
+ import { ScheduleView } from "@/components/app/schedule-view";
+ import { MoreView } from "@/components/app/more-view";
++import { NutritionView } from "@/components/app/nutrition-view";
+ import { ProgramView } from "@/components/app/program-view";
+ import { ClientSheet, ClientsView } from "@/components/app/clients-view";
+ import { CsvImportPanel } from "@/components/app/csv-import-panel";
+@@ -24,14 +25,17 @@ import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
+ import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
+ import { ProgramCycleExtras } from "@/components/app/program-cycle-extras";
+ 
+-const CLIENT_TABS: { id: TabId; label: string }[] = [
+-  { id: "today", label: "Сегодня" },
+-  { id: "schedule", label: "Расписание" },
+-  { id: "program", label: "Программа" },
+-  { id: "more", label: "Ещё" },
++type NavItem = { id: TabId; label: string; icon: typeof Users };
++
++const CLIENT_NAV: NavItem[] = [
++  { id: "today", label: "Сегодня", icon: Sparkles },
++  { id: "schedule", label: "Запись", icon: CalendarDays },
++  { id: "program", label: "Программа", icon: ClipboardList },
++  { id: "food", label: "Еда", icon: Utensils },
++  { id: "more", label: "Ещё", icon: LayoutGrid },
+ ];
+ 
+-const TRAINER_NAV: { id: TabId; label: string; icon: typeof Users }[] = [
++const TRAINER_NAV: NavItem[] = [
+   { id: "today", label: "Сегодня", icon: Sparkles },
+   { id: "clients", label: "Клиенты", icon: Users },
+   { id: "schedule", label: "Расписание", icon: CalendarDays },
+@@ -52,6 +56,12 @@ const TITLES: Partial<Record<TabId, string>> = {
+   signals: "Сигналы",
+ };
+ 
++function navActive(id: TabId, tab: TabId) {
++  if (id === "schedule") return tab === "schedule" || tab === "slots" || tab === "bookings";
++  if (id === "more") return tab === "more" || tab === "form" || tab === "hall";
++  return tab === id;
++}
++
+ export function MiniApp() {
+   const hydrate = useStudio((s) => s.hydrate);
+   const refreshCloud = useStudio((s) => s.refreshCloud);
+@@ -80,7 +90,7 @@ export function MiniApp() {
+ 
+   useEffect(() => {
+     if (role === "trainer") return;
+-    if (getStartParam().toLowerCase().startsWith("m_")) setTab("more" as TabId);
++    if (getStartParam().toLowerCase().startsWith("m_")) setTab("hall" as TabId);
+   }, [role, setTab]);
+ 
+   useEffect(() => {
+@@ -132,6 +142,8 @@ export function MiniApp() {
+     .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
+   const soon = nextMine ? hoursUntilSlot(nextMine.date, nextMine.time) : null;
+ 
++  const showNav = role === "trainer" || (!inviteBlocked && !sheetClientId && !guestPreview);
++  const navItems = role === "trainer" ? TRAINER_NAV : CLIENT_NAV;
+ 
+   const title = useMemo(() => {
+     if (role === "trainer") return TITLES[tab] ?? "Сегодня";
+@@ -207,37 +219,6 @@ export function MiniApp() {
+               </>
+               )}
+             </>
+           )}
+         </header>
+-
+-        {role === "client" && !inviteBlocked ? (
+-          <div className="no-scrollbar flex gap-1 overflow-x-auto px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]">
+-            {CLIENT_TABS.map((item) => {
+-              const active =
+-                tab === item.id ||
+-                (item.id === "schedule" && (tab === "slots" || tab === "bookings")) ||
+-                (item.id === "more" && (tab === "food" || tab === "form" || tab === "hall"));
+-              return (
+-                <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
+-                    "min-h-11 shrink-0 border-b-2 px-3 py-2.5 text-center text-sm font-medium leading-tight transition-[color,border-color,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+-                    active ? "border-primary bg-primary/10 text-foreground" : "border-hairline text-muted-foreground",
+-                  )} aria-current={active ? "page" : undefined}>
+-                  {item.label}
+-                </button>
+-              );
+-            })}
+-          </div>
+-        ) : null}
+         </div>
+         )}
+ 
+         <main ref={scroller} onScroll={readScroll} className={cn(
+             "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
+-            role === "trainer" ? "pb-24" : "pb-10",
++            showNav ? "pb-24" : "pb-10",
+           )}>
+           <div key={`${role}-${tab}`} className="pt-4">
+             {inviteBlocked && role === "client" ? (
+@@ -257,7 +238,10 @@ export function MiniApp() {
+                 ) : null}
+               </>
+             ) : null}
+-            {tab === "more" || tab === "food" || tab === "form" || tab === "hall" ? <MoreView /> : null}
++            {tab === "food" ? <NutritionView /> : null}
++            {tab === "more" || tab === "form" || tab === "hall" ? (
++              <MoreView initial={tab === "hall" ? "hall" : "form"} />
++            ) : null}
+             {tab === "clients" ? (
+               <div className="space-y-4">
+                 <CsvImportPanel />
+@@ -272,16 +256,14 @@ export function MiniApp() {
+         </main>
+ 
+         {canScroll && progress < 0.02 && !sheetClientId && !guestPreview ? (
+-          <p className={cn("scroll-hint", role === "trainer" ? "bottom-20" : "bottom-3")}>ниже</p>
++          <p className={cn("scroll-hint", showNav ? "bottom-20" : "bottom-3")}>ниже</p>
+         ) : null}
+ 
+-        {role === "trainer" ? (
++        {showNav ? (
+           <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
+             <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))]">
+-              {TRAINER_NAV.map((item) => {
+-                const active =
+-                  tab === item.id ||
+-                  (item.id === "schedule" && (tab === "slots" || tab === "bookings"));
++              {navItems.map((item) => {
++                const active = navActive(item.id, tab);
+                 const Icon = item.icon;
+                 const badge = item.id === "signals" ? trainerBadge : 0;
+                 return (

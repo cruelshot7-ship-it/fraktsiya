@@ -1,21 +1,26 @@
-import { useState } from "react";
-import { NutritionView } from "@/components/app/nutrition-view";
+import { useEffect, useState } from "react";
 import { FormView } from "@/components/app/form-view";
 import { HallView } from "@/components/app/hall-view";
 import { cn } from "@/lib/utils";
 
+type Sub = "form" | "hall";
+
 /**
- * Блок F · Ещё (клиент): Еда / Форма / Зал
+ * Блок F · Ещё (клиент): Форма / Зал
+ * Еда вынесена в отдельную вкладку (NutritionView в mini-app).
  */
-export function MoreView() {
-  const [sub, setSub] = useState<"food" | "form" | "hall">("food");
+export function MoreView({ initial }: { initial?: Sub }) {
+  const [sub, setSub] = useState<Sub>(initial ?? "form");
+
+  useEffect(() => {
+    if (initial) setSub(initial);
+  }, [initial]);
 
   return (
     <div className="space-y-3">
       <div className="flex gap-1 rounded-xl bg-secondary/80 p-1">
         {(
           [
-            ["food", "Еда"],
             ["form", "Форма"],
             ["hall", "Зал"],
           ] as const
@@ -33,7 +38,6 @@ export function MoreView() {
           </button>
         ))}
       </div>
-      {sub === "food" ? <NutritionView /> : null}
       {sub === "form" ? <FormView /> : null}
       {sub === "hall" ? <HallView /> : null}
     </div>
