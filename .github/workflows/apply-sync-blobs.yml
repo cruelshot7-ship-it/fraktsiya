@@ -1,11 +1,12 @@
-name: Apply sync blobs
+name: Apply sync patches
 
 on:
   workflow_dispatch:
   push:
     branches: [fix/sync-marks-and-dismissals]
     paths:
-      - "scripts/ci/**"
+      - "scripts/ci/patch-sync.py"
+      - "scripts/ci/patch-store.py"
       - ".github/workflows/apply-sync-blobs.yml"
 
 permissions:
@@ -19,8 +20,10 @@ jobs:
         with:
           ref: fix/sync-marks-and-dismissals
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Apply blobs
-        run: bash scripts/ci/apply-sync-blobs.sh
+      - name: Patch sync + store + package.json
+        run: |
+          python3 scripts/ci/patch-sync.py
+          python3 scripts/ci/patch-store.py
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
@@ -30,5 +33,5 @@ jobs:
             echo "no changes"
             exit 0
           fi
-          git commit -m "fix(sync): apply studio-sync + studio-store merge/push durability"
+          git commit -m "fix(sync): merge flags, dismissals, durable client cloud merge"
           git push origin HEAD:fix/sync-marks-and-dismissals
