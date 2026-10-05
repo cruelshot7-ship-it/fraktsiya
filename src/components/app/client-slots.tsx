@@ -127,7 +127,7 @@ export function ClientSlots() {
                   ) : past ? (
                     <span className="text-xs text-muted-foreground">Прошло</span>
                   ) : left > 0 && !frozen ? (
-                    {confirmId === slot.id ? (
+                    confirmId === slot.id ? (
                       <div className="flex flex-col items-end gap-1.5">
                         <p className="text-2xs text-muted-foreground">−1 с баланса · {slot.time}</p>
                         <div className="flex gap-1.5">
@@ -199,7 +199,7 @@ export function ClientSlots() {
                       >
                         {(me.sessionsLeft ?? 0) <= 0 ? "Нет занятий" : "Записаться"}
                       </button>
-                    )}
+                    )
                   ) : left <= 0 && !waiting ? (
                     <button
                       type="button"
