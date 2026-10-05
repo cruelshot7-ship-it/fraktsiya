@@ -900,7 +900,6 @@ export const pushStudio = createServerFn({ method: "POST" })
       }
       next = mergeClientWrite(bound, incoming, session.user.id);
     }
-
     try {
       await saveStudioState(next);
     } catch (err) {
