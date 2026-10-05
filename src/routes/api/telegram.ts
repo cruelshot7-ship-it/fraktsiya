@@ -3,12 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/telegram")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        const { ensureBotHook } = await import("@/lib/telegram-bot.server");
-        const origin = new URL(request.url).origin;
-        const ok = await ensureBotHook(origin.includes("localhost") ? "https://ruksha.vercel.app" : origin);
-        return Response.json({ ok, hook: "set" });
-      },
+      GET: async () => {
+  const { ensureBotHook } = await import("@/lib/telegram-bot.server");
+  const ok = await ensureBotHook();
+  return Response.json({ ok, hook: "set" });
+},
       POST: async ({ request }) => {
         const { env } = await import("@/lib/env.server");
         const { handleTelegramUpdate, webhookSecret } = await import("@/lib/telegram-bot.server");
