@@ -388,27 +388,39 @@ export function ClientsView() {
                 >
                   Карточка клиента
                 </button>
-                <button
-                  type="button"
-                  disabled={!next}
-                  className={cn(
-                    "pressable flex h-11 items-center justify-center rounded-lg text-sm font-medium",
-                    next ? "bg-secondary text-foreground" : "bg-secondary/50 text-muted-foreground",
-                  )}
-                  onClick={() => {
-                    if (!next) return;
-                    cancelBooking(next.id, "trainer");
-                    showToast(
-                      `Отменено · ${next.date === today ? "сегодня" : formatDayMonth(next.date)} ${next.time} · ${shortName(client)}`,
+                {(() => {
+                  const future = bookings
+                    .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
+                    .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`));
+                  if (!future.length) {
+                    return (
+                      <button
+                        type="button"
+                        disabled
+                        className="pressable flex h-11 items-center justify-center rounded-lg bg-secondary/50 text-sm font-medium text-muted-foreground"
+                      >
+                        Нет ближайшего слота
+                      </button>
                     );
-                    setActionClientId(null);
-                    setConfirmRemove(false);
-                  }}
-                >
-                  {next
-                    ? `Отменить слот · ${next.date === today ? "сегодня" : formatDayMonth(next.date)} ${next.time}`
-                    : "Нет ближайшего слота"}
-                </button>
+                  }
+                  return future.slice(0, 4).map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      className="pressable flex h-11 items-center justify-center rounded-lg bg-secondary text-sm font-medium text-foreground"
+                      onClick={() => {
+                        cancelBooking(row.id, "trainer");
+                        showToast(
+                          `Отменено · ${row.date === today ? "сегодня" : formatDayMonth(row.date)} ${row.time} · ${shortName(client)}`,
+                        );
+                        setActionClientId(null);
+                        setConfirmRemove(false);
+                      }}
+                    >
+                      Отменить слот · {row.date === today ? "сегодня" : formatDayMonth(row.date)} {row.time}
+                    </button>
+                  ));
+                })()}
                 {!confirmRemove ? (
                   <button
                     type="button"

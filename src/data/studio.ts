@@ -952,7 +952,9 @@ export function daysAgoPhrase(n: number) {
 }
 
 export function shortName(client: Pick<Client, "firstName" | "lastName">) {
-  return `${client.firstName} ${client.lastName.charAt(0)}.`;
+  const last = (client.lastName ?? "").trim();
+  if (!last) return client.firstName;
+  return `${client.firstName} ${last.charAt(0)}.`;
 }
 
 export function hoursAgoIso(hours: number) {
@@ -1236,7 +1238,9 @@ export function clientFlag(
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
   const target = dayKbju(client, today, bookings).kbju;
   const lowCal = eaten.calories > 0 && target.calories > 0 && eaten.calories < target.calories * 0.72;
-  const noReport = daysSinceReport >= 3;
+  const hasReport = Boolean(client.lastReportAt);
+  const noReport = hasReport && daysSinceReport >= 3;
+  const neverReported = !hasReport;
   const lateOften = (client.lateCancels ?? 0) >= 2;
   const lowPack = (client.sessionsLeft ?? 0) <= 2;
   const frozen = isFrozen(client, today);
@@ -1244,14 +1248,18 @@ export function clientFlag(
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
   const todayTrain = client.trainDays.includes(dowIndex(today));
   const todayOn = Boolean(todayBook || todayTrain);
-  const attention = noReport || lowCal || lateOften || lowPack || frozen || (expiring !== null && expiring <= 7);
+  const attention =
+    noReport || neverReported || lowCal || lateOften || lowPack || frozen || (expiring !== null && expiring <= 7);
   let badge: string | null = null;
   let tone: ClientFlag["tone"] = "none";
   if (frozen) {
     badge = `заморозка до ${formatDayMonth(client.frozenUntil!)}`;
     tone = "alert";
-  } else if (noReport) {
+  } else if (noReport && daysSinceReport <= 60) {
     badge = `нет отчёта ${daysSinceReport} ${daysRu(daysSinceReport)}`;
+    tone = "alert";
+  } else if (noReport || neverReported) {
+    badge = "нет отчёта";
     tone = "alert";
   } else if (lateOften) {
     badge = "поздние отмены";
