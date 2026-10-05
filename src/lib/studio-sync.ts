@@ -742,8 +742,7 @@ export const pullStudio = createServerFn({ method: "POST" })
       const wantPhone = digitsPhone(data.phone);
       const byPhone =
         wantPhone.length >= 10
-          ? payload.clients.find((c) => digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
-          : undefined;
+                    ? payload.clients.find((c) => !c.telegramId && digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
       const match = byName ?? byPhone;
       if (!byId && match) {
         payload = {
