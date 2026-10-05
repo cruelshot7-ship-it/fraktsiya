@@ -737,8 +737,7 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byId = payload.clients.some((c) => c.telegramId === session.user.id);
       const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
             const byName = uname
-                ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
- : undefined;
+              ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname) :undefined;
       const wantPhone = digitsPhone(data.phone);
       const byPhone =
         wantPhone.length >= 10
