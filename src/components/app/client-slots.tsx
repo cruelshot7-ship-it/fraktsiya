@@ -51,6 +51,7 @@ export function ClientSlots() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const me = activeClient({ clients, activeClientId });
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const { start, days } = useWeekDays();
   const end = addDays(start, 6);
 
@@ -107,8 +108,11 @@ export function ClientSlots() {
                 key={slot.id}
                 className={cn(
                   "ds-slot bg-card p-4",
-                  mine && "is-mine",
+                  mine && "is-mine ring-1 ring-ok/40",
+                  !mine && !past && left > 0 && "ring-1 ring-ok/20",
+                  !mine && !past && left <= 0 && "opacity-90",
                   past && "is-past",
+                  confirmId === slot.id && "ring-1 ring-primary/50",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -123,51 +127,79 @@ export function ClientSlots() {
                   ) : past ? (
                     <span className="text-xs text-muted-foreground">Прошло</span>
                   ) : left > 0 && !frozen ? (
-                    <button
-                      type="button"
-                      className="pressable ds-cta"
-                      disabled={pendingId === slot.id}
-                      onClick={() => {
-                        if ((me.sessionsLeft ?? 0) <= 0) {
-                          showToast("На балансе нет занятий. Напишите тренеру.");
-                          return;
-                        }
-                        const overlap = clientBookingsConflict(
-                          bookings
-                            .filter((b) => b.clientId === me.id && !b.noShow)
-                            .map((b) => ({
-                              date: b.date,
-                              time: b.time,
-                              durationMin: b.duration || 60,
-                            })),
-                          {
-                            date: slot.date,
-                            time: slot.time,
-                            durationMin: slot.duration || 60,
-                          },
-                        );
-                        if (overlap) {
-                          showToast("У вас уже есть занятие в это время.");
-                          return;
-                        }
-                        setPendingId(slot.id);
-                        const ok = book(slot.id);
-                        setPendingId(null);
-                        if (ok) {
-                          enqueueBookingConfirmed({
-                            telegramId: me.telegramId,
-                            bookingId: `local_${slot.id}_${me.id}`,
-                            clientId: me.id,
-                            date: slot.date,
-                            time: slot.time,
-                          });
-                          tryFlushPending();
-                          showToast("Запись создана.");
-                        }
-                      }}
-                    >
-                      {(me.sessionsLeft ?? 0) <= 0 ? "Нет занятий" : "Записаться"}
-                    </button>
+                    {confirmId === slot.id ? (
+                      <div className="flex flex-col items-end gap-1.5">
+                        <p className="text-2xs text-muted-foreground">−1 с баланса · {slot.time}</p>
+                        <div className="flex gap-1.5">
+                          <button type="button" className="pressable rounded-lg bg-secondary px-2.5 py-1.5 text-xs" onClick={() => setConfirmId(null)}>
+                            Отмена
+                          </button>
+                          <button
+                            type="button"
+                            className="pressable ds-cta"
+                            disabled={pendingId === slot.id}
+                            onClick={() => {
+                              if ((me.sessionsLeft ?? 0) <= 0) {
+                                showToast("На балансе нет занятий. Напишите тренеру.");
+                                setConfirmId(null);
+                                return;
+                              }
+                              const overlap = clientBookingsConflict(
+                                bookings
+                                  .filter((b) => b.clientId === me.id && !b.noShow)
+                                  .map((b) => ({
+                                    date: b.date,
+                                    time: b.time,
+                                    durationMin: b.duration || 60,
+                                  })),
+                                {
+                                  date: slot.date,
+                                  time: slot.time,
+                                  durationMin: slot.duration || 60,
+                                },
+                              );
+                              if (overlap) {
+                                showToast("У вас уже есть занятие в это время.");
+                                setConfirmId(null);
+                                return;
+                              }
+                              setPendingId(slot.id);
+                              const ok = book(slot.id);
+                              setPendingId(null);
+                              setConfirmId(null);
+                              if (ok) {
+                                enqueueBookingConfirmed({
+                                  telegramId: me.telegramId,
+                                  bookingId: `local_${slot.id}_${me.id}`,
+                                  clientId: me.id,
+                                  date: slot.date,
+                                  time: slot.time,
+                                });
+                                tryFlushPending();
+                                showToast(`Записано · ${slot.time} · −1 занятие`);
+                              }
+                            }}
+                          >
+                            Подтвердить
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pressable ds-cta"
+                        disabled={pendingId === slot.id}
+                        onClick={() => {
+                          if ((me.sessionsLeft ?? 0) <= 0) {
+                            showToast("На балансе нет занятий. Напишите тренеру.");
+                            return;
+                          }
+                          setConfirmId(slot.id);
+                        }}
+                      >
+                        {(me.sessionsLeft ?? 0) <= 0 ? "Нет занятий" : "Записаться"}
+                      </button>
+                    )}
                   ) : left <= 0 && !waiting ? (
                     <button
                       type="button"
