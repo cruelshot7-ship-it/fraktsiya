@@ -737,12 +737,12 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byId = payload.clients.some((c) => c.telegramId === session.user.id);
       const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
             const byName = uname
-                ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
-        : undefined;
+                        ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
+: undefined;
       const wantPhone = digitsPhone(data.phone);
       const byPhone =
         wantPhone.length >= 10
-                              ? payload.clients.find((c) => !c.telegramId && digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
+                                        ? payload.clients.find((c) => !c.telegramId && digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
       const match = byName ?? byPhone;
       if (!byId && match) {
         payload = {
@@ -887,8 +887,7 @@ export const pushStudio = createServerFn({ method: "POST" })
       let bound = current;
       if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
                 const byName = current.clients.find(
-                    (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
-        );
+                              (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
         if (byName) {
           bound = {
             ...current,
