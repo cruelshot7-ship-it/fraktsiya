@@ -141,10 +141,16 @@ export function SignalsView() {
             <SignalCard
               key={item.id}
               item={item}
-              onOpen={() => openClientSheet(item.clientId)}
+              onOpen={() => {
+                if (item.clientId) openClientSheet(item.clientId);
+                if (item.kind === "book" || item.kind === "cancel" || item.kind === "checkin") {
+                  const row = bookings.find((b) => b.clientId === item.clientId && !b.noShow);
+                  if (row) selectDay(row.date);
+                }
+              }}
               onDismiss={() => dismissSignal(item.id)}
               onOffer={
-                item.kind === "cancel"
+                item.kind === "cancel" || item.kind === "book"
                   ? () => {
                       const next = bookings.find((b) => b.clientId === item.clientId);
                       if (next) selectDay(next.date);
@@ -218,7 +224,7 @@ function SignalCard({
       </div>
       {onOffer ? (
         <button type="button" onClick={onOffer} className="pressable mt-3 h-10 w-full rounded-lg bg-secondary text-xs">
-          Предложить другой слот
+          {item.kind === "book" ? "К расписанию" : "Предложить другой слот"}
         </button>
       ) : null}
     </div>
