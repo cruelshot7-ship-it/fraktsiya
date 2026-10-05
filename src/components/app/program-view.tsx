@@ -457,43 +457,5 @@ function RitualTick({ on, label }: { on: boolean; label: string }) {
   );
 }
 
-: {
-  label: string;
-  value: number;
-  current: number;
-}) {
-  // value = trainer target; current = logged today.
-  // Ring fills current/target; if no target, ring is full when current > 0.
-  const safeCurrent = Number.isFinite(current) ? Math.max(0, current) : 0;
-  const safeTarget = Number.isFinite(value) ? Math.max(0, value) : 0;
-  const max = safeTarget > 0 ? safeTarget : Math.max(safeCurrent, 1);
-  const ratio = Math.min(1, Math.max(0, safeCurrent / max));
-  const r = 16;
-  const c = 2 * Math.PI * r;
-  const display = Math.round(safeCurrent);
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 40 40" className="size-12 -rotate-90" aria-hidden>
-        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
-        <circle
-          cx="20"
-          cy="20"
-          r={r}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="3"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - ratio)}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 400ms ease" }}
-        />
-      </svg>
-      <span className="font-display text-sm tabular-nums leading-none">{display}</span>
-      {safeTarget > 0 ? (
-        <span className="text-3xs tabular-nums text-muted-foreground">/{Math.round(safeTarget)}</span>
-      ) : null}
-      <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
-    </div>
-  );
-}
 
+  
