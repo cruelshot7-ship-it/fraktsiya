@@ -1,0 +1,27 @@
+name: Patch E signals
+on:
+  push:
+    branches: [feat/signals-nav-e]
+    paths:
+      - scripts/patch-e-signals.py
+      - .github/workflows/patch-e-signals.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/signals-nav-e
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-e-signals.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-e-signals.py .github/workflows/patch-e-signals.yml
+          git add -A
+          if git diff --staged --quiet; then echo no changes; exit 0; fi
+          git commit -m "feat(signals): E open client + schedule context on signal tap"
+          git push origin feat/signals-nav-e
