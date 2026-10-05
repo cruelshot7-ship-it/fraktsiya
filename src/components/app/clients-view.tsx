@@ -306,18 +306,25 @@ export function ClientsView() {
             const next = bookings
               .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
               .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
+            const open = actionClientId === client.id;
             return (
+          <div key={client.id} className="space-y-1.5">
           <button
-            key={client.id}
             type="button"
             onClick={() => {
-              setActionClientId(client.id);
-              setConfirmRemove(false);
+              if (open) {
+                setActionClientId(null);
+                setConfirmRemove(false);
+              } else {
+                setActionClientId(client.id);
+                setConfirmRemove(false);
+              }
             }}
             className={cn(
-              "pressable relative overflow-hidden rounded-xl bg-card p-3.5 text-left shadow-border",
+              "pressable relative w-full overflow-hidden rounded-xl bg-card p-3.5 text-left shadow-border",
               flag.tone === "alert" && "glow-alert",
               flag.tone === "ok" && "glow-ok",
+              open && "ring-1 ring-primary/40",
             )}
           >
             <span
@@ -367,6 +374,76 @@ export function ClientsView() {
               </div>
             </div>
           </button>
+          {open ? (
+            <div className="overflow-hidden rounded-xl border border-border bg-card/95 p-2 shadow-border">
+              <div className="grid grid-cols-1 gap-1.5">
+                <button
+                  type="button"
+                  className="pressable flex h-11 items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                  onClick={() => {
+                    setActionClientId(null);
+                    setConfirmRemove(false);
+                    openClientSheet(client.id);
+                  }}
+                >
+                  Карточка клиента
+                </button>
+                <button
+                  type="button"
+                  disabled={!next}
+                  className={cn(
+                    "pressable flex h-11 items-center justify-center rounded-lg text-sm font-medium",
+                    next ? "bg-secondary text-foreground" : "bg-secondary/50 text-muted-foreground",
+                  )}
+                  onClick={() => {
+                    if (!next) return;
+                    cancelBooking(next.id, "trainer");
+                    showToast(
+                      `Отменено · ${next.date === today ? "сегодня" : formatDayMonth(next.date)} ${next.time} · ${shortName(client)}`,
+                    );
+                    setActionClientId(null);
+                    setConfirmRemove(false);
+                  }}
+                >
+                  {next
+                    ? `Отменить слот · ${next.date === today ? "сегодня" : formatDayMonth(next.date)} ${next.time}`
+                    : "Нет ближайшего слота"}
+                </button>
+                {!confirmRemove ? (
+                  <button
+                    type="button"
+                    className="pressable flex h-11 items-center justify-center rounded-lg bg-primary/15 text-sm font-medium text-primary"
+                    onClick={() => setConfirmRemove(true)}
+                  >
+                    Удалить клиента
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      className="pressable h-11 flex-1 rounded-lg bg-secondary text-sm"
+                      onClick={() => setConfirmRemove(false)}
+                    >
+                      Назад
+                    </button>
+                    <button
+                      type="button"
+                      className="pressable h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                      onClick={() => {
+                        removeClient(client.id);
+                        showToast(`Клиент ${shortName(client)} удалён`);
+                        setActionClientId(null);
+                        setConfirmRemove(false);
+                      }}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+          </div>
             );
           })
         )}
@@ -458,113 +535,6 @@ export function ClientsView() {
         </div>
       </details>
 
-      {actionClientId ? (() => {
-        const client = clients.find((c) => c.id === actionClientId);
-        if (!client) return null;
-        const nextBooking = bookings
-          .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
-          .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
-        return (
-          <div className="fixed inset-0 z-[70] flex flex-col justify-end">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/55"
-              aria-label="Закрыть"
-              onClick={() => {
-                setActionClientId(null);
-                setConfirmRemove(false);
-              }}
-            />
-            <div className="relative z-[71] space-y-2 rounded-t-2xl border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-border">
-              <div className="mb-1 flex items-center gap-3">
-                <Avatar initials={initials(client)} tone={clientFlag(client, today, food, bookings).tone} />
-                <div className="min-w-0 flex-1">
-                  <p className="font-display truncate text-base">{shortName(client)}</p>
-                  <p className="text-tiny text-muted-foreground">
-                    {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
-                    {nextBooking
-                      ? ` · след. ${nextBooking.date === today ? "сегодня" : formatDayMonth(nextBooking.date)} ${nextBooking.time}`
-                      : " · нет записи"}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="pressable flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                onClick={() => {
-                  setActionClientId(null);
-                  setConfirmRemove(false);
-                  openClientSheet(client.id);
-                }}
-              >
-                Карточка клиента
-              </button>
-
-              <button
-                type="button"
-                disabled={!nextBooking}
-                className={cn(
-                  "pressable flex h-12 w-full items-center justify-center rounded-xl text-sm font-medium",
-                  nextBooking ? "bg-secondary text-foreground" : "bg-secondary/50 text-muted-foreground",
-                )}
-                onClick={() => {
-                  if (!nextBooking) return;
-                  cancelBooking(nextBooking.id, "trainer");
-                  showToast(`Тренировка ${nextBooking.time} отменена · ${shortName(client)}`);
-                  setActionClientId(null);
-                  setConfirmRemove(false);
-                }}
-              >
-                {nextBooking ? `Отменить тренировку · ${nextBooking.time}` : "Нет ближайшей тренировки"}
-              </button>
-
-              {!confirmRemove ? (
-                <button
-                  type="button"
-                  className="pressable flex h-12 w-full items-center justify-center rounded-xl bg-primary/15 text-sm font-medium text-primary"
-                  onClick={() => setConfirmRemove(true)}
-                >
-                  Удалить клиента
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="pressable h-12 flex-1 rounded-xl bg-secondary text-sm"
-                    onClick={() => setConfirmRemove(false)}
-                  >
-                    Назад
-                  </button>
-                  <button
-                    type="button"
-                    className="pressable h-12 flex-1 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={() => {
-                      removeClient(client.id);
-                      showToast(`Клиент ${shortName(client)} удалён`);
-                      setActionClientId(null);
-                      setConfirmRemove(false);
-                    }}
-                  >
-                    Удалить
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="pressable flex h-11 w-full items-center justify-center text-sm text-muted-foreground"
-                onClick={() => {
-                  setActionClientId(null);
-                  setConfirmRemove(false);
-                }}
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
-        );
-      })() : null}
 
     </div>
   );
