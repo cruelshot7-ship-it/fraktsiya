@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
-import { dayKbju, isoDate, MEALS, sumFood, type Meal } from "@/data/studio";
+import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Meal } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
@@ -70,6 +70,30 @@ export function NutritionView() {
 
   const today = isoDate(new Date());
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
+
+  const yesterday = isoDate(addDays(parseISODate(today), -1));
+  const yesterdayFood = useMemo(
+    () => (client ? food.filter((f) => f.clientId === client.id && f.date === yesterday) : []),
+    [client, food, yesterday],
+  );
+
+  function repeatYesterday() {
+    if (!yesterdayFood.length) {
+      showToast("Вчера записей еды не было");
+      return;
+    }
+    for (const entry of yesterdayFood) {
+      addCustomFood({
+        name: entry.name,
+        calories: entry.calories,
+        protein: entry.protein,
+        fat: entry.fat,
+        carbs: entry.carbs,
+        kind: entry.kind,
+      });
+    }
+    showToast(`Повторено вчера · ${yesterdayFood.length} поз.`);
+  }
   const totals = sumFood(todayFood);
   const goal = dayKbju(client, today, bookings);
   const leftCal = Math.max(0, (goal.kbju.calories || 0) - totals.calories);
@@ -151,7 +175,7 @@ export function NutritionView() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="mt-3 grid grid-cols-1 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {suggestions.length === 0 ? (
             <p className="py-4 text-sm text-muted-foreground">Нет вариантов — смените приём пищи или поиск.</p>
           ) : (
@@ -163,19 +187,16 @@ export function NutritionView() {
                   type="button"
                   onClick={() => pick(meal.id)}
                   className={cn(
-                    "pressable flex items-center justify-between gap-3 rounded-xl bg-card px-3 py-3 text-left shadow-border",
+                    "pressable flex flex-col gap-1 rounded-xl bg-card px-2.5 py-2.5 text-left shadow-border",
                     fits ? "" : "opacity-70",
                   )}
                 >
-                  <div>
-                    <span className="block text-sm font-medium">{meal.name}</span>
-                    <span className="mt-0.5 block text-tiny text-muted-foreground">
-                      {meal.calories} ккал · Б {meal.protein} · Ж {meal.fat} · У {meal.carbs}
-                      {meal.kind ? ` · ${SLOT_LABEL[meal.kind]}` : ""}
-                    </span>
-                  </div>
-                  <span className={cn("shrink-0 text-xs font-medium", fits ? "text-ok" : "text-muted-foreground")}>
-                    {fits ? "В цель" : "Больше остатка"} · +
+                  <span className="line-clamp-2 text-xs font-medium leading-snug">{meal.name}</span>
+                  <span className="text-2xs tabular-nums text-muted-foreground">
+                    {meal.calories} ккал · Б{meal.protein}
+                  </span>
+                  <span className={cn("text-2xs font-medium", fits ? "text-ok" : "text-muted-foreground")}>
+                    {fits ? "В цель · +" : "+"}
                   </span>
                 </button>
               );
@@ -192,6 +213,16 @@ export function NutritionView() {
         <ScanLine className="size-5" />
         Сканировать штрихкод / QR
       </button>
+
+      {yesterdayFood.length > 0 ? (
+        <button
+          type="button"
+          onClick={repeatYesterday}
+          className="pressable flex h-11 items-center justify-center rounded-xl bg-secondary text-sm font-medium"
+        >
+          Повторить вчера · {yesterdayFood.length} поз.
+        </button>
+      ) : null}
 
       {todayFood.length > 0 ? (
         <div className="flex flex-col gap-2">
