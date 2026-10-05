@@ -886,8 +886,8 @@ export const pushStudio = createServerFn({ method: "POST" })
     } else {
       let bound = current;
       if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
-        const byName = current.clients.find(
-          (c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
+                const byName = current.clients.find(
+          (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
         );
         if (byName) {
           bound = {
