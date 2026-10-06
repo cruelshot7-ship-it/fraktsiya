@@ -1,0 +1,27 @@
+name: Patch bookings on signals-clean
+on:
+  push:
+    branches: [feat/signals-clean]
+    paths:
+      - scripts/patch-bookings-checkin.py
+      - .github/workflows/patch-bookings-checkin.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/signals-clean
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-bookings-checkin.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-bookings-checkin.py .github/workflows/patch-bookings-checkin.yml
+          git add -A
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "feat(ux): trainer check-in + program CTA"
+          git push origin feat/signals-clean
