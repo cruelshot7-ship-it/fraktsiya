@@ -525,6 +525,94 @@ export function ClientsView() {
           Добавить клиента
         </button>
       )}
+      {owner ? (
+        <div className="mt-2 space-y-2 border-t border-hairline/40 pt-3">
+          <button
+            type="button"
+            className="pressable flex h-11 w-full items-center justify-between rounded-xl bg-card px-4 text-left shadow-border"
+            onClick={() => setTeamOpen((v) => !v)}
+          >
+            <span className="text-sm font-medium">Команда тренеров</span>
+            <span className="text-tiny text-muted-foreground">
+              {teamOpen ? "скрыть" : coaches.length ? `${coaches.length} · открыть` : "открыть"}
+            </span>
+          </button>
+          {teamOpen ? (
+            <Surface>
+              <p className="text-tiny text-muted-foreground">
+                Доступ субарендаторам. Не смешивается со списком ваших клиентов.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <input className={inputClass} value={coachName} onChange={(e) => setCoachName(e.target.value)} placeholder="Имя" />
+                <input className={inputClass} value={coachUser} onChange={(e) => setCoachUser(e.target.value)} placeholder="@username" />
+              </div>
+              <button
+                type="button"
+                className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
+                onClick={() => {
+                  if (!coachName.trim() || !coachUser.trim()) {
+                    showToast("Нужны имя и @username.");
+                    return;
+                  }
+                  void addCoach(coachUser, coachName);
+                  setCoachName("");
+                  setCoachUser("");
+                }}
+              >
+                Дать доступ
+              </button>
+              {coaches.length > 0 ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  {coaches.map((coach) => {
+                    const token = coach.code || coach.telegramId;
+                    const link = token ? inviteUrl(BOT_USERNAME, `c_${token}`) : "";
+                    return (
+                      <div key={coach.code || coach.username || coach.firstName} className="rounded-lg bg-secondary px-3 py-2">
+                        <button
+                          type="button"
+                          className="pressable w-full text-left"
+                          onClick={() => {
+                            if (!link) {
+                              showToast("Пусть тренер сначала откроет бота.");
+                              return;
+                            }
+                            void navigator.clipboard?.writeText(link);
+                            showToast("Ссылка тренера скопирована");
+                          }}
+                        >
+                          <p className="text-xs text-foreground">
+                            {coach.firstName} · @{coach.username}
+                            {coach.telegramId ? "" : " · ещё не открыл бота"}
+                          </p>
+                          <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
+                          <p className="mt-1 text-tiny text-foreground">{coachStatusLine(coach)}</p>
+                        </button>
+                        <button
+                          type="button"
+                          className="pressable mt-2 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                          onClick={() => void payCoach(coach)}
+                        >
+                          Оплачено · $10
+                        </button>
+                        <button
+                          type="button"
+                          className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-primary"
+                          onClick={() => void removeCoach(coach)}
+                        >
+                          Удалить полностью
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 text-tiny text-muted-foreground">Пока никого. Добавьте по имени и @username.</p>
+              )}
+            </Surface>
+          ) : null}
+        </div>
+      ) : null}
+
       <details className="rounded-xl bg-card px-4 py-3 shadow-border">
         <summary className="cursor-pointer text-sm text-muted-foreground">Разработка</summary>
         <p className="mt-3 text-xs text-muted-foreground">Наклейки на стойки. Нажатие копирует ссылку для QR.</p>
@@ -942,93 +1030,6 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
         ) : null}
       </div>
 
-      {owner ? (
-        <div className="mt-2 space-y-2 border-t border-hairline/40 pt-3">
-          <button
-            type="button"
-            className="pressable flex h-11 w-full items-center justify-between rounded-xl bg-card px-4 text-left shadow-border"
-            onClick={() => setTeamOpen((v) => !v)}
-          >
-            <span className="text-sm font-medium">Команда тренеров</span>
-            <span className="text-tiny text-muted-foreground">
-              {teamOpen ? "скрыть" : coaches.length ? `${coaches.length} · открыть` : "открыть"}
-            </span>
-          </button>
-          {teamOpen ? (
-            <Surface>
-              <p className="text-tiny text-muted-foreground">
-                Доступ субарендаторам. Не смешивается со списком ваших клиентов.
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <input className={inputClass} value={coachName} onChange={(e) => setCoachName(e.target.value)} placeholder="Имя" />
-                <input className={inputClass} value={coachUser} onChange={(e) => setCoachUser(e.target.value)} placeholder="@username" />
-              </div>
-              <button
-                type="button"
-                className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
-                onClick={() => {
-                  if (!coachName.trim() || !coachUser.trim()) {
-                    showToast("Нужны имя и @username.");
-                    return;
-                  }
-                  void addCoach(coachUser, coachName);
-                  setCoachName("");
-                  setCoachUser("");
-                }}
-              >
-                Дать доступ
-              </button>
-              {coaches.length > 0 ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  {coaches.map((coach) => {
-                    const token = coach.code || coach.telegramId;
-                    const link = token ? inviteUrl(BOT_USERNAME, `c_${token}`) : "";
-                    return (
-                      <div key={coach.code || coach.username || coach.firstName} className="rounded-lg bg-secondary px-3 py-2">
-                        <button
-                          type="button"
-                          className="pressable w-full text-left"
-                          onClick={() => {
-                            if (!link) {
-                              showToast("Пусть тренер сначала откроет бота.");
-                              return;
-                            }
-                            void navigator.clipboard?.writeText(link);
-                            showToast("Ссылка тренера скопирована");
-                          }}
-                        >
-                          <p className="text-xs text-foreground">
-                            {coach.firstName} · @{coach.username}
-                            {coach.telegramId ? "" : " · ещё не открыл бота"}
-                          </p>
-                          <p className="mt-1 text-tiny text-muted-foreground">{link || "Ссылка появится после входа"}</p>
-                          <p className="mt-1 text-tiny text-foreground">{coachStatusLine(coach)}</p>
-                        </button>
-                        <button
-                          type="button"
-                          className="pressable mt-2 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-                          onClick={() => void payCoach(coach)}
-                        >
-                          Оплачено · $10
-                        </button>
-                        <button
-                          type="button"
-                          className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-primary"
-                          onClick={() => void removeCoach(coach)}
-                        >
-                          Удалить полностью
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="mt-2 text-tiny text-muted-foreground">Пока никого. Добавьте по имени и @username.</p>
-              )}
-            </Surface>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
