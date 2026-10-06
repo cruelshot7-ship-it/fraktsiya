@@ -1,0 +1,27 @@
+name: Patch checkin today
+on:
+  push:
+    branches: [feat/checkin-today]
+    paths:
+      - scripts/patch-checkin-today.py
+      - .github/workflows/patch-checkin-today.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/checkin-today
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-checkin-today.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-checkin-today.py .github/workflows/patch-checkin-today.yml
+          git add -A
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "feat(ux): trainer Явка on today upcoming bookings"
+          git push origin feat/checkin-today
