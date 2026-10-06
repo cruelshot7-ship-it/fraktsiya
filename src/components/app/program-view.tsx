@@ -55,6 +55,7 @@ export function ProgramView() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
+  const setTab = useStudio((s) => s.setTab);
   const client = activeClient({ clients, activeClientId });
   const series = useMemo(() => {
     if (!client) return [];
@@ -355,6 +356,8 @@ export function ProgramView() {
                   }
                   setStartedAt(null);
                   setFacts({});
+                  showToast("Тренировка записана · можно отметить еду");
+                  setTab("food");
                 }}
                 className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
               >
