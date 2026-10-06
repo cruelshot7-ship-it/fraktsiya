@@ -179,15 +179,35 @@ export function ProgramEditor({
         className="pressable h-11 rounded-xl bg-secondary text-sm"
         onClick={() => {
           const built = buildProgram(draft, goal, preset);
-          setDraft({ ...draft, programTitle: built.programTitle, sessions: built.sessions });
+          const n = built.sessions.length;
+          const defaultDays: Record<number, number[]> = {
+            2: [0, 3],
+            3: [0, 2, 4],
+            4: [0, 1, 3, 4],
+          };
+          const trainDays =
+            draft.trainDays.length > 0 ? draft.trainDays : (defaultDays[n] ?? [0, 2, 4]);
+          setDraft({
+            ...draft,
+            programTitle: built.programTitle,
+            sessions: built.sessions,
+            trainDays,
+            programStart: isoDate(new Date()),
+            programWeeks: draft.programWeeks || 8,
+          });
         }}
       >
         Собрать черновик
       </button>
       <p className="text-tiny text-muted-foreground">
         {draft.weight > 0
-          ? `Вес ${draft.weight} кг. Веса стартовые — поправь под технику и сохрани.`
-          : "Веса клиента нет — килограммы не ставлю. Схему сохрани, вес допиши сам."}
+          ? `Вес ${draft.weight} кг. Веса стартовые — поправь под технику.`
+          : "Веса нет — кг не ставлю."}{" "}
+        Сплит из {draft.sessions.length || "—"} блоков · дни:{" "}
+        {draft.trainDays.length
+          ? draft.trainDays.map((d) => DOW[d]).join(", ")
+          : "выберутся при сборке"}
+        . Старт цикла — сегодня (сброс при «Собрать»).
       </p>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
