@@ -1,0 +1,27 @@
+name: Patch structure clean
+on:
+  push:
+    branches: [feat/program-structure-clean]
+    paths:
+      - scripts/patch-structure-clean.py
+      - .github/workflows/patch-structure-clean.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/program-structure-clean
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-structure-clean.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-structure-clean.py .github/workflows/patch-structure-clean.yml
+          git add -A
+          if git diff --staged --quiet; then echo no changes; exit 0; fi
+          git commit -m "feat(program): auto trainDays + programStart on preset build"
+          git push origin feat/program-structure-clean
