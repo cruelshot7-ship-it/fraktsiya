@@ -5,6 +5,7 @@ import { pullStudio, pushStudio, type StudioPayload } from "@/lib/studio-sync";
 type Role = "client" | "trainer";
 
 const DIRTY_KEY = "ruksha:dirty";
+const LAST_SYNC_KEY = "ruksha:lastSyncAt";
 const RETRY_MS = [2000, 5000, 15000] as const;
 
 export function isTrainerTelegramId(id: string | number | null | undefined) {
@@ -56,9 +57,27 @@ function setDirty(on: boolean) {
   try {
     if (typeof localStorage === "undefined") return;
     if (on) localStorage.setItem(DIRTY_KEY, "1");
-    else localStorage.removeItem(DIRTY_KEY);
+    else {
+      localStorage.removeItem(DIRTY_KEY);
+      localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("ruksha-sync"));
+    }
   } catch {
     /* private mode */
+  }
+}
+
+export function lastCloudSyncAt(): number | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(LAST_SYNC_KEY);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
   }
 }
 
