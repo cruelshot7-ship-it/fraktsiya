@@ -5,6 +5,7 @@ import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
 import { BrandLockup } from "@/components/app/brand-mark";
 import { HapticLayer } from "@/components/app/haptic-layer";
+import { SyncStatusChip } from "@/components/app/sync-status";
 import { TodayView } from "@/components/app/today-view";
 import { ScheduleView } from "@/components/app/schedule-view";
 import { MoreView } from "@/components/app/more-view";
@@ -189,7 +190,10 @@ export function MiniApp() {
                 {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
-                <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
+                <div>
+                  <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
+                  <SyncStatusChip className="mt-1" />
+                </div>
                 <button type="button" onClick={() => setTab("signals")} className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground" aria-label="Сигналы">
                   <Bell className="size-4" />
                   {trainerBadge > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
@@ -214,6 +218,7 @@ export function MiniApp() {
               {inviteBlocked ? null : (
               <>
               <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
+              <SyncStatusChip className="mt-1" />
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
                   ? inviteBlocked ? "Тренер добавит вас в зал" : "Профиль появится, когда тренер добавит вас в зал"
