@@ -10,12 +10,14 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Do not cancel in-progress main runs: one-shot cleanups after a merge
+  # were cancelling the real CI and leaving a red X on the tip commit.
+  cancel-in-progress: false
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
