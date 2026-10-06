@@ -3,6 +3,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   addDays,
   clientFlag,
+  clientCoach,
   daysAgoPhrase,
   dayKbju,
   formatDayMonth,
@@ -102,6 +103,9 @@ export function ClientsView() {
     if (clientFilter === "today") return r.flag.today;
     return true;
   });
+  const myCoachKey = String(me?.id ?? TRAINER_TG_ID);
+  const mineRows = visible.filter((r) => clientCoach(r.client) === myCoachKey);
+  const otherRows = visible.filter((r) => clientCoach(r.client) !== myCoachKey);
 
   const myCoach = me && String(me.id) !== TRAINER_TG_ID ? coaches.find((c) => c.telegramId === String(me.id)) : undefined;
 
@@ -283,7 +287,7 @@ export function ClientsView() {
 
       <div className="flex gap-1.5">
         <FilterChip active={clientFilter === "all"} onClick={() => setClientFilter("all")}>
-          Все {clients.length}
+          Все {mineRows.length}{otherRows.length ? ` · +${otherRows.length}` : ""}
         </FilterChip>
         <FilterChip active={clientFilter === "attention"} onClick={() => setClientFilter("attention")}>
           Внимание {attentionCount}
@@ -297,12 +301,16 @@ export function ClientsView() {
       </div>
 
       <div className="stagger-in flex flex-col gap-2">
-        {visible.length === 0 ? (
+        {mineRows.length === 0 && otherRows.length === 0 ? (
           <p className="rounded-xl bg-card px-4 py-8 text-center text-sm leading-relaxed text-muted-foreground shadow-border">
             Пока никого. Добавьте клиента: имя и телефон или @username.
           </p>
-        ) : (
-          visible.map(({ client, flag }) => {
+        ) : null}
+
+        {mineRows.length > 0 ? (
+          <>
+            <SectionLabel>Мои клиенты · {mineRows.length}</SectionLabel>
+            {mineRows.map(({ client, flag }) => {
             const next = bookings
               .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
               .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
@@ -457,8 +465,43 @@ export function ClientsView() {
           ) : null}
           </div>
             );
-          })
-        )}
+          }
+)}
+          </>
+        ) : null}
+
+        {otherRows.length > 0 ? (
+          <>
+            <SectionLabel>Другие тренеры · {otherRows.length}</SectionLabel>
+            <p className="text-tiny text-muted-foreground">Общая база · не ваши клиенты. Карточка только для просмотра.</p>
+            {otherRows.map(({ client }) => {
+              const next = bookings
+                .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
+                .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
+              return (
+                <button
+                  key={client.id}
+                  type="button"
+                  onClick={() => openClientSheet(client.id)}
+                  className="pressable relative overflow-hidden rounded-xl bg-card/70 px-4 py-3 text-left shadow-border opacity-90"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar initials={initials(client)} tone="none" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display truncate text-base leading-tight">{shortName(client)}</p>
+                      <p className="mt-0.5 truncate text-tiny text-muted-foreground">
+                        тренер · {client.coachId || "—"}
+                        {next
+                          ? ` · ${next.date === today ? "сегодня" : formatDayMonth(next.date)} ${next.time}`
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </>
+        ) : null}
       </div>
 
       {adding ? (
