@@ -1,0 +1,27 @@
+name: Patch clients by coach
+on:
+  push:
+    branches: [feat/clients-by-coach]
+    paths:
+      - scripts/patch-clients-coach.py
+      - .github/workflows/patch-clients-coach.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/clients-by-coach
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-clients-coach.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-clients-coach.py .github/workflows/patch-clients-coach.yml
+          git add -A
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "feat(ux): clients list split mine vs other coaches"
+          git push origin feat/clients-by-coach
