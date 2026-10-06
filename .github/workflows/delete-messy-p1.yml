@@ -1,0 +1,28 @@
+name: Delete messy P1 branch
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/delete-messy-p1.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          git push origin --delete feat/p1-today-cta-join-pack 2>/dev/null || true
+          git push origin --delete feat/p0-sync-program-groups 2>/dev/null || true
+          git push origin --delete feat/program-structure-clean 2>/dev/null || true
+          rm -f .github/workflows/delete-messy-p1.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "chore: drop one-shot delete-messy-p1 workflow"
+          git push origin main
