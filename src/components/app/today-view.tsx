@@ -30,6 +30,7 @@ export function TodayView() {
   const setActiveClient = useStudio((s) => s.setActiveClient);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
+  const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
 
@@ -114,14 +115,20 @@ export function TodayView() {
                     <button
                       type="button"
                       className="pressable rounded-lg bg-ok/15 px-3 py-2 text-xs font-medium text-ok"
-                      onClick={() => checkIn(b.id)}
+                      onClick={() => {
+                        checkIn(b.id);
+                        showToast(name ? `Явка · ${name}` : "Явка отмечена");
+                      }}
                     >
                       Явка
                     </button>
                     <button
                       type="button"
                       className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                      onClick={() => markNoShow(b.id)}
+                      onClick={() => {
+                        markNoShow(b.id);
+                        showToast(name ? `Неявка · ${name}` : "Неявка отмечена");
+                      }}
                     >
                       Неявка
                     </button>
