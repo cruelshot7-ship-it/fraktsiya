@@ -64,6 +64,7 @@ export function ClientsView() {
   const [adding, setAdding] = useState(false);
   const [actionClientId, setActionClientId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeTyped, setRemoveTyped] = useState("");
   const [coachName, setCoachName] = useState("");
   const [coachUser, setCoachUser] = useState("");
   const me = getTelegramUser();
@@ -323,9 +324,11 @@ export function ClientsView() {
               if (open) {
                 setActionClientId(null);
                 setConfirmRemove(false);
+                setRemoveTyped("");
               } else {
                 setActionClientId(client.id);
                 setConfirmRemove(false);
+                setRemoveTyped("");
               }
             }}
             className={cn(
@@ -433,31 +436,55 @@ export function ClientsView() {
                   <button
                     type="button"
                     className="pressable flex h-11 items-center justify-center rounded-lg bg-primary/15 text-sm font-medium text-primary"
-                    onClick={() => setConfirmRemove(true)}
+                    onClick={() => {
+                      setConfirmRemove(true);
+                      setRemoveTyped("");
+                    }}
                   >
                     Удалить клиента
                   </button>
                 ) : (
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      className="pressable h-11 flex-1 rounded-lg bg-secondary text-sm"
-                      onClick={() => setConfirmRemove(false)}
-                    >
-                      Назад
-                    </button>
-                    <button
-                      type="button"
-                      className="pressable h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-                      onClick={() => {
-                        removeClient(client.id);
-                        showToast(`Клиент ${shortName(client)} удалён`);
-                        setActionClientId(null);
-                        setConfirmRemove(false);
-                      }}
-                    >
-                      Удалить
-                    </button>
+                  <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                    <p className="text-tiny text-muted-foreground">
+                      Безвозвратно. Введите имя «{client.firstName}» для подтверждения.
+                    </p>
+                    <input
+                      className={inputClass}
+                      value={removeTyped}
+                      onChange={(e) => setRemoveTyped(e.target.value)}
+                      placeholder={client.firstName}
+                      autoComplete="off"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        className="pressable h-11 flex-1 rounded-lg bg-secondary text-sm"
+                        onClick={() => {
+                          setConfirmRemove(false);
+                          setRemoveTyped("");
+                        }}
+                      >
+                        Назад
+                      </button>
+                      <button
+                        type="button"
+                        disabled={removeTyped.trim().toLowerCase() !== String(client.firstName || "").trim().toLowerCase()}
+                        className="pressable h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-40"
+                        onClick={() => {
+                          if (removeTyped.trim().toLowerCase() !== String(client.firstName || "").trim().toLowerCase()) {
+                            showToast("Имя не совпало");
+                            return;
+                          }
+                          removeClient(client.id);
+                          showToast(`Клиент ${shortName(client)} удалён`);
+                          setActionClientId(null);
+                          setConfirmRemove(false);
+                          setRemoveTyped("");
+                        }}
+                      >
+                        Удалить навсегда
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
