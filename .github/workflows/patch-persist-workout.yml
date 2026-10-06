@@ -1,0 +1,27 @@
+name: Patch persist workout
+on:
+  push:
+    branches: [feat/persist-workout-local]
+    paths:
+      - scripts/patch-persist-workout.py
+      - .github/workflows/patch-persist-workout.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/persist-workout-local
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-persist-workout.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-persist-workout.py .github/workflows/patch-persist-workout.yml
+          git add -A
+          if git diff --staged --quiet; then echo no changes; exit 0; fi
+          git commit -m "fix(program): persist workout timer and facts in localStorage"
+          git push origin feat/persist-workout-local
