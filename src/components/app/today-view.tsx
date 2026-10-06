@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import { ActionCenter } from "@/components/app/action-center";
 import { SoftReturnPanel } from "@/components/app/soft-return";
-import { ProgramView } from "@/components/app/program-view";
 import { BookingsView } from "@/components/app/bookings-view";
-import { useStudio } from "@/lib/studio-store";
+import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { daysSince, isoDate, isSlotPast } from "@/data/studio";
+import { clientActionItems } from "@/lib/action-items";
 
 /**
  * Блок A · Мой день
- * Клиент: задачи + программа сегодня
+ * Клиент: один главный CTA + мягкий возврат + задачи
  * Тренер: сводка зала + центр действий + записи
  */
 export function TodayView() {
@@ -17,9 +17,13 @@ export function TodayView() {
   const clients = useStudio((s) => s.clients);
   const bookings = useStudio((s) => s.bookings);
   const joinRequests = useStudio((s) => s.joinRequests);
+  const slots = useStudio((s) => s.slots);
+  const notices = useStudio((s) => s.notices);
+  const activeClientId = useStudio((s) => s.activeClientId);
   const setTab = useStudio((s) => s.setTab);
   const setClientFilter = useStudio((s) => s.setClientFilter);
   const today = isoDate(new Date());
+  const me = activeClient({ clients, activeClientId });
 
   const summary = useMemo(() => {
     const todayRows = bookings.filter((b) => b.date === today && !b.noShow);
@@ -41,6 +45,12 @@ export function TodayView() {
       joins,
     };
   }, [bookings, clients, joinRequests, today]);
+
+  const primary = useMemo(() => {
+    if (!me || role === "trainer") return null;
+    const items = clientActionItems({ client: me, bookings, slots, notices });
+    return items.sort((a, b) => a.priority - b.priority)[0] ?? null;
+  }, [me, role, bookings, slots, notices]);
 
   if (role === "trainer") {
     return (
@@ -105,11 +115,42 @@ export function TodayView() {
     <div className="space-y-4">
       <div>
         <SectionLabel>Мой день</SectionLabel>
-        <p className="mt-1 text-tiny text-muted-foreground">Что сделать сейчас · программа · прогресс</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Одно главное действие · дальше по желанию</p>
       </div>
+
+      {primary ? (
+        <button type="button" className="pressable w-full text-left" onClick={() => setTab(primary.tab)}>
+          <Surface glow="ok" className="border border-ok/30">
+            <p className="text-2xs tracking-wide text-ok uppercase">Сейчас</p>
+            <p className="mt-1 font-display text-xl leading-tight">{primary.title}</p>
+            <p className="mt-1.5 text-tiny text-muted-foreground">{primary.body}</p>
+            <p className="mt-3 text-xs font-medium text-ok">Открыть →</p>
+          </Surface>
+        </button>
+      ) : (
+        <Surface>
+          <p className="text-sm text-muted-foreground">Нет срочных задач. Можно записаться или открыть программу.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="pressable h-11 rounded-lg bg-secondary text-sm"
+              onClick={() => setTab("schedule")}
+            >
+              Запись
+            </button>
+            <button
+              type="button"
+              className="pressable h-11 rounded-lg bg-secondary text-sm"
+              onClick={() => setTab("program")}
+            >
+              Программа
+            </button>
+          </div>
+        </Surface>
+      )}
+
       <SoftReturnPanel />
       <ActionCenter />
-      <ProgramView />
     </div>
   );
 }
