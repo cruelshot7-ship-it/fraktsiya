@@ -1,0 +1,28 @@
+name: Patch P0 UX
+on:
+  push:
+    branches: [feat/p0-sync-program-groups]
+    paths:
+      - scripts/patch-p0-ux.py
+      - src/components/app/sync-status.tsx
+      - .github/workflows/patch-p0-ux.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p0-sync-program-groups
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: python3 scripts/patch-p0-ux.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/patch-p0-ux.py .github/workflows/patch-p0-ux.yml
+          git add -A
+          if git diff --staged --quiet; then echo no changes; exit 0; fi
+          git commit -m "feat(ux): P0 sync indicator in chrome + program exercise groups"
+          git push origin feat/p0-sync-program-groups
