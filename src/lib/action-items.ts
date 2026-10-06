@@ -90,7 +90,7 @@ export function clientActionItems(opts: {
       kind: "next_session",
       title: `Ближайшая · ${next.time}`,
       body: `${next.date === today ? "Сегодня" : next.date} · ${next.duration} мин`,
-      tab: "bookings",
+      tab: "schedule",
       bookingId: next.id,
       clientId: client.id,
       priority: 10,
@@ -115,7 +115,7 @@ export function clientActionItems(opts: {
         kind: "return_soft",
         title: "Спокойный возврат",
         body: "После перерыва нагрузку не поднимаем автоматически — выберите удобный слот.",
-        tab: "slots",
+        tab: "schedule",
         clientId: client.id,
         priority: 15,
       });
@@ -125,7 +125,7 @@ export function clientActionItems(opts: {
         kind: "book_next",
         title: "Записаться на тренировку",
         body: "Выберите свободный слот в расписании",
-        tab: "slots",
+        tab: "schedule",
         clientId: client.id,
         priority: 25,
       });
@@ -154,7 +154,7 @@ export function clientActionItems(opts: {
       kind: "book_next",
       title: n.title,
       body: n.body,
-      tab: "slots",
+      tab: "schedule",
       clientId: client.id,
       priority: 12,
     });
