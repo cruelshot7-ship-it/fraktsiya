@@ -23,6 +23,8 @@ export function BookingsView() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const cancelBooking = useStudio((s) => s.cancelBooking);
   const markNoShow = useStudio((s) => s.markNoShow);
+  const checkIn = useStudio((s) => s.checkIn);
+  const setActiveClient = useStudio((s) => s.setActiveClient);
   const setTab = useStudio((s) => s.setTab);
   const role = useStudio((s) => s.role);
   const notices = useStudio((s) => s.notices);
@@ -211,12 +213,33 @@ export function BookingsView() {
                 {booking.checkedIn ? " · чек-ин" : booking.noShow ? " · неявка" : ""}
               </p>
               {role === "trainer" && !booking.checkedIn && !booking.noShow ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => checkIn(booking.id)}
+                    className="pressable rounded-lg bg-ok/15 px-3 py-2 text-xs font-medium text-ok"
+                  >
+                    Явка
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => markNoShow(booking.id)}
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    Неявка
+                  </button>
+                </div>
+              ) : null}
+              {role === "trainer" && booking.checkedIn ? (
                 <button
                   type="button"
-                  onClick={() => markNoShow(booking.id)}
-                  className="pressable mt-2 rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                  onClick={() => {
+                    setActiveClient(booking.clientId);
+                    setTab("program");
+                  }}
+                  className="pressable mt-2 rounded-lg bg-secondary px-3 py-2 text-xs font-medium"
                 >
-                  Отметить неявку
+                  К программе клиента
                 </button>
               ) : null}
             </Surface>
