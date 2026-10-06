@@ -73,14 +73,14 @@ export function ProgramView() {
   useEffect(() => {
     if (!factKey) return;
     try {
-      setFacts(JSON.parse(sessionStorage.getItem(factKey) || "{}") as Record<number, string>);
+      setFacts(JSON.parse(localStorage.getItem(factKey) || "{}") as Record<number, string>);
     } catch {
       setFacts({});
     }
   }, [factKey]);
   useEffect(() => {
     if (!startKey) return;
-    const raw = sessionStorage.getItem(startKey);
+    const raw = localStorage.getItem(startKey);
     setStartedAt(raw ? Number(raw) : null);
   }, [startKey]);
   useEffect(() => {
@@ -267,7 +267,7 @@ export function ProgramView() {
                       onChange={(e) => {
                         const next = { ...facts, [index]: e.target.value };
                         setFacts(next);
-                        if (factKey) sessionStorage.setItem(factKey, JSON.stringify(next));
+                        if (factKey) localStorage.setItem(factKey, JSON.stringify(next));
                       }}
                     />
                   ) : null}
@@ -305,7 +305,7 @@ export function ProgramView() {
                 onClick={() => {
                   const stamp = Date.now();
                   setStartedAt(stamp);
-                  sessionStorage.setItem(startKey, String(stamp));
+                  localStorage.setItem(startKey, String(stamp));
                 }}
                 className="pressable h-12 rounded-xl bg-secondary text-sm font-medium disabled:opacity-50"
               >
@@ -319,6 +319,14 @@ export function ProgramView() {
                     return;
                   }
                   completeWorkout(itemCount || checked.length, withRest, new Date(startedAt).toISOString(), totals.volume);
+                  try {
+                    if (startKey) localStorage.removeItem(startKey);
+                    if (factKey) localStorage.removeItem(factKey);
+                  } catch {
+                    /* ignore */
+                  }
+                  setStartedAt(null);
+                  setFacts({});
                 }}
                 className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
               >
