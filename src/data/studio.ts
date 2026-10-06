@@ -301,6 +301,17 @@ export type ProgramSession = {
 
 export type BuildGoal = "strength" | "shape" | "cut";
 
+/** Готовые сплиты по правилам: новичок / опытный / верх / низ / full body */
+export type ProgramPreset = "beginner" | "experienced" | "fullbody" | "upper" | "lower";
+
+export const PROGRAM_PRESETS: { id: ProgramPreset; label: string; hint: string }[] = [
+  { id: "beginner", label: "Новичок", hint: "3× full body · техника · 2–3 подхода" },
+  { id: "experienced", label: "Опытный", hint: "4× верх/низ · больше объёма" },
+  { id: "fullbody", label: "Full body", hint: "3× всё тело · база" },
+  { id: "upper", label: "Верх", hint: "2 дня верха · жим + тяга" },
+  { id: "lower", label: "Низ", hint: "2 дня низа · присед + шарнир" },
+];
+
 function plate(kg: number) {
   return Math.max(20, Math.round(kg / 2.5) * 2.5);
 }
@@ -309,35 +320,221 @@ function block(name: string, sets: string, kg: number | null, rest: number) {
   return [name, sets, ...(kg ? [`${kg} кг`] : []), `Отдых ${rest} секунд`];
 }
 
-export function buildProgram(client: Pick<Client, "weight" | "trainDays">, goal: BuildGoal) {
+export function buildProgram(
+  client: Pick<Client, "weight" | "trainDays">,
+  goal: BuildGoal,
+  preset: ProgramPreset = "beginner",
+) {
   const bw = client.weight > 0 ? client.weight : 0;
-  const days = Math.min(4, Math.max(2, client.trainDays.length || 3));
-  const scheme = goal === "strength" ? "5×5" : goal === "cut" ? "3×12" : "3×8-10";
+  const scheme = goal === "strength" ? "5×5" : goal === "cut" ? "3×12-15" : "3×8-10";
+  const begScheme = goal === "strength" ? "3×5" : goal === "cut" ? "2×12-15" : "2×8-10";
   const rest = goal === "strength" ? 180 : goal === "cut" ? 60 : 90;
+  const begRest = goal === "strength" ? 120 : 90;
   const scale = goal === "strength" ? 1 : goal === "cut" ? 0.65 : 0.8;
-  const lift = (name: string, ratio: number | null) =>
-    block(name, scheme, ratio && bw ? plate(bw * ratio * scale) : null, rest);
-  const catalog: Record<number, { name: string; focus: string; items: string[] }[]> = {
-    2: [
-      { name: "Всё тело А", focus: "Присед и жим", items: [...lift("Присед", 0.7), ...lift("Жим лёжа", 0.45), ...lift("Тяга в наклоне", 0.4)] },
-      { name: "Всё тело Б", focus: "Тяга и жим стоя", items: [...lift("Становая тяга", 0.85), ...lift("Жим стоя", 0.28), ...lift("Подтягивания", null)] },
-    ],
-    3: [
-      { name: "Жим", focus: "Грудь и плечи", items: [...lift("Жим лёжа", 0.45), ...lift("Жим стоя", 0.28), ...lift("Отжимания на брусьях", null)] },
-      { name: "Тяга", focus: "Спина", items: [...lift("Становая тяга", 0.85), ...lift("Тяга в наклоне", 0.4), ...lift("Подтягивания", null)] },
-      { name: "Ноги", focus: "Присед", items: [...lift("Присед", 0.7), ...lift("Румынская тяга", 0.5), ...lift("Выпады", 0.2)] },
-    ],
-    4: [
-      { name: "Верх А", focus: "Жим", items: [...lift("Жим лёжа", 0.45), ...lift("Жим стоя", 0.28), ...lift("Отжимания на брусьях", null)] },
-      { name: "Низ А", focus: "Присед", items: [...lift("Присед", 0.7), ...lift("Выпады", 0.2), ...lift("Румынская тяга", 0.5)] },
-      { name: "Верх Б", focus: "Тяга", items: [...lift("Тяга в наклоне", 0.4), ...lift("Подтягивания", null), ...lift("Жим лёжа", 0.4)] },
-      { name: "Низ Б", focus: "Тяга", items: [...lift("Становая тяга", 0.85), ...lift("Присед", 0.55), ...lift("Выпады", 0.2)] },
-    ],
+  const begScale = scale * 0.75;
+  const lift = (name: string, ratio: number | null, sets = scheme, r = rest, sc = scale) =>
+    block(name, sets, ratio && bw ? plate(bw * ratio * sc) : null, r);
+  const body = (name: string, sets = scheme, r = rest) => block(name, sets, null, r);
+
+  /** Новичок: 3 full body, мало объёма, паттерны присед/жим/тяга/кор */
+  const beginner = [
+    {
+      name: "Full body A",
+      focus: "Присед · жим · тяга",
+      items: [
+        ...lift("Гоблет-присед / присед", 0.35, begScheme, begRest, begScale),
+        ...lift("Жим гантелей / жим лёжа", 0.3, begScheme, begRest, begScale),
+        ...lift("Тяга гантели в наклоне", 0.25, begScheme, begRest, begScale),
+        ...body("Планка", "3×20-40 сек", begRest),
+      ],
+    },
+    {
+      name: "Full body B",
+      focus: "Шарнир · жим стоя · тяга",
+      items: [
+        ...lift("Румынская тяга", 0.4, begScheme, begRest, begScale),
+        ...lift("Жим стоя / гантели", 0.2, begScheme, begRest, begScale),
+        ...body("Тяга верхнего блока / подтягивания", begScheme, begRest),
+        ...body("Ягодичный мост", "3×10-12", begRest),
+      ],
+    },
+    {
+      name: "Full body C",
+      focus: "Ноги · отжимания · кор",
+      items: [
+        ...lift("Выпады / болгарские", 0.15, begScheme, begRest, begScale),
+        ...body("Отжимания / брусья", begScheme, begRest),
+        ...lift("Тяга к поясу сидя", 0.3, begScheme, begRest, begScale),
+        ...body("Dead bug / bird-dog", "3×8/сторона", begRest),
+      ],
+    },
+  ];
+
+  /** Опытный: upper/lower 4 дня */
+  const experienced = [
+    {
+      name: "Верх A · жим",
+      focus: "Грудь · плечи · трицепс",
+      items: [
+        ...lift("Жим лёжа", 0.5),
+        ...lift("Жим гантелей наклон", 0.28),
+        ...lift("Жим стоя", 0.3),
+        ...body("Отжимания на брусьях", "3×8-12"),
+        ...body("Разгибания на трицепс", "3×12-15", 60),
+      ],
+    },
+    {
+      name: "Низ A · присед",
+      focus: "Квадрицепс · ягодицы",
+      items: [
+        ...lift("Присед", 0.75),
+        ...lift("Румынская тяга", 0.55),
+        ...lift("Выпады", 0.22),
+        ...body("Подъём на носки", "3×12-15", 60),
+        ...body("Планка", "3×30-45 сек", 60),
+      ],
+    },
+    {
+      name: "Верх B · тяга",
+      focus: "Спина · бицепс · задняя дельта",
+      items: [
+        ...lift("Тяга в наклоне", 0.45),
+        ...body("Подтягивания / блок", scheme),
+        ...lift("Тяга гантели", 0.28),
+        ...body("Face pull", "3×12-15", 60),
+        ...body("Подъём на бицепс", "3×10-12", 60),
+      ],
+    },
+    {
+      name: "Низ B · шарнир",
+      focus: "Задняя цепь · присед",
+      items: [
+        ...lift("Становая тяга", 0.9),
+        ...lift("Фронт-присед / гоблет", 0.5),
+        ...lift("Гиперэкстензия / good morning", 0.25),
+        ...body("Сгибания ног", "3×10-12", 60),
+        ...body("Боковая планка", "3×20-30 сек", 60),
+      ],
+    },
+  ];
+
+  /** Full body 3× */
+  const fullbody = [
+    {
+      name: "Full body A",
+      focus: "Присед · жим · горизонтальная тяга",
+      items: [
+        ...lift("Присед", 0.7),
+        ...lift("Жим лёжа", 0.45),
+        ...lift("Тяга в наклоне", 0.4),
+        ...body("Face pull", "3×12-15", 60),
+        ...body("Планка", "3×30 сек", 60),
+      ],
+    },
+    {
+      name: "Full body B",
+      focus: "Шарнир · жим стоя · вертикальная тяга",
+      items: [
+        ...lift("Румынская / становая", 0.7),
+        ...lift("Жим стоя", 0.28),
+        ...body("Подтягивания / блок", scheme),
+        ...lift("Выпады", 0.2),
+        ...body("Скручивания", "3×12-15", 45),
+      ],
+    },
+    {
+      name: "Full body C",
+      focus: "Ноги · жим · тяга",
+      items: [
+        ...lift("Присед / гоблет", 0.55),
+        ...lift("Жим гантелей", 0.3),
+        ...lift("Тяга к поясу", 0.35),
+        ...body("Отжимания на брусьях", "3×8-12"),
+        ...body("Ягодичный мост", "3×10-12", 60),
+      ],
+    },
+  ];
+
+  /** Специализация верх */
+  const upper = [
+    {
+      name: "Верх · жимовой",
+      focus: "Грудь · плечи · трицепс",
+      items: [
+        ...lift("Жим лёжа", 0.5),
+        ...lift("Жим гантелей наклон", 0.28),
+        ...lift("Жим стоя", 0.3),
+        ...body("Разведения гантелей", "3×12-15", 60),
+        ...body("Отжимания на брусьях", "3×8-12"),
+        ...body("Разгибания на трицепс", "3×12-15", 60),
+      ],
+    },
+    {
+      name: "Верх · тяговый",
+      focus: "Спина · бицепс · задняя дельта",
+      items: [
+        ...lift("Тяга в наклоне", 0.45),
+        ...body("Подтягивания / блок", scheme),
+        ...lift("Тяга гантели", 0.28),
+        ...body("Face pull", "3×12-15", 60),
+        ...body("Подъём на бицепс", "3×10-12", 60),
+        ...body("Молотки", "3×12", 60),
+      ],
+    },
+  ];
+
+  /** Специализация низ */
+  const lower = [
+    {
+      name: "Низ · присед",
+      focus: "Квадрицепс · ягодицы · икры",
+      items: [
+        ...lift("Присед", 0.75),
+        ...lift("Выпады / болгарские", 0.22),
+        ...lift("Жим ногами / гоблет", 0.9),
+        ...body("Разгибания ног", "3×12-15", 60),
+        ...body("Подъём на носки", "3×12-15", 45),
+        ...body("Планка", "3×30-45 сек", 60),
+      ],
+    },
+    {
+      name: "Низ · шарнир",
+      focus: "Задняя цепь · ягодицы",
+      items: [
+        ...lift("Становая тяга", 0.9),
+        ...lift("Румынская тяга", 0.55),
+        ...lift("Ягодичный мост / hip thrust", 0.6),
+        ...body("Сгибания ног", "3×10-12", 60),
+        ...body("Good morning / гиперэкстензия", "3×10-12", 60),
+        ...body("Боковая планка", "3×20-30 сек", 60),
+      ],
+    },
+  ];
+
+  const byPreset: Record<ProgramPreset, { name: string; focus: string; items: string[] }[]> = {
+    beginner,
+    experienced,
+    fullbody,
+    upper,
+    lower,
   };
-  const title = goal === "strength" ? "Сила" : goal === "cut" ? "Снижение" : "Форма";
+
+  const sessions = byPreset[preset] ?? beginner;
+  const goalTitle = goal === "strength" ? "Сила" : goal === "cut" ? "Снижение" : "Форма";
+  const presetTitle =
+    preset === "beginner"
+      ? "Новичок · full body"
+      : preset === "experienced"
+        ? "Опытный · верх/низ"
+        : preset === "fullbody"
+          ? "Full body"
+          : preset === "upper"
+            ? "Верх"
+            : "Низ";
+
   return {
-    programTitle: `${title} · ${days} в неделю`,
-    sessions: catalog[days].map((session, index) => ({ ...session, id: `built_${index + 1}` })),
+    programTitle: `${presetTitle} · ${goalTitle}`,
+    sessions: sessions.map((session, index) => ({ ...session, id: `built_${index + 1}` })),
   };
 }
 

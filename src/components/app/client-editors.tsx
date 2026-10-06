@@ -9,6 +9,8 @@ import {
   type Kbju,
   type ProgramSession,
   buildProgram,
+  PROGRAM_PRESETS,
+  type ProgramPreset,
   type BuildGoal,
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
@@ -87,6 +89,7 @@ export function ProgramEditor({
 }) {
   const [draft, setDraft] = useState(client);
   const [goal, setGoal] = useState<BuildGoal>("shape");
+  const [preset, setPreset] = useState<ProgramPreset>("beginner");
   return (
     <div className="flex flex-col gap-3">
       <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
@@ -133,7 +136,26 @@ export function ProgramEditor({
         })}
       </div>
       <p className="text-tiny text-muted-foreground">Порядок блоков сверху вниз — это порядок визитов. Буквы в названии дня ни на что не влияют.</p>
-      <SectionLabel>Собрать по клиенту</SectionLabel>
+      <SectionLabel>Сплит · шаблон</SectionLabel>
+      <div className="grid grid-cols-1 gap-1.5">
+        {PROGRAM_PRESETS.map((row) => (
+          <button
+            key={row.id}
+            type="button"
+            onClick={() => setPreset(row.id)}
+            className={cn(
+              "pressable rounded-xl px-3 py-2.5 text-left",
+              preset === row.id ? "bg-primary text-primary-foreground" : "bg-secondary",
+            )}
+          >
+            <span className="block text-sm font-medium">{row.label}</span>
+            <span className={cn("mt-0.5 block text-2xs", preset === row.id ? "text-primary-foreground/80" : "text-muted-foreground")}>
+              {row.hint}
+            </span>
+          </button>
+        ))}
+      </div>
+      <SectionLabel>Цель нагрузки</SectionLabel>
       <div className="grid grid-cols-3 gap-2">
         {(
           [
@@ -156,7 +178,7 @@ export function ProgramEditor({
         type="button"
         className="pressable h-11 rounded-xl bg-secondary text-sm"
         onClick={() => {
-          const built = buildProgram(draft, goal);
+          const built = buildProgram(draft, goal, preset);
           setDraft({ ...draft, programTitle: built.programTitle, sessions: built.sessions });
         }}
       >
@@ -164,8 +186,8 @@ export function ProgramEditor({
       </button>
       <p className="text-tiny text-muted-foreground">
         {draft.weight > 0
-          ? `Вес ${draft.weight} кг, визитов ${draft.trainDays.length || 3}. Веса стартовые, поправь и сохрани.`
-          : "Веса клиента нет, поэтому килограммы не ставлю. Дни и схема будут, вес допишешь сам."}
+          ? `Вес ${draft.weight} кг. Веса стартовые — поправь под технику и сохрани.`
+          : "Веса клиента нет — килограммы не ставлю. Схему сохрани, вес допиши сам."}
       </p>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
