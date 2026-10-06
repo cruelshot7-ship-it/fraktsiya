@@ -85,26 +85,27 @@ export function clientActionItems(opts: {
   const items: ActionItem[] = [];
 
   if (next) {
-    items.push({
-      id: `act_next_${next.id}`,
-      kind: "next_session",
-      title: `Ближайшая · ${next.time}`,
-      body: `${next.date === today ? "Сегодня" : next.date} · ${next.duration} мин`,
-      tab: "schedule",
-      bookingId: next.id,
-      clientId: client.id,
-      priority: 10,
-    });
     if (next.date === today) {
       items.push({
         id: `act_plan_${next.id}`,
         kind: "today_plan",
-        title: "План на сегодня",
-        body: "Откройте программу занятия",
+        title: `Тренировка сегодня · ${next.time}`,
+        body: "Откройте программу и отметьте подходы",
         tab: "program",
         bookingId: next.id,
         clientId: client.id,
-        priority: 20,
+        priority: 5,
+      });
+    } else {
+      items.push({
+        id: `act_next_${next.id}`,
+        kind: "next_session",
+        title: `Ближайшая · ${next.time}`,
+        body: `${next.date} · ${next.duration} мин`,
+        tab: "schedule",
+        bookingId: next.id,
+        clientId: client.id,
+        priority: 10,
       });
     }
   } else {
