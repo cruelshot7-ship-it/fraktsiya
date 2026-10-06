@@ -7,6 +7,7 @@ import {
   hoursUntilSlot,
   isLateCancel,
   isSlotPast,
+  isoDate,
   relativeDayLabel,
   sessionsRu,
   shortName,
@@ -43,6 +44,7 @@ export function BookingsView() {
   const next = upcoming[0];
   const weekVisits = weekVisitCount(all, me?.id ?? "");
   const hoursToNext = next ? hoursUntilSlot(next.date, next.time) : null;
+  const today = isoDate(new Date());
 
   if (role === "client" && !me) {
     return <EmptyHint>Записи появятся после того, как тренер добавит вас в зал.</EmptyHint>;
@@ -168,7 +170,28 @@ export function BookingsView() {
                 </div>
               </div>
             ) : (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
+                {role === "trainer" && booking.date === today && !booking.checkedIn && !booking.noShow ? (
+                  <button
+                    type="button"
+                    onClick={() => checkIn(booking.id)}
+                    className="pressable rounded-lg bg-ok/15 px-3 py-2 text-xs font-medium text-ok"
+                  >
+                    Явка
+                  </button>
+                ) : null}
+                {role === "trainer" && booking.checkedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveClient(booking.clientId);
+                      setTab("program");
+                    }}
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium"
+                  >
+                    К программе
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setPendingId(booking.id)}
