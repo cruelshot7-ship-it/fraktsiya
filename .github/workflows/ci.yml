@@ -26,6 +26,5 @@ jobs:
       - run: |
           if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
       - run: npm run typecheck
-        continue-on-error: true
       - run: npm test
       - run: npm run build
