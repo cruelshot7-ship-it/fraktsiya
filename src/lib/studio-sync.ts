@@ -109,3 +109,49 @@ export function emptyPayload(): StudioPayload {
     visits: [],
   };
 }
+
+// ===== TEMPORARY STUBS (restore full implementation later) =====
+export async function loadStudioState(): Promise<StudioPayload> {
+  return emptyPayload();
+}
+
+export async function saveStudioState(_payload: StudioPayload): Promise<void> {}
+
+export async function pullStudio(_initData?: string): Promise<StudioPayload> {
+  return emptyPayload();
+}
+
+export async function pushStudio(_payload: StudioPayload, _initData?: string): Promise<void> {}
+
+export function dropTombstones(payload: StudioPayload): StudioPayload {
+  return payload;
+}
+
+export function ensureApprovedClients(payload: StudioPayload): StudioPayload {
+  return payload;
+}
+
+export function isRemovedClient(_c: Client, _removed: string[]): boolean {
+  return false;
+}
+
+export function mergeClients(primary: Client[], secondary: Client[]): Client[] {
+  return [...primary, ...secondary];
+}
+
+export function tombstonesFor(_payload: StudioPayload): string[] {
+  return [];
+}
+
+export const requestJoin = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const addCoachFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const removeCoachFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const payCoachFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const decideJoinFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const sendBotLinkFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+export const sendTrainerNoteFn = createServerFn({ method: "POST" }).handler(async () => ({}));
+
+export const studioHealth = createServerFn({ method: "GET" }).handler(async () => ({
+  bot: false,
+  db: "pglite" as const,
+}));
