@@ -32,11 +32,7 @@
     "server"
   ],
   "exclude": [
-    "src/lib/multiplayer",
-    "src/lib/auth/middleware.ts",
-    "src/lib/app-data/index.ts",
-    "src/lib/app-data/readiness.ts",
-    "src/lib/app-data/client.server.ts",
-    "src/lib/app-data/use-connector-readiness.ts"
+    "node_modules",
+    "dist"
   ]
 }
