@@ -7,7 +7,6 @@ import {
   isSlotPast,
   MEALS,
   MONTHS,
-  MARIA_SESSIONS,
   PACK_VALID_DAYS,
   packDaysLeft,
   parseISODate,
@@ -224,8 +223,8 @@ export function visitSession(client: Client, iso: string, bookings: Booking[] = 
 }
 
 export function programWeek(client: Client, iso: string) {
-  const start = parseISODate(client.programStart);
   const d = parseISODate(iso);
+  const start = parseISODate(client.programStart);
   const diff = Math.floor((d.getTime() - start.getTime()) / 86400000);
   const w = Math.floor(diff / 7) + 1;
   return Math.min(client.programWeeks, Math.max(1, w));
