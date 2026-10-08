@@ -37,6 +37,7 @@
     "src/lib/app-data/index.ts",
     "src/lib/app-data/readiness.ts",
     "src/lib/app-data/client.server.ts",
-    "src/lib/app-data/use-connector-readiness.ts"
+    "src/lib/app-data/use-connector-readiness.ts",
+    "src/lib/studio-store.ts"
   ]
 }
