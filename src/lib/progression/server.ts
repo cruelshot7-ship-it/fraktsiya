@@ -108,7 +108,7 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
     if (!row[0]) return { ok: false as const, reason: "missing" };
     // Only the owning coach may resolve (or platform admin if role set).
     const isOwner = row[0].coach_id === session.user.id;
-    const isAdmin = session.role === "admin";
+    const isAdmin = (session.role as string) === "admin";
     if (!isOwner && !isAdmin) {
       return { ok: false as const, reason: "forbidden" };
     }
