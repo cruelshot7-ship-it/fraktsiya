@@ -55,7 +55,7 @@ export function SyncStatusChip({ className }: { className?: string }) {
   }, []);
 
   let label = "на сервере";
-  let tone: "muted" | "alert" | "ok" = "ok";
+  let tone: "muted" | "alert" = "muted";
   if (!online) {
     label = "только на телефоне";
     tone = "alert";
@@ -73,7 +73,6 @@ export function SyncStatusChip({ className }: { className?: string }) {
       className={cn(
         "text-2xs",
         tone === "alert" && "text-primary",
-        tone === "ok" && "text-ok",
         tone === "muted" && "text-muted-foreground",
         className,
       )}

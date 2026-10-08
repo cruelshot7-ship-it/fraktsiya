@@ -90,7 +90,7 @@ type PersistShape = {
   workoutLogs: WorkoutLog[];
   checks: Record<string, string[]>;
   visits: Visit[];
-  trainerUsername?: string | null;
+  trainerUsername: string | null;
   joinRequests?: JoinRequest[];
   removedClientIds?: string[];
   coaches?: Coach[];
@@ -212,7 +212,15 @@ function persist(s: PersistShape, push = true) {
   } catch {
     /* ignore quota */
   }
-  if (push) scheduleCloudPush(s);
+  if (push) {
+    scheduleCloudPush({
+      ...s,
+      trainerUsername: s.trainerUsername ?? null,
+      joinRequests: s.joinRequests ?? [],
+      removedClientIds: s.removedClientIds ?? [],
+      coaches: s.coaches ?? [],
+    });
+  }
 }
 
 function snap(s: State): PersistShape {
@@ -256,8 +264,9 @@ function mergeExtraSlots(a: Slot[], b: Slot[]) {
 
 let slotHolds: Record<string, number> = {};
 
-function slotViewer(clients: Client[], role: Role) {
-  const me = getTelegramUser()?.id || "";
+function slotViewer(clients: Client[], role: Role): string {
+  const rawId = getTelegramUser()?.id;
+  const me = rawId != null ? String(rawId) : "";
   if (role === "trainer") return me || String(TRAINER_TG_ID);
   const mine = clients.find((client) => me && client.telegramId === me) ?? clients[0];
   return mine?.coachId || String(TRAINER_TG_ID);
