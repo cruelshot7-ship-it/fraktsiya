@@ -23,8 +23,12 @@ export function getDbSource(): DbSource {
   return databaseUrlNow() ? "neon" : "pglite";
 }
 
-/** @deprecated use getDbSource() */
-export const dbSource: DbSource = getDbSource();
+/**
+ * Snapshot of backend at first module evaluation.
+ * Prefer getDbSource() — env (DATABASE_URL) may become available later on cold start.
+ * Kept for backward compatibility; refreshed when getSql() runs.
+ */
+export let dbSource: DbSource = getDbSource();
 
 export interface Sql {
   <T = Record<string, unknown>>(
@@ -85,17 +89,13 @@ function createNeonSql(connectionString: string): Promise<Sql> {
 async function createPgliteSql(): Promise<Sql> {
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
-    const pg = new PGlite({
-      parsers: {
-        [OID_INT8]: Number,
-        [OID_DATE]: identity,
-        [OID_INTERVAL]: identity,
-      },
-    });
-    await pg.waitReady;
-    await pg.exec(
-      "create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())",
-    );
+    const pg = new PGlite("idb://ruksha-discipline");
+    await pg.exec(`
+      create table if not exists _migrations (
+        name text primary key,
+        applied_at timestamptz not null default now()
+      );
+    `);
     return pg;
   })().catch((err) => {
     globalRef.__pgliteInstance__ = undefined;
@@ -146,6 +146,8 @@ async function createSql(): Promise<Sql> {
 }
 
 export function getSql(): Promise<Sql> {
+  // Re-resolve on each first connect so late-bound env is visible.
+  dbSource = getDbSource();
   sqlPromise ??= createSql().catch((err) => {
     sqlPromise = null;
     throw err;
