@@ -50,7 +50,7 @@ export function OutboxPanel() {
           },
         });
         await flushLocal(true);
-        const okN = res.results.filter((r) => r.ok).length;
+        const okN = res.results.filter((r: { ok: boolean }) => r.ok).length;
         const failN = res.results.length - okN;
         showToast(
           failN
