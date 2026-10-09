@@ -97,6 +97,12 @@ export function ProgramView() {
   const weekVisits = weekVisitCount(bookings, client.id);
   const next = nextTrainDate(client);
   const nextSession = visitSession(client, next, bookings);
+  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
+  const todayWorkout = workoutLogs.find((row) => row.clientId === client.id && row.date === today) ?? null;
+  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
+  const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
+  const arrived = Boolean(todayBook?.checkedIn) || visits.some((row) => row.clientId === client.id && row.date === today);
+  const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
   const shown = session ?? nextSession;
   const planMissingWeights = Boolean(
     shown?.items?.length &&
@@ -132,12 +138,6 @@ export function ProgramView() {
     ? workoutKcal(client.weight, withRest || todayBook?.duration || 60, checked.length, itemCount || 1) +
       Math.round(totals.volume * 0.04)
     : 0;
-  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
-  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
-  const todayWorkout = workoutLogs.find((row) => row.clientId === client.id && row.date === today);
-  const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
-  const arrived = Boolean(todayBook?.checkedIn) || visits.some((row) => row.clientId === client.id && row.date === today);
-  const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
   const ritual = dayRitual({
     trainDay,
     checkedIn: Boolean(todayBook?.checkedIn),
@@ -161,6 +161,8 @@ export function ProgramView() {
   const trend = useMemo(() => e1rmTrend(myLifts), [myLifts]);
   const prs = useMemo(() => detectPRs(myLifts), [myLifts]);
   const lastPr = prs.length ? prs[prs.length - 1] : null;
+  const kbjuTarget = dayKbju(client, trainDay);
+  const foodToday = sumFood(food.filter((f) => f.clientId === client.id && f.date === today));
 
   return (
     <div className="flex flex-col gap-3 pb-4">
@@ -194,7 +196,7 @@ export function ProgramView() {
             ) : (
               <span className="text-xs text-ok">на месте</span>
             )}
-            <a className="text-xs text-muted-foreground underline" href={mapsUrl} target="_blank" rel="noreferrer">
+            <a className="text-xs text-muted-foreground underline" href={mapsUrl("Минск")} target="_blank" rel="noreferrer">
               Маршрут
             </a>
           </div>
@@ -312,9 +314,7 @@ export function ProgramView() {
             )}
           </div>
           {startedAt ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Старт {clock(startedAt)} · идёт {elapsedMin} мин
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">Старт {clock(startedAt)} · идёт {elapsedMin} мин</p>
           ) : null}
         </Surface>
       ) : (
@@ -325,7 +325,7 @@ export function ProgramView() {
 
       <Surface>
         <SectionLabel>КБЖУ сегодня</SectionLabel>
-        <KbjuMeters target={dayKbju(client, trainDay)} actual={sumFood(food.filter((f) => f.clientId === client.id && f.date === today))} />
+        <KbjuMeters target={kbjuTarget.kbju ?? kbjuTarget} actual={foodToday} />
       </Surface>
 
       <Surface>
@@ -333,7 +333,7 @@ export function ProgramView() {
           Динамика <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
         </SectionLabel>
         <p className="mt-1 text-xs text-muted-foreground">
-          {trend
+          {trend && "kgPerWeek" in trend
             ? `Тренд: ${trend.kgPerWeek > 0 ? "+" : ""}${trend.kgPerWeek} кг/нед за ${trend.sessions} тренировок`
             : "Мало данных для тренда"}
           {lastPr ? ` · Последний рекорд ${formatDayMonth(lastPr.date)}: ${lastPr.e1rm} кг (+${lastPr.gain})` : ""}
