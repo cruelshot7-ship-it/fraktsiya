@@ -87,7 +87,6 @@ test("weight trend and calorie advice", () => {
   const t = weightTrend(hist, "2026-09-14");
   assert.equal(t.status, "ok");
   if (t.status === "ok") {
-    // cutting faster than recomp corridor -> add calories
     const advice = calorieAdvice(t, "recomp", 0.9);
     assert.equal(advice.status, "adjust");
     if (advice.status === "adjust") {
@@ -97,4 +96,23 @@ test("weight trend and calorie advice", () => {
   }
   const hold = calorieAdvice(t as WeightTrend, "recomp", 0.5);
   assert.equal(hold.status, "hold");
+});
+
+test("readiness maps optional DayCheck-like recovery fields", () => {
+  const hist: ReadinessDay[] = Array.from({ length: 7 }, (_, i) => ({
+    date: `2026-09-${String(i + 1).padStart(2, "0")}`,
+    sleepHours: 7.5,
+    fatigue: 2,
+    soreness: 2,
+    pain: 0,
+  }));
+  const day = {
+    date: "2026-09-10",
+    sleepHours: 5,
+    fatigue: 4,
+    soreness: 2,
+    pain: 0,
+  };
+  const decision = readiness(day, hist);
+  assert.equal(decision.status, "reduce");
 });
