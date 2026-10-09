@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { detectPRs } from "@/lib/athlete-metrics";
 import {
   BOT_USERNAME,
   addDays,
@@ -162,7 +163,7 @@ type State = {
   saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind">>) => void;
   importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
   ensureHealthToken: () => string;
-  addLift: (exercise: string, weight: number, reps: number, sets: number) => void;
+  addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
   toggleCheck: (item: string) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
   setWeight: (kg: number) => void;
@@ -1538,22 +1539,35 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
 
-  addLift: (exercise, weight, reps, sets) => {
-    const lifts = [
-      ...get().lifts,
-      {
-        id: `lift_${Date.now()}`,
-        date: todayIso(),
-        exercise,
-        weight,
-        reps,
-        sets,
-        clientId: get().activeClientId,
-      },
-    ];
+  addLift: (exercise, weight, reps, sets, rir) => {
+    const clientId = get().activeClientId;
+    const entry: LiftLog = {
+      id: `lift_${Date.now()}`,
+      date: todayIso(),
+      exercise,
+      weight,
+      reps,
+      sets,
+      ...(typeof rir === "number" && Number.isFinite(rir) && rir >= 0 ? { rir } : {}),
+      clientId,
+    };
+    const asSets = (rows: LiftLog[]) =>
+      rows
+        .filter((l) => l.clientId === clientId && l.exercise === exercise)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((l) => ({ date: l.date, exercise: l.exercise, weight: l.weight, reps: l.reps, rir: l.rir }));
+    const before = get().lifts;
+    const lifts = [...before, entry];
+    const prsBefore = detectPRs(asSets(before));
+    const prsAfter = detectPRs(asSets(lifts));
+    const isPr = prsAfter.length > prsBefore.length ? prsAfter.at(-1) : undefined;
     set({ lifts });
     persist(snap(get()));
-    get().showToast(`Записано: ${exercise} ${weight} кг`);
+    get().showToast(
+      isPr
+        ? `Рекорд: ${exercise} · ПМ ${isPr.e1rm} кг (+${isPr.gain})`
+        : `Записано: ${exercise} ${weight} кг`,
+    );
   },
 
   toggleCheck: (item) => {
