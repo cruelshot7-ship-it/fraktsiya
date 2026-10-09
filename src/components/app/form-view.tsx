@@ -27,22 +27,17 @@ export function FormView() {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [paste, setPaste] = useState("");
   const [autoOpen, setAutoOpen] = useState(false);
-  const [hook, setHook] = useState("");
-  const [healthLink, setHealthLink] = useState("");
 
   useEffect(() => {
-    if (!client) return;
-    const token = ensureHealthToken();
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    setHook(`${origin}/api/health?token=${token}`);
-    setHealthLink(`healthautoexport://x-callback-url/export?tokens=${token}`);
+    if (client && !client.healthToken) ensureHealthToken();
   }, [client, ensureHealthToken]);
 
-  if (!client) return <EmptyHint>Форма откроется после входа в зал.</EmptyHint>;
+  if (!client) return <EmptyHint>Форма откроется, когда тренер добавит вас в зал.</EmptyHint>;
 
   const recoveryReady = fatigue != null || soreness != null || pain != null;
-  const recoveryLabel = recoveryReady
+  const recoveryDecision = recoveryReady
     ? readiness(
         {
           date: today,
@@ -52,8 +47,23 @@ export function FormView() {
           pain: pain ?? 0,
         } satisfies ReadinessDay,
         [],
-      ).reason
+      )
     : null;
+  const recoveryLabel =
+    recoveryDecision?.status === "skip"
+      ? "Пропуск: сильная боль"
+      : recoveryDecision?.status === "modify"
+        ? "Заменить упражнения (боль)"
+        : recoveryDecision?.status === "deload"
+          ? "Снизить нагрузку"
+          : recoveryDecision
+            ? "Можно тренироваться"
+            : null;
+
+  const token = client.healthToken || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const hook = token ? `${origin}/api/health?token=${token}` : "";
+  const healthLink = token ? `healthautoexport://x-callback-url/export?tokens=${token}` : "";
 
   return (
     <div className="flex flex-col gap-3">
@@ -78,35 +88,44 @@ export function FormView() {
           </label>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {MOVE_KINDS.map((k) => (
+          {MOVE_KINDS.map((item) => (
             <button
-              key={k}
+              key={item}
               type="button"
-              className={
-                kind === k
-                  ? "pressable rounded-lg bg-primary px-2.5 py-1.5 text-xs text-primary-foreground"
-                  : "pressable rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground"
-              }
-              onClick={() => setKind(k)}
+              className={`pressable h-11 rounded-lg text-xs ${kind === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+              onClick={() => setKind(item)}
             >
-              {k}
+              {item}
             </button>
           ))}
         </div>
+        <div className="mt-2 flex gap-1.5">
+          {[250, 500].map((add) => (
+            <button
+              key={add}
+              type="button"
+              className="pressable h-11 rounded-lg bg-secondary text-sm"
+              onClick={() => setWater(String((Number(water) || 0) + add))}
+            >
+              +{add}
+            </button>
+          ))}
+        </div>
+        <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} label="шаги" />
         <div className="mt-3 space-y-2">
-          <p className="text-xs text-muted-foreground">Восстановление (сохраняется с днём)</p>
+          <p className="text-xs text-muted-foreground">Восстановление</p>
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs text-muted-foreground">Усталость 1–5</span>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
-                  key={v}
+                  key={`f${v}`}
                   type="button"
                   aria-pressed={fatigue === v}
                   onClick={() => setFatigue(fatigue === v ? null : v)}
-                  className={
-                    fatigue === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
-                  }
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    fatigue === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
                 >
                   {v}
                 </button>
@@ -118,13 +137,13 @@ export function FormView() {
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
-                  key={v}
+                  key={`s${v}`}
                   type="button"
                   aria-pressed={soreness === v}
                   onClick={() => setSoreness(soreness === v ? null : v)}
-                  className={
-                    soreness === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
-                  }
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    soreness === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
                 >
                   {v}
                 </button>
@@ -136,13 +155,13 @@ export function FormView() {
             <div className="flex gap-1">
               {[0, 1, 2, 3].map((v) => (
                 <button
-                  key={v}
+                  key={`p${v}`}
                   type="button"
                   aria-pressed={pain === v}
                   onClick={() => setPain(pain === v ? null : v)}
-                  className={
-                    pain === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
-                  }
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    pain === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
                 >
                   {v}
                 </button>
