@@ -20,24 +20,29 @@ export function FormView() {
   const [water, setWater] = useState(saved ? String(saved.waterMl || "") : "");
   const [move, setMove] = useState(saved ? String(saved.moveMin || "") : "");
   const [kind, setKind] = useState(saved?.moveKind || "Ходьба");
-  const [fatigue, setFatigue] = useState<number | null>(null);
-  const [soreness, setSoreness] = useState<number | null>(null);
-  const [pain, setPain] = useState<number | null>(null);
+  const [fatigue, setFatigue] = useState<number | null>(saved?.fatigue ?? null);
+  const [soreness, setSoreness] = useState<number | null>(saved?.soreness ?? null);
+  const [pain, setPain] = useState<number | null>(saved?.pain ?? null);
   const [kcal, setKcal] = useState("");
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
-  const [paste, setPaste] = useState("");
   const [autoOpen, setAutoOpen] = useState(false);
+  const [hook, setHook] = useState("");
+  const [healthLink, setHealthLink] = useState("");
 
   useEffect(() => {
-    if (client && !client.healthToken) ensureHealthToken();
+    if (!client) return;
+    const token = ensureHealthToken();
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    setHook(`${origin}/api/health?token=${token}`);
+    setHealthLink(`healthautoexport://x-callback-url/export?tokens=${token}`);
   }, [client, ensureHealthToken]);
 
-  if (!client) return <EmptyHint>Форма откроется, когда тренер добавит вас в зал.</EmptyHint>;
+  if (!client) return <EmptyHint>Форма откроется после входа в зал.</EmptyHint>;
 
   const recoveryReady = fatigue != null || soreness != null || pain != null;
-  const recoveryDecision = recoveryReady
+  const recoveryLabel = recoveryReady
     ? readiness(
         {
           date: today,
@@ -47,150 +52,97 @@ export function FormView() {
           pain: pain ?? 0,
         } satisfies ReadinessDay,
         [],
-      )
+      ).reason
     : null;
-  const recoveryLabel =
-    recoveryDecision?.status === "skip"
-      ? "Пропуск: сильная боль"
-      : recoveryDecision?.status === "modify"
-        ? "Заменить упражнения (боль)"
-        : recoveryDecision?.status === "reduce"
-          ? "Снизить объём (~80% подходов)"
-          : recoveryDecision?.status === "watch"
-            ? "Внимание: один флаг восстановления"
-            : recoveryDecision?.status === "ok"
-              ? "Можно по плану"
-              : null;
-
-  const token = client.healthToken || "";
-  const hook = token ? `${window.location.origin}/api/health?token=${token}` : "";
-  const healthLink = hook
-    ? `com.HealthExport://automation?url=${encodeURIComponent(hook)}&name=${encodeURIComponent("Ruksha")}&format=json&period=today&interval=days&enabled=true&datatype=healthmetrics&aggregatedata=true`
-    : "";
-
-  const week = [...Array(7)].map((_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
-    const iso = isoDate(date);
-    return { iso, on: dayChecks.some((row) => row.clientId === client.id && row.date === iso && (row.steps > 0 || row.waterMl > 0 || row.sleepHours > 0)) };
-  });
 
   return (
     <div className="flex flex-col gap-3">
       <Surface>
-        <SectionLabel>Сегодня</SectionLabel>
-        <div className="mt-2 flex gap-1">
-          {week.map((day) => (
-            <div
-              key={day.iso}
-              className={`h-2 flex-1 rounded-full ${
-                day.on ? "bg-primary" : "bg-secondary"
-              }`}
-              title={day.iso}
-            />
+        <SectionLabel>День</SectionLabel>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            Шаги
+            <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={String(FORM_GOALS.steps)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            Сон, ч
+            <input className={inputClass} inputMode="decimal" value={sleep} onChange={(e) => setSleep(e.target.value)} placeholder={String(FORM_GOALS.sleep)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            Вода, мл
+            <input className={inputClass} inputMode="numeric" value={water} onChange={(e) => setWater(e.target.value)} placeholder={String(FORM_GOALS.water)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            Движение, мин
+            <input className={inputClass} inputMode="numeric" value={move} onChange={(e) => setMove(e.target.value)} placeholder={String(FORM_GOALS.move)} />
+          </label>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {MOVE_KINDS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className={
+                kind === k
+                  ? "pressable rounded-lg bg-primary px-2.5 py-1.5 text-xs text-primary-foreground"
+                  : "pressable rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground"
+              }
+              onClick={() => setKind(k)}
+            >
+              {k}
+            </button>
           ))}
         </div>
-        <div className="mt-3 space-y-3">
-          <label className="block">
-            <span className="text-tiny text-muted-foreground">Шаги · цель {FORM_GOALS.steps}</span>
-            <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder="0" />
-            <div className="mt-2">
-              <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} />
-            </div>
-          </label>
-          <label className="block">
-            <span className="text-tiny text-muted-foreground">Сон, часы · цель {FORM_GOALS.sleep}</span>
-            <input className={inputClass} inputMode="decimal" value={sleep} onChange={(e) => setSleep(e.target.value)} placeholder="7.5" />
-            <div className="mt-2">
-              <ProgressRail value={Number(sleep.replace(",", ".")) || 0} max={FORM_GOALS.sleep} />
-            </div>
-          </label>
-          <div>
-            <span className="text-tiny text-muted-foreground">Вода, мл · цель {FORM_GOALS.water}</span>
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {[250, 500, 750, 1000].map((add) => (
-                <button
-                  key={add}
-                  type="button"
-                  className="pressable h-11 rounded-lg bg-secondary text-sm"
-                  onClick={() => setWater(String((Number(water) || 0) + add))}
-                >
-                  +{add}
-                </button>
-              ))}
-            </div>
-            <input className={`${inputClass} mt-2`} inputMode="numeric" value={water} onChange={(e) => setWater(e.target.value)} placeholder="0" />
-            <div className="mt-2">
-              <ProgressRail value={Number(water) || 0} max={FORM_GOALS.water} />
-            </div>
-          </div>
-          <div>
-            <span className="text-tiny text-muted-foreground">Движение вне зала, мин · цель {FORM_GOALS.move}</span>
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {MOVE_KINDS.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={`pressable h-11 rounded-lg text-xs ${kind === item ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
-                  onClick={() => setKind(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <input className={`${inputClass} mt-2`} inputMode="numeric" value={move} onChange={(e) => setMove(e.target.value)} placeholder="0" />
-          </div>
-        </div>
         <div className="mt-3 space-y-2">
-          <span className="text-tiny text-muted-foreground">Восстановление (необяз.)</span>
-          <div>
-            <span className="text-xs text-muted-foreground">Усталость 1–5</span>
-            <div className="mt-1 flex gap-1" role="group" aria-label="Усталость">
+          <p className="text-xs text-muted-foreground">Восстановление (сохраняется с днём)</p>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-2xs text-muted-foreground">Усталость 1–5</span>
+            <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
-                  key={`f${v}`}
+                  key={v}
                   type="button"
                   aria-pressed={fatigue === v}
                   onClick={() => setFatigue(fatigue === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    fatigue === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                  }`}
+                  className={
+                    fatigue === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
+                  }
                 >
                   {v}
                 </button>
               ))}
             </div>
           </div>
-          <div>
-            <span className="text-xs text-muted-foreground">Крепатура 1–5</span>
-            <div className="mt-1 flex gap-1" role="group" aria-label="Крепатура">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-2xs text-muted-foreground">Крепатура 1–5</span>
+            <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
-                  key={`s${v}`}
+                  key={v}
                   type="button"
                   aria-pressed={soreness === v}
                   onClick={() => setSoreness(soreness === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    soreness === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                  }`}
+                  className={
+                    soreness === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
+                  }
                 >
                   {v}
                 </button>
               ))}
             </div>
           </div>
-          <div>
-            <span className="text-xs text-muted-foreground">Боль 0–3</span>
-            <div className="mt-1 flex gap-1" role="group" aria-label="Боль">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-2xs text-muted-foreground">Боль 0–3</span>
+            <div className="flex gap-1">
               {[0, 1, 2, 3].map((v) => (
                 <button
-                  key={`p${v}`}
+                  key={v}
                   type="button"
                   aria-pressed={pain === v}
                   onClick={() => setPain(pain === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    pain === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                  }`}
+                  className={
+                    pain === v ? "pressable h-10 flex-1 rounded-lg bg-primary text-sm text-primary-foreground" : "pressable h-10 flex-1 rounded-lg bg-secondary text-sm text-muted-foreground"
+                  }
                 >
                   {v}
                 </button>
@@ -213,6 +165,9 @@ export function FormView() {
               waterMl: Number(water) || 0,
               moveMin: Number(move) || 0,
               moveKind: kind,
+              fatigue: fatigue ?? undefined,
+              soreness: soreness ?? undefined,
+              pain: pain ?? undefined,
             });
           }}
         >
