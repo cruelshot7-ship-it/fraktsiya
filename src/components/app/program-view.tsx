@@ -19,7 +19,6 @@ import {
   visitSession,
   WEEK_GOAL,
   weekVisitCount,
-  epley1rm,
   planTotals,
   lineGroup,
   readPlanLine,
@@ -29,6 +28,7 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
+import { detectPRs, e1rm, e1rmTrend, isReliable } from "@/lib/athlete-metrics";
 import { Check, Flame } from "lucide-react";
 
 export function ProgramView() {
@@ -49,6 +49,7 @@ export function ProgramView() {
   const [kg, setKg] = useState("60");
   const [reps, setReps] = useState("6");
   const [sets, setSets] = useState("4");
+  const [rir, setRir] = useState<number | null>(null);
   const [chartReady, setChartReady] = useState(false);
   const [facts, setFacts] = useState<Record<number, string>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -57,17 +58,29 @@ export function ProgramView() {
   const showToast = useStudio((s) => s.showToast);
   const setTab = useStudio((s) => s.setTab);
   const client = activeClient({ clients, activeClientId });
+  const myLifts = useMemo(
+    () =>
+      client
+        ? lifts
+            .filter((l) => l.exercise === exercise && l.clientId === client.id)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((l) => ({ date: l.date, exercise: l.exercise, weight: l.weight, reps: l.reps, rir: l.rir }))
+        : [],
+    [lifts, exercise, client],
+  );
   const series = useMemo(() => {
-    if (!client) return [];
     const byDay = new Map<string, number>();
-    for (const lift of lifts.filter((l) => l.exercise === exercise && l.clientId === client.id)) {
-      const rm = epley1rm(lift.weight, lift.reps);
-      byDay.set(lift.date, Math.max(byDay.get(lift.date) ?? 0, rm));
+    for (const l of myLifts) {
+      if (!isReliable(l.reps, l.rir)) continue;
+      byDay.set(l.date, Math.max(byDay.get(l.date) ?? 0, e1rm(l.weight, l.reps, l.rir)));
     }
     return [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, rm]) => ({ date, label: formatDayMonth(date), rm }));
-  }, [lifts, exercise, client]);
+  }, [myLifts]);
+  const trend = useMemo(() => e1rmTrend(myLifts, exercise), [myLifts, exercise]);
+  const lastPr = useMemo(() => detectPRs(myLifts).at(-1) ?? null, [myLifts]);
+  const unreliableOnly = myLifts.length > 0 && series.length === 0;
   const today = isoDate(new Date());
   const startKey = client ? `ruksha:wo:${client.id}:${today}` : "";
   const factKey = client ? `ruksha:fact:${client.id}:${today}` : "";
@@ -408,7 +421,7 @@ export function ProgramView() {
 
       <Surface>
         <SectionLabel>Повторный максимум</SectionLabel>
-        <p className="mt-1 text-tiny text-muted-foreground">Считается по весу и повторам. 1 повтор = этот вес.</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Считается по весу, повторам и запасу (сколько повторов осталось в баке). Подходы дальше 10 повторов до отказа не учитываются: там формула врёт.</p>
         <div className="mt-3 flex flex-wrap gap-1">
           {EXERCISES.map((item) => (
             <button
@@ -428,6 +441,15 @@ export function ProgramView() {
           {series.at(-1)?.rm ?? 0}
           <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {trend.status === "ok"
+            ? `Тренд: ${trend.kgPerWeek > 0 ? "+" : ""}${trend.kgPerWeek} кг/нед за ${trend.sessions} тренировок`
+            : trend.reason}
+          {lastPr ? ` · Последний рекорд ${formatDayMonth(lastPr.date)}: ${lastPr.e1rm} кг (+${lastPr.gain})` : ""}
+        </p>
+        {unreliableOnly ? (
+          <p className="mt-1 text-xs text-muted-foreground">Все записи — длинные подходы, для ПМ они не годятся. Запишите подход на 1–8 повторов.</p>
+        ) : null}
         <div className="mt-3 h-44">
           {chartReady && series.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -463,9 +485,28 @@ export function ProgramView() {
           <Field label="Подходы">
             <input className={inputClass} inputMode="numeric" value={sets} onChange={(e) => setSets(e.target.value)} />
           </Field>
+          <div className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
+            <span id="rir-label">Запас (RIR)</span>
+            <div className="flex gap-1" role="group" aria-labelledby="rir-label">
+              {[0, 1, 2, 3].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={rir === v}
+                  onClick={() => setRir(rir === v ? null : v)}
+                  className={cn(
+                    "pressable h-11 flex-1 rounded-lg text-sm tabular-nums",
+                    rir === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                  )}
+                >
+                  {v === 3 ? "3+" : v}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             type="button"
-            className="pressable mt-6 h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+            className="pressable col-span-2 h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
             onClick={() => {
               const w = Number(kg.replace(",", "."));
               const r = Number(reps);
@@ -474,7 +515,8 @@ export function ProgramView() {
                 showToast("Введите вес, повторы и подходы.");
                 return;
               }
-              addLift(exercise, w, r, st);
+              addLift(exercise, w, r, st, rir ?? undefined);
+              setRir(null);
             }}
           >
             Записать подход
