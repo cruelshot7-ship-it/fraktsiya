@@ -226,6 +226,12 @@ export type DayCheck = {
   waterMl: number;
   moveMin: number;
   moveKind: string;
+  /** 1-5, optional recovery */
+  fatigue?: number;
+  /** 1-5, optional recovery */
+  soreness?: number;
+  /** 0-3, optional recovery */
+  pain?: number;
   source?: "apple" | "hand";
 };
 

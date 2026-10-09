@@ -160,7 +160,7 @@ type State = {
   addFood: (mealId: string) => void;
   addCustomFood: (meal: Omit<Meal, "id">) => void;
   removeFood: (logId: string) => void;
-  saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind">>) => void;
+  saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind" | "fatigue" | "soreness" | "pain">>) => void;
   importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
   ensureHealthToken: () => string;
   addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
@@ -1495,6 +1495,9 @@ export const useStudio = create<State>((set, get) => ({
       waterMl: Math.max(0, Math.round(patch.waterMl ?? prev?.waterMl ?? 0)),
       moveMin: Math.max(0, Math.round(patch.moveMin ?? prev?.moveMin ?? 0)),
       moveKind: (patch.moveKind ?? prev?.moveKind ?? "Ходьба").trim() || "Ходьба",
+      fatigue: patch.fatigue ?? prev?.fatigue,
+      soreness: patch.soreness ?? prev?.soreness,
+      pain: patch.pain ?? prev?.pain,
     };
     set({ dayChecks: [...get().dayChecks.filter((row) => row.id !== id), next] });
     persist(snap(get()));
