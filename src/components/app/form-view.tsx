@@ -19,6 +19,13 @@ export function FormView() {
   const [water, setWater] = useState(saved ? String(saved.waterMl || "") : "");
   const [move, setMove] = useState(saved ? String(saved.moveMin || "") : "");
   const [kind, setKind] = useState(saved?.moveKind || "Ходьба");
+  const [fatigue, setFatigue] = useState<number | null>(
+    typeof saved?.fatigue === "number" ? saved.fatigue : null,
+  );
+  const [soreness, setSoreness] = useState<number | null>(
+    typeof saved?.soreness === "number" ? saved.soreness : null,
+  );
+  const [pain, setPain] = useState<number | null>(typeof saved?.pain === "number" ? saved.pain : null);
   const [kcal, setKcal] = useState("");
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
@@ -49,22 +56,18 @@ export function FormView() {
     <div className="flex flex-col gap-3">
       <Surface>
         <SectionLabel>Сегодня</SectionLabel>
-        <p className="mt-1 text-xs text-muted-foreground">Три числа с часов или из Trackables: шаги, сон, минуты. Одной строкой.</p>
-        {saved?.source === "apple" ? <p className="mt-1 text-tiny text-primary">Сегодня уже пришло само.</p> : null}
-        <input
-          className={`${inputClass} mt-3`}
-          value={paste}
-          placeholder="8000 7.5 30"
-          onChange={(e) => {
-            const value = e.target.value;
-            setPaste(value);
-            const nums = value.replace(/,/g, ".").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-            if (nums[0] != null) setSteps(String(Math.round(nums[0])));
-            if (nums[1] != null) setSleep(String(nums[1]));
-            if (nums[2] != null) setMove(String(Math.round(nums[2])));
-          }}
-        />
-        <div className="mt-3 flex flex-col gap-3">
+        <div className="mt-2 flex gap-1">
+          {week.map((day) => (
+            <div
+              key={day.iso}
+              className={`h-2 flex-1 rounded-full ${
+                day.on ? "bg-primary" : "bg-secondary"
+              }`}
+              title={day.iso}
+            />
+          ))}
+        </div>
+        <div className="mt-3 space-y-3">
           <label className="block">
             <span className="text-tiny text-muted-foreground">Шаги · цель {FORM_GOALS.steps}</span>
             <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder="0" />
@@ -115,26 +118,86 @@ export function FormView() {
             <input className={`${inputClass} mt-2`} inputMode="numeric" value={move} onChange={(e) => setMove(e.target.value)} placeholder="0" />
           </div>
         </div>
+        <div className="mt-3 space-y-2">
+          <span className="text-tiny text-muted-foreground">Восстановление (необяз.)</span>
+          <div>
+            <span className="text-2xs text-muted-foreground">Усталость 1–5</span>
+            <div className="mt-1 flex gap-1" role="group" aria-label="Усталость">
+              {[1, 2, 3, 4, 5].map((v) => (
+                <button
+                  key={`f${v}`}
+                  type="button"
+                  aria-pressed={fatigue === v}
+                  onClick={() => setFatigue(fatigue === v ? null : v)}
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    fatigue === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="text-2xs text-muted-foreground">Крепатура 1–5</span>
+            <div className="mt-1 flex gap-1" role="group" aria-label="Крепатура">
+              {[1, 2, 3, 4, 5].map((v) => (
+                <button
+                  key={`s${v}`}
+                  type="button"
+                  aria-pressed={soreness === v}
+                  onClick={() => setSoreness(soreness === v ? null : v)}
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    soreness === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="text-2xs text-muted-foreground">Боль 0–3</span>
+            <div className="mt-1 flex gap-1" role="group" aria-label="Боль">
+              {[0, 1, 2, 3].map((v) => (
+                <button
+                  key={`p${v}`}
+                  type="button"
+                  aria-pressed={pain === v}
+                  onClick={() => setPain(pain === v ? null : v)}
+                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                    pain === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         <button
           type="button"
           className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-          onClick={() =>
-            saveDayCheck({
+          onClick={() => {
+            const patch: Parameters<typeof saveDayCheck>[0] & {
+              fatigue?: number;
+              soreness?: number;
+              pain?: number;
+            } = {
               steps: Number(steps) || 0,
               sleepHours: Number(sleep.replace(",", ".")) || 0,
               waterMl: Number(water) || 0,
               moveMin: Number(move) || 0,
               moveKind: kind,
-            })
-          }
+            };
+            if (fatigue != null) patch.fatigue = fatigue;
+            if (soreness != null) patch.soreness = soreness;
+            if (pain != null) patch.pain = pain;
+            saveDayCheck(patch);
+          }}
         >
-          Записать день
+          Сохранить день
         </button>
-        <div className="mt-3 flex gap-1">
-          {week.map((day) => (
-            <span key={day.iso} className={`h-1.5 flex-1 rounded-full ${day.on ? "bg-primary" : "bg-secondary"}`} />
-          ))}
-        </div>
       </Surface>
 
       <Surface>
