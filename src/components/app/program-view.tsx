@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
+  buildProgram,
   countdownLabel,
   dayRitual,
   dayKbju,
@@ -42,6 +43,7 @@ export function ProgramView() {
   const visits = useStudio((s) => s.visits);
   const toggleCheck = useStudio((s) => s.toggleCheck);
   const completeWorkout = useStudio((s) => s.completeWorkout);
+  const updateClient = useStudio((s) => s.updateClient);
   const checks = useStudio((s) => s.checks);
   const workoutLogs = useStudio((s) => s.workoutLogs);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
@@ -119,6 +121,28 @@ export function ProgramView() {
   const t = dayKbju(client, today, bookings).kbju;
   const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today) ?? null;
   const shown = session ?? nextSession;
+  const planMissingWeights = Boolean(
+    shown?.items?.length &&
+      !shown.items.some((line) => /\d+(?:[.,]\d+)?\s*кг/i.test(line)),
+  );
+  const prescribeWorkingWeights = () => {
+    const bw = client.weight > 0 ? client.weight : 70;
+    const days = client.trainDays?.length ? client.trainDays : [0, 2, 4];
+    const rebuilt = buildProgram({ weight: bw, trainDays: days }, "shape", "beginner");
+    updateClient(client.id, {
+      weight: bw,
+      programTitle: rebuilt.programTitle,
+      sessions: rebuilt.sessions,
+      programWeeks: client.programWeeks || 8,
+      programStart: client.programStart || today,
+      trainDays: days,
+    });
+    showToast(
+      client.weight > 0
+        ? `Рабочие веса по вашим ${bw} кг`
+        : `Рабочие веса по ${bw} кг (укажите свой вес в профиле)`,
+    );
+  };
   const checked = checks[`${client.id}:${today}`] ?? [];
   const itemCount = shown?.items.length ?? 0;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
@@ -241,6 +265,20 @@ export function ProgramView() {
             <p className="font-display text-base">{shown.name}</p>
             <p className="text-xs text-muted-foreground">{shown.focus}</p>
           </div>
+          {planMissingWeights ? (
+            <div className="mt-3 rounded-xl border border-border/60 bg-secondary/40 px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">
+                В плане нет рабочих весов (часто так, если вес тела не указан при сборке).
+              </p>
+              <button
+                type="button"
+                className="pressable mt-2 h-10 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                onClick={prescribeWorkingWeights}
+              >
+                Проставить рабочие веса
+              </button>
+            </div>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {(() => {
               const items = shown.items;
