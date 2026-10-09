@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FORM_GOALS, isoDate, MOVE_KINDS } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { readiness, type ReadinessDay } from "@/lib/athlete-metrics";
 
 export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
@@ -34,6 +35,32 @@ export function FormView() {
   }, [client, ensureHealthToken]);
 
   if (!client) return <EmptyHint>Форма откроется, когда тренер добавит вас в зал.</EmptyHint>;
+
+  const recoveryReady = fatigue != null || soreness != null || pain != null;
+  const recoveryDecision = recoveryReady
+    ? readiness(
+        {
+          date: today,
+          sleepHours: Number(sleep.replace(",", ".")) || 0,
+          fatigue: fatigue ?? 2,
+          soreness: soreness ?? 2,
+          pain: pain ?? 0,
+        } satisfies ReadinessDay,
+        [],
+      )
+    : null;
+  const recoveryLabel =
+    recoveryDecision?.status === "skip"
+      ? "Пропуск: сильная боль"
+      : recoveryDecision?.status === "modify"
+        ? "Заменить упражнения (боль)"
+        : recoveryDecision?.status === "reduce"
+          ? "Снизить объём (~80% подходов)"
+          : recoveryDecision?.status === "watch"
+            ? "Внимание: один флаг восстановления"
+            : recoveryDecision?.status === "ok"
+              ? "Можно по плану"
+              : null;
 
   const token = client.healthToken || "";
   const hook = token ? `${window.location.origin}/api/health?token=${token}` : "";
@@ -171,6 +198,11 @@ export function FormView() {
             </div>
           </div>
         </div>
+        {recoveryLabel ? (
+          <p className="mt-2 text-xs text-muted-foreground" role="status">
+            Сегодня: {recoveryLabel}
+          </p>
+        ) : null}
         <button
           type="button"
           className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
