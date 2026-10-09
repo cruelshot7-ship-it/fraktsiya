@@ -257,6 +257,8 @@ export type LiftLog = {
   weight: number;
   reps: number;
   sets: number;
+  /** Reps in reserve at the end of the set (0 = to failure). Optional: old records have none. */
+  rir?: number;
   clientId: string;
 };
 
