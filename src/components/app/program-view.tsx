@@ -80,11 +80,6 @@ export function ProgramView() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, rm]) => ({ date, label: formatDayMonth(date), rm }));
   }, [myLifts]);
-  const trend = useMemo(() => e1rmTrend(myLifts), [myLifts]);
-  const lastPr = useMemo(() => {
-    const prs = detectPRs(myLifts);
-    return prs.length ? prs[prs.length - 1] : null;
-  }, [myLifts]);
 
   useEffect(() => {
     if (!startedAt) return;
@@ -92,7 +87,9 @@ export function ProgramView() {
     return () => window.clearInterval(id);
   }, [startedAt]);
 
-  if (!client) return <EmptyHint>Программа откроется, когда тренер добавит вас в зал.</EmptyHint>;
+  if (!client) {
+    return <EmptyHint>Программа откроется после входа в зал.</EmptyHint>;
+  }
 
   const today = isoDate(new Date());
   const session = visitSession(client, today, bookings);
@@ -131,13 +128,13 @@ export function ProgramView() {
   const restMin = Math.round(totals.restSec / 60);
   const withRest = elapsedMin + restMin;
   const clock = (ts: number) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
-  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
-  const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today);
   const liveKcal = checked.length
     ? workoutKcal(client.weight, withRest || todayBook?.duration || 60, checked.length, itemCount || 1) +
       Math.round(totals.volume * 0.04)
     : 0;
+  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
+  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
+  const todayWorkout = workoutLogs.find((row) => row.clientId === client.id && row.date === today);
   const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
   const arrived = Boolean(todayBook?.checkedIn) || visits.some((row) => row.clientId === client.id && row.date === today);
   const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
@@ -160,53 +157,49 @@ export function ProgramView() {
     totalItems: itemCount,
     frozen: isFrozen(client),
   });
-  const kbju = dayKbju(client, trainDay);
-  const foodToday = sumFood(food.filter((f) => f.clientId === client.id && f.date === today));
-  const visiting = arrived;
+
+  const trend = useMemo(() => e1rmTrend(myLifts), [myLifts]);
+  const prs = useMemo(() => detectPRs(myLifts), [myLifts]);
+  const lastPr = prs.length ? prs[prs.length - 1] : null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <Surface glow={client.sessionsLeft <= 2 ? "alert" : session ? "ok" : undefined}>
-        <div className="flex items-start justify-between gap-3">
-          <SectionLabel>
-            {client.programTitle} · нед. {week}/{client.programWeeks}
-          </SectionLabel>
-          <p className="text-right text-xs text-muted-foreground">
-            {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
-          </p>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isFrozen(client)
-            ? `Заморозка до ${client.frozenUntil}`
-            : session
-              ? visiting
-                ? " · вы сегодня в зале"
-                : ` · день ${client.sessions.indexOf(session) + 1} из ${client.sessions.length}`
-              : next
-                ? `Следующая · ${formatDayMonth(next)}`
-                : "Нет ближайшей тренировки"}
+    <div className="flex flex-col gap-3 pb-4">
+      <Surface>
+        <SectionLabel>{motive.kicker}</SectionLabel>
+        <p className="font-display mt-2 text-xl leading-tight tracking-wide">{motive.line}</p>
+        <p className="mt-2 text-tiny text-muted-foreground">
+          Серия {client.streak} · дисциплина дня {ritual.done}/3
         </p>
-        {todayBook ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Слот {todayBook.time} · {countdownLabel(hoursToToday)}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <RitualTick on={ritual.hall} label={ritual.restDay ? "отдых" : "зал"} />
+          <RitualTick on={ritual.food} label="еда" />
+          <RitualTick on={ritual.report} label="явка" />
+        </div>
+        {client.programTitle ? (
+          <p className="mt-3 text-tiny text-muted-foreground">
+            {client.programTitle} · нед. {week}/{client.programWeeks}
+            {session ? ` · ${session.name}` : nextSession ? ` · далее ${nextSession.name}` : ""}
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-muted-foreground">{motive.text}</p>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          <RitualTick on={ritual.report} label="Отчёт" />
-          <RitualTick on={ritual.food} label="Еда" />
-          <RitualTick on={ritual.workout} label="Зал" />
-          <RitualTick on={ritual.checkin} label="Чекин" />
-        </div>
-        {session && !visiting ? (
-          <button
-            type="button"
-            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-secondary text-sm"
-            onClick={() => arrive()}
-          >
-            Я в зале
-          </button>
+        {todayBook ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="text-sm">
+              Сегодня {todayBook.time}
+              {hoursToToday != null ? ` · ${countdownLabel(hoursToToday)}` : ""}
+            </p>
+            {!arrived ? (
+              <button type="button" className="pressable rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground" onClick={() => arrive()}>
+                Я на месте
+              </button>
+            ) : (
+              <span className="text-xs text-ok">на месте</span>
+            )}
+            <a className="text-xs text-muted-foreground underline" href={mapsUrl} target="_blank" rel="noreferrer">
+              Маршрут
+            </a>
+          </div>
         ) : null}
+        {isFrozen(client) ? <p className="mt-2 text-xs text-alert">Заморозка до {client.frozenUntil}</p> : null}
       </Surface>
 
       {shown ? (
@@ -296,16 +289,11 @@ export function ProgramView() {
             })()}
           </ul>
           <p className="mt-3 text-xs text-muted-foreground">
-            Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых{" "}
-            {restMin} мин
+            Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
           </p>
           <div className="mt-3 flex gap-2">
             {!startedAt ? (
-              <button
-                type="button"
-                className="pressable h-11 flex-1 rounded-lg bg-secondary text-sm"
-                onClick={() => setStartedAt(Date.now())}
-              >
+              <button type="button" className="pressable h-11 flex-1 rounded-lg bg-secondary text-sm" onClick={() => setStartedAt(Date.now())}>
                 Начать
               </button>
             ) : (
@@ -313,10 +301,6 @@ export function ProgramView() {
                 type="button"
                 className="pressable h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
                 onClick={() => {
-                  if (!startedAt) {
-                    showToast("Сначала нажмите «Начать».");
-                    return;
-                  }
                   completeWorkout(itemCount || 1, elapsedMin, new Date(startedAt).toISOString(), totals.volume);
                   showToast("Тренировка записана · можно отметить еду");
                   setStartedAt(null);
@@ -327,40 +311,26 @@ export function ProgramView() {
               </button>
             )}
           </div>
+          {startedAt ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Старт {clock(startedAt)} · идёт {elapsedMin} мин
+            </p>
+          ) : null}
         </Surface>
       ) : (
         <Surface>
-          <p className="text-sm text-muted-foreground">
-            Тренер ещё не назначил программу. Когда назначит — день сам подтянется к визиту.
-          </p>
+          <p className="text-sm text-muted-foreground">Тренер ещё не назначил программу.</p>
         </Surface>
       )}
 
-      {client.sessions.length > 1 ? (
-        <Surface>
-          <SectionLabel>Все дни</SectionLabel>
-          {client.sessions.map((day, i) => (
-            <div key={day.id} className="mt-2 rounded-lg bg-secondary/40 px-3 py-2">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-sm font-medium">
-                  {i + 1}. {day.name}
-                </p>
-                <p className="text-xs text-muted-foreground">{day.focus}</p>
-              </div>
-            </div>
-          ))}
-        </Surface>
-      ) : null}
-
       <Surface>
         <SectionLabel>КБЖУ сегодня</SectionLabel>
-        <KbjuMeters target={kbju} actual={foodToday} />
+        <KbjuMeters target={dayKbju(client, trainDay)} actual={sumFood(food.filter((f) => f.clientId === client.id && f.date === today))} />
       </Surface>
 
       <Surface>
         <SectionLabel>
-          Динамика
-          <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
+          Динамика <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
         </SectionLabel>
         <p className="mt-1 text-xs text-muted-foreground">
           {trend
@@ -375,20 +345,14 @@ export function ProgramView() {
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis width={36} tick={{ fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                  }}
+                  contentStyle={{ background: "var(--color-popover)", border: "1px solid var(--color-border)", borderRadius: 8 }}
                   formatter={(value) => [`${value} кг`, "ПМ"]}
                 />
                 <Line type="monotone" dataKey="rm" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
-              Запишите несколько подходов — появится график
-            </p>
+            <p className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">Запишите несколько подходов</p>
           )}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
