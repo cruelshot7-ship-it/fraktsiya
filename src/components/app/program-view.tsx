@@ -86,14 +86,20 @@ export function ProgramView() {
     return prs.length ? prs[prs.length - 1] : null;
   }, [myLifts]);
 
+  useEffect(() => {
+    if (!startedAt) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+
   if (!client) return <EmptyHint>Программа откроется, когда тренер добавит вас в зал.</EmptyHint>;
 
   const today = isoDate(new Date());
   const session = visitSession(client, today, bookings);
   const week = programWeek(client, today);
-  const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
-  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
-  const nextSession = client.sessions[0] ?? null;
+  const weekVisits = weekVisitCount(bookings, client.id);
+  const next = nextTrainDate(client);
+  const nextSession = visitSession(client, next, bookings);
   const shown = session ?? nextSession;
   const planMissingWeights = Boolean(
     shown?.items?.length &&
@@ -120,27 +126,43 @@ export function ProgramView() {
   const checked = checks[`${client.id}:${today}`] ?? [];
   const itemCount = shown?.items.length ?? 0;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
-  const elapsedMin = Math.floor(elapsedSec / 60);
-  const restMin = startedAt ? Math.max(0, elapsedMin - Math.min(elapsedMin, itemCount * 3)) : 0;
-  const withRest = startedAt ? elapsedMin : 0;
+  const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
   const totals = planTotals(shown?.items ?? [], checked, facts);
-  const kcal = client
+  const restMin = Math.round(totals.restSec / 60);
+  const withRest = elapsedMin + restMin;
+  const clock = (ts: number) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
+  const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
+  const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today);
+  const liveKcal = checked.length
     ? workoutKcal(client.weight, withRest || todayBook?.duration || 60, checked.length, itemCount || 1) +
       Math.round(totals.volume * 0.04)
     : 0;
-
-  useEffect(() => {
-    if (!startedAt) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [startedAt]);
-
-  const frozen = isFrozen(client);
-  const nextTrain = nextTrainDate(client, today);
-  const weekVisits = weekVisitCount(client, bookings, today);
-  const ritual = dayRitual(client, today, food, visits);
-  const kbju = dayKbju(client, today);
+  const trainDay = Boolean(todayBook) || client.trainDays.includes(dowIndex(today));
+  const arrived = Boolean(todayBook?.checkedIn) || visits.some((row) => row.clientId === client.id && row.date === today);
+  const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
+  const ritual = dayRitual({
+    trainDay,
+    checkedIn: Boolean(todayBook?.checkedIn),
+    workout: Boolean(todayWorkout),
+    foodCount,
+    reportedToday: client.lastReportAt === today,
+  });
+  const motive = motiveFor({
+    client,
+    today,
+    trainDay,
+    checkedIn: Boolean(todayBook?.checkedIn),
+    hoursToSession: hoursToToday,
+    foodCount,
+    workout: todayWorkout,
+    checks: checked.length,
+    totalItems: itemCount,
+    frozen: isFrozen(client),
+  });
+  const kbju = dayKbju(client, trainDay);
   const foodToday = sumFood(food.filter((f) => f.clientId === client.id && f.date === today));
+  const visiting = arrived;
 
   return (
     <div className="flex flex-col gap-3">
@@ -154,27 +176,27 @@ export function ProgramView() {
           </p>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {frozen
+          {isFrozen(client)
             ? `Заморозка до ${client.frozenUntil}`
             : session
               ? visiting
                 ? " · вы сегодня в зале"
                 : ` · день ${client.sessions.indexOf(session) + 1} из ${client.sessions.length}`
-              : nextTrain
-                ? `Следующая · ${formatDayMonth(nextTrain)}`
+              : next
+                ? `Следующая · ${formatDayMonth(next)}`
                 : "Нет ближайшей тренировки"}
         </p>
         {todayBook ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            Слот {todayBook.time} · {countdownLabel(hoursUntilSlot(todayBook.date, todayBook.time))}
+            Слот {todayBook.time} · {countdownLabel(hoursToToday)}
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-muted-foreground">{motiveFor(client, weekVisits)}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{motive.text}</p>
         <div className="mt-3 grid grid-cols-4 gap-2">
-          <RitualTick on={ritual.sleep} label="Сон" />
-          <RitualTick on={ritual.water} label="Вода" />
-          <RitualTick on={ritual.steps} label="Шаги" />
+          <RitualTick on={ritual.report} label="Отчёт" />
           <RitualTick on={ritual.food} label="Еда" />
+          <RitualTick on={ritual.workout} label="Зал" />
+          <RitualTick on={ritual.checkin} label="Чекин" />
         </div>
         {session && !visiting ? (
           <button
@@ -265,9 +287,7 @@ export function ProgramView() {
                         inputMode="decimal"
                         placeholder="факт, кг — если другой"
                         value={facts[weightBit.i] ?? ""}
-                        onChange={(e) => {
-                          setFacts({ ...facts, [weightBit.i]: e.target.value });
-                        }}
+                        onChange={(e) => setFacts({ ...facts, [weightBit.i]: e.target.value })}
                       />
                     ) : null}
                   </li>
@@ -303,7 +323,7 @@ export function ProgramView() {
                   setFacts({});
                 }}
               >
-                Завершить · ~{kcal} ккал
+                Завершить · ~{liveKcal} ккал
               </button>
             )}
           </div>
