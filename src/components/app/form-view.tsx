@@ -54,11 +54,13 @@ export function FormView() {
       ? "Пропуск: сильная боль"
       : recoveryDecision?.status === "modify"
         ? "Заменить упражнения (боль)"
-        : recoveryDecision?.status === "deload"
+        : recoveryDecision?.status === "reduce"
           ? "Снизить нагрузку"
-          : recoveryDecision
-            ? "Можно тренироваться"
-            : null;
+          : recoveryDecision?.status === "watch"
+            ? "Смотреть самочувствие"
+            : recoveryDecision?.status === "ok"
+              ? "Можно тренироваться"
+              : null;
 
   const token = client.healthToken || "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -69,49 +71,51 @@ export function FormView() {
     <div className="flex flex-col gap-3">
       <Surface>
         <SectionLabel>День</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Шаги
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Шаги</label>
             <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={String(FORM_GOALS.steps)} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Сон, ч
+            <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Сон, ч</label>
             <input className={inputClass} inputMode="decimal" value={sleep} onChange={(e) => setSleep(e.target.value)} placeholder={String(FORM_GOALS.sleep)} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Вода, мл
-            <input className={inputClass} inputMode="numeric" value={water} onChange={(e) => setWater(e.target.value)} placeholder={String(FORM_GOALS.water)} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Движение, мин
+            <ProgressRail value={Number(sleep.replace(",", ".")) || 0} max={FORM_GOALS.sleep} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Вода, мл</label>
+            <div className="flex gap-1.5">
+              <input className={inputClass} inputMode="numeric" value={water} onChange={(e) => setWater(e.target.value)} placeholder={String(FORM_GOALS.water)} />
+              {[250, 500].map((add) => (
+                <button
+                  key={add}
+                  type="button"
+                  className="pressable h-11 shrink-0 rounded-lg bg-secondary px-3 text-sm"
+                  onClick={() => setWater(String((Number(water) || 0) + add))}
+                >
+                  +{add}
+                </button>
+              ))}
+            </div>
+            <ProgressRail value={Number(water) || 0} max={FORM_GOALS.water} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Движение, мин</label>
             <input className={inputClass} inputMode="numeric" value={move} onChange={(e) => setMove(e.target.value)} placeholder={String(FORM_GOALS.move)} />
-          </label>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {MOVE_KINDS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`pressable h-11 rounded-lg px-2.5 text-xs ${kind === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                onClick={() => setKind(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {MOVE_KINDS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`pressable h-11 rounded-lg text-xs ${kind === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-              onClick={() => setKind(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-        <div className="mt-2 flex gap-1.5">
-          {[250, 500].map((add) => (
-            <button
-              key={add}
-              type="button"
-              className="pressable h-11 rounded-lg bg-secondary text-sm"
-              onClick={() => setWater(String((Number(water) || 0) + add))}
-            >
-              +{add}
-            </button>
-          ))}
-        </div>
-        <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} label="шаги" />
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted-foreground">Восстановление</p>
           <div className="flex flex-col gap-1.5">
