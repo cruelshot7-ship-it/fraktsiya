@@ -19,13 +19,9 @@ export function FormView() {
   const [water, setWater] = useState(saved ? String(saved.waterMl || "") : "");
   const [move, setMove] = useState(saved ? String(saved.moveMin || "") : "");
   const [kind, setKind] = useState(saved?.moveKind || "Ходьба");
-  const [fatigue, setFatigue] = useState<number | null>(
-    typeof saved?.fatigue === "number" ? saved.fatigue : null,
-  );
-  const [soreness, setSoreness] = useState<number | null>(
-    typeof saved?.soreness === "number" ? saved.soreness : null,
-  );
-  const [pain, setPain] = useState<number | null>(typeof saved?.pain === "number" ? saved.pain : null);
+  const [fatigue, setFatigue] = useState<number | null>(null);
+  const [soreness, setSoreness] = useState<number | null>(null);
+  const [pain, setPain] = useState<number | null>(null);
   const [kcal, setKcal] = useState("");
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
@@ -121,7 +117,7 @@ export function FormView() {
         <div className="mt-3 space-y-2">
           <span className="text-tiny text-muted-foreground">Восстановление (необяз.)</span>
           <div>
-            <span className="text-2xs text-muted-foreground">Усталость 1–5</span>
+            <span className="text-xs text-muted-foreground">Усталость 1–5</span>
             <div className="mt-1 flex gap-1" role="group" aria-label="Усталость">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
@@ -139,7 +135,7 @@ export function FormView() {
             </div>
           </div>
           <div>
-            <span className="text-2xs text-muted-foreground">Крепатура 1–5</span>
+            <span className="text-xs text-muted-foreground">Крепатура 1–5</span>
             <div className="mt-1 flex gap-1" role="group" aria-label="Крепатура">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
@@ -157,7 +153,7 @@ export function FormView() {
             </div>
           </div>
           <div>
-            <span className="text-2xs text-muted-foreground">Боль 0–3</span>
+            <span className="text-xs text-muted-foreground">Боль 0–3</span>
             <div className="mt-1 flex gap-1" role="group" aria-label="Боль">
               {[0, 1, 2, 3].map((v) => (
                 <button
@@ -179,21 +175,13 @@ export function FormView() {
           type="button"
           className="pressable mt-3 h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
           onClick={() => {
-            const patch: Parameters<typeof saveDayCheck>[0] & {
-              fatigue?: number;
-              soreness?: number;
-              pain?: number;
-            } = {
+            saveDayCheck({
               steps: Number(steps) || 0,
               sleepHours: Number(sleep.replace(",", ".")) || 0,
               waterMl: Number(water) || 0,
               moveMin: Number(move) || 0,
               moveKind: kind,
-            };
-            if (fatigue != null) patch.fatigue = fatigue;
-            if (soreness != null) patch.soreness = soreness;
-            if (pain != null) patch.pain = pain;
-            saveDayCheck(patch);
+            });
           }}
         >
           Сохранить день
