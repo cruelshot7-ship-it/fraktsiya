@@ -63,7 +63,9 @@ export const STUDIO = {
   brand: "RUKSHA DISCIPLINE",
   line: "Discipline",
   est: "Est. 2026",
-  city: "Минск",
+  city: "Гродно",
+  address: "ул. Лидская, 1",
+  gym: "TITAN",
   trainer: "Евгений",
 };
 

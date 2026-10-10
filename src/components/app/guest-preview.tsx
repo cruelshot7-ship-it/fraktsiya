@@ -111,7 +111,10 @@ export function OfferLanding({ live }: { live: boolean }) {
               бесплатно
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {STUDIO.trainer}, {STUDIO.city}. Час в зале: техника и понятно, ваш ли это формат. Возьмите форму, воду и кроссовки.
+              {STUDIO.trainer}, {STUDIO.gym} — место силы. Час в зале: техника и понятно, ваш ли это формат. Возьмите форму, воду и кроссовки.
+            </p>
+            <p className="mt-2 text-tiny text-muted-foreground">
+              {STUDIO.city}, {STUDIO.address}
             </p>
             <div className="mt-5 grid grid-cols-3 gap-2">
               {OFFERS.map((offer) => (
