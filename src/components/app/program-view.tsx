@@ -148,7 +148,11 @@ export function ProgramView() {
   const plan = shown ? sessionPlan(shown) : { blocks: [] as ProgramBlock[], owner: [] as string[] };
   const legacy = shown ? legacyMarkMap(shown) : {};
   const checked = rewriteMarks(checks[`${client.id}:${today}`] ?? [], legacy);
-  const factsById = shown ? rewriteFacts(facts, shown) : {};
+  // facts typed during the workout, or the ones saved with the finished workout (so the trainer sees them)
+  const factsById: Record<string, string> = {
+    ...(todayWorkout?.facts ?? {}),
+    ...(shown ? rewriteFacts(facts, shown) : {}),
+  };
   const doneCount = plan.blocks.filter((b) => checked.includes(b.id)).length;
   // done blocks leave the list (less to scroll); totals and marks still count them
   const visibleBlocks = showDone
@@ -365,6 +369,15 @@ export function ProgramView() {
                     // undo keeps the record cancelled and restores the day; the timer resumes from the original start
                     const restored = todayWorkout.startedAt ? Date.parse(todayWorkout.startedAt) : null;
                     if (!undoWorkout()) return;
+                    // the facts saved with the workout go back into the editable list
+                    if (todayWorkout.facts) {
+                      setFacts(todayWorkout.facts);
+                      try {
+                        if (factKey) localStorage.setItem(factKey, JSON.stringify(todayWorkout.facts));
+                      } catch {
+                        /* ignore */
+                      }
+                    }
                     if (restored && startKey) {
                       try {
                         localStorage.setItem(startKey, String(restored));
@@ -400,7 +413,7 @@ export function ProgramView() {
                     showToast("Сначала нажмите «Начать».");
                     return;
                   }
-                  completeWorkout(itemCount || checked.length, withRest, new Date(startedAt).toISOString(), totals.volume);
+                  completeWorkout(itemCount || checked.length, withRest, new Date(startedAt).toISOString(), totals.volume, factsById);
                   try {
                     if (startKey) localStorage.removeItem(startKey);
                     if (factKey) localStorage.removeItem(factKey);
