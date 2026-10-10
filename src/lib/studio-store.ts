@@ -3,6 +3,7 @@ import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@
 import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
+import type { ProgramTemplate } from "@/lib/templates/program-template";
 import {
   BOT_USERNAME,
   addDays,
@@ -98,6 +99,7 @@ type PersistShape = {
   joinRequests?: JoinRequest[];
   removedClientIds?: string[];
   coaches?: Coach[];
+  programTemplates?: ProgramTemplate[];
 };
 
 type State = {
@@ -129,6 +131,7 @@ type State = {
   joinRequests: JoinRequest[];
   removedClientIds: string[];
   coaches: Coach[];
+  programTemplates: ProgramTemplate[];
   inviteBlocked: boolean;
   noteOpen: boolean;
   guestPreview: boolean;
@@ -186,6 +189,8 @@ type State = {
   addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string; phone?: string }) => string;
   removeClient: (id: string) => void;
   updateClient: (id: string, patch: Partial<Client>) => void;
+  saveTemplate: (tpl: ProgramTemplate) => void;
+  removeTemplate: (id: string) => void;
   dismissSignal: (id: string) => void;
   setNotifyPrefs: (patch: Partial<NotifyPrefs>) => void;
   showToast: (msg: string) => void;
@@ -256,6 +261,7 @@ function snap(s: State): PersistShape {
     joinRequests: s.joinRequests,
     removedClientIds: s.removedClientIds,
     coaches: s.coaches,
+    programTemplates: s.programTemplates,
   };
 }
 
@@ -469,6 +475,7 @@ export const useStudio = create<State>((set, get) => ({
   joinRequests: [],
   removedClientIds: [],
   coaches: [],
+  programTemplates: [],
   inviteBlocked: false,
   noteOpen: false,
   guestPreview: false,
@@ -495,6 +502,7 @@ export const useStudio = create<State>((set, get) => ({
     let joinRequests: JoinRequest[] = [];
     let removedClientIds: string[] = [];
     let coaches: Coach[] = [];
+    let programTemplates: ProgramTemplate[] = [];
     try {
       const raw = readPersist();
       if (raw) {
@@ -530,6 +538,7 @@ export const useStudio = create<State>((set, get) => ({
         joinRequests = parsed.joinRequests ?? [];
         removedClientIds = parsed.removedClientIds ?? [];
         coaches = parsed.coaches ?? [];
+        programTemplates = parsed.programTemplates ?? [];
         const cleaned = stripDemoData({
           clients,
           bookings,
@@ -591,6 +600,7 @@ export const useStudio = create<State>((set, get) => ({
       joinRequests,
       removedClientIds,
       coaches,
+      programTemplates,
       inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
@@ -1927,8 +1937,21 @@ export const useStudio = create<State>((set, get) => ({
   },
 
   updateClient: (id, patch) => {
-    const clients = get().clients.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    // Any change of the days is a new program. The stamp keeps an older copy (the bot's import) from overwriting it.
+    const stamped = patch.sessions ? { ...patch, programAt: patch.programAt ?? new Date().toISOString() } : patch;
+    const clients = get().clients.map((c) => (c.id === id ? { ...c, ...stamped } : c));
     set({ clients });
+    persist(snap(get()));
+  },
+
+  saveTemplate: (tpl) => {
+    const programTemplates = [tpl, ...get().programTemplates.filter((t) => t.id !== tpl.id)];
+    set({ programTemplates });
+    persist(snap(get()));
+  },
+
+  removeTemplate: (id) => {
+    set({ programTemplates: get().programTemplates.filter((t) => t.id !== id) });
     persist(snap(get()));
   },
 
