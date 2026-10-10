@@ -129,3 +129,54 @@ export function programFor<S>(
   if (old && stamp && (incoming.programAt ?? "") < stamp) return { sessions: old.sessions, programAt: stamp };
   return { sessions: incoming.sessions, programAt: incoming.programAt ?? stamp };
 }
+
+/** First line of the force-reply prompt the bot sends after «Добавить программу». */
+export const PROGRAM_PROMPT = "Пришлите программу";
+
+/** The example the trainer copies: it must parse (see program-import.test.ts). */
+export const PROGRAM_EXAMPLE = [
+  "/program Елена",
+  "День A",
+  "Жим лежа",
+  "4×8",
+  "80 кг",
+  "Отдых 90 секунд",
+  "Подъём гантелей",
+  "3×12 на каждую руку",
+  "10 кг",
+  "День B",
+  "Приседания",
+  "5×5",
+  "100 кг",
+  "Отдых 120 секунд",
+].join("\n");
+
+/** The text under the trainer's cabinet block: how to write a program, line by line. */
+export function trainerCabinetText(): string {
+  return [
+    "Кабинет тренера.",
+    "",
+    "Добавить программу: нажмите «Добавить программу» под этим сообщением или пришлите её в чат.",
+    "",
+    "Как написать, строка за строкой:",
+    "1. Первая строка — /program и имя клиента, как в карточке (или @ник).",
+    "2. «День A», «День B» — заголовок дня. Без заголовков всё попадёт в один день.",
+    "3. Упражнение — отдельной строкой: Жим лежа",
+    "4. Подходы×повторения — следующей строкой: 4×8 (или 4x8, диапазон 10-12).",
+    "5. Вес — отдельной строкой: 80 кг (или 10-12 кг).",
+    "6. Отдых — отдельной строкой: Отдых 90 секунд.",
+    "",
+    "Строки 4–6 относятся к упражнению над ними. Каждое упражнение — отдельным блоком, как в примере.",
+    "После кнопки «Добавить программу» пишите то же самое без /program: первая строка — имя клиента.",
+    "Если у клиента уже есть программа, бот попросит «/program!» вместо «/program» — тогда старая заменится.",
+    "",
+    "Пример:",
+    PROGRAM_EXAMPLE,
+  ].join("\n");
+}
+
+/** A reply to the prompt becomes a /program command, unless the trainer already typed one. */
+export function programCommandFromReply(text: string): string {
+  const t = text.trim();
+  return COMMAND.test(t) ? t : `/program ${t}`;
+}

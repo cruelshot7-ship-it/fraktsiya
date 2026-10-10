@@ -2,7 +2,16 @@ import { createHash } from "node:crypto";
 import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dueReminders, findByToken, markReminder, remindToken } from "@/lib/studio-remind";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
-import { buildSessions, findClients, parseImportCommand, splitDays, type ImportCommand } from "@/lib/program-import";
+import {
+  buildSessions,
+  findClients,
+  parseImportCommand,
+  PROGRAM_PROMPT,
+  programCommandFromReply,
+  splitDays,
+  trainerCabinetText,
+  type ImportCommand,
+} from "@/lib/program-import";
 
 const APP_URL = "https://ruksha.vercel.app";
 
@@ -30,6 +39,20 @@ function webAppKeyboard(text: string) {
   return {
     inline_keyboard: [[{ text, web_app: { url: APP_URL } }]],
   };
+}
+
+function cabinetKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "Добавить программу", callback_data: "prog:add" }],
+      [{ text: "Открыть кабинет", web_app: { url: APP_URL } }],
+    ],
+  };
+}
+
+async function isCoach(id: string) {
+  if (id === String(TRAINER_TG_ID)) return true;
+  return (await loadStudioState()).coaches?.some((c) => c.telegramId === id) ?? false;
 }
 
 function decideKeyboard(telegramId: string) {
@@ -213,6 +236,7 @@ type TgUpdate = {
     text?: string;
     chat: { id: number };
     from?: { id: number; first_name?: string; last_name?: string; username?: string };
+    reply_to_message?: { text?: string };
   };
   callback_query?: {
     id: string;
@@ -236,6 +260,19 @@ export async function handleTelegramUpdate(update: TgUpdate) {
     const cut = cb.data.indexOf(":");
     const action = cut < 0 ? cb.data : cb.data.slice(0, cut);
     const id = cut < 0 ? "" : cb.data.slice(cut + 1);
+    if (action === "prog") {
+      if (!(await isCoach(String(cb.from.id)))) {
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Только для тренера.", show_alert: true });
+        return;
+      }
+      await tg("answerCallbackQuery", { callback_query_id: cb.id });
+      await tg("sendMessage", {
+        chat_id: cb.from.id,
+        text: `${PROGRAM_PROMPT} ответом на это сообщение. Первая строка — имя клиента, дальше упражнения, как в описании выше.`,
+        reply_markup: { force_reply: true, input_field_placeholder: "Елена" },
+      });
+      return;
+    }
     if ((action === "y" || action === "m") && id) {
       let payload = emptyPayload();
       try {
@@ -323,17 +360,19 @@ export async function handleTelegramUpdate(update: TgUpdate) {
   if (!from || !text) return;
   const id = String(from.id);
 
-  if (id === String(TRAINER_TG_ID) || (await loadStudioState()).coaches?.some((c) => c.telegramId === id)) {
+  if (await isCoach(id)) {
     if (text.startsWith("/start")) {
       await ensureBotHook();
       await tg("sendMessage", {
         chat_id: from.id,
-        text: "Кабинет тренера.\nПрограмму клиенту пришлите так: /program Имя, с новой строки упражнения. День A, День B — отдельные дни.",
-        reply_markup: webAppKeyboard("Открыть кабинет"),
+        text: trainerCabinetText(),
+        reply_markup: cabinetKeyboard(),
       });
       return;
     }
-    const cmd = parseImportCommand(text);
+    // an answer to «Добавить программу» is the program without the /program word
+    const asked = (msg?.reply_to_message?.text ?? "").startsWith(PROGRAM_PROMPT);
+    const cmd = parseImportCommand(asked ? programCommandFromReply(text) : text);
     if (cmd) {
       await tg("sendMessage", { chat_id: from.id, text: await importProgramFromChat(id, cmd) });
     }
