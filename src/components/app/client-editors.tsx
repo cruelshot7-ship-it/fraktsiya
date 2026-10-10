@@ -1,3 +1,4 @@
+import { MeasuresSummary } from "@/components/app/measures-card";
 import { useState, type ReactNode } from "react";
 import {
   DOW,
@@ -404,9 +405,15 @@ export function MeasuresEditor({
         <input className={inputClass} inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
       </Field>
       <Surface>
+        <SectionLabel>Замеры, см</SectionLabel>
+        <div className="mt-3">
+          <MeasuresSummary client={client} />
+        </div>
+      </Surface>
+      <Surface>
         <SectionLabel>Фото прогресса</SectionLabel>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Позже клиент будет присылать фото из мини-приложения. Сейчас тренер видит вес и серию отчётов.
+          Фото пока не принимаем: решим после согласия клиентов и юридического контура.
         </p>
       </Surface>
       <button

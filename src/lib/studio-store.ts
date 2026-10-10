@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { buildMeasure, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
 import { detectPRs } from "@/lib/athlete-metrics";
 import {
   BOT_USERNAME,
@@ -167,6 +168,8 @@ type State = {
   toggleCheck: (item: string) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
   setWeight: (kg: number) => void;
+  /** Returns an error message, or null when saved. */
+  saveMeasure: (values: MeasureInput, date?: string) => string | null;
   addSlot: (date: string, time: string, capacity: number) => void;
   repeatWeek: () => void;
   closeSlot: (id: string) => void;
@@ -483,6 +486,7 @@ export const useStudio = create<State>((set, get) => ({
               ...emptyClient(),
               ...c,
               weightHistory: c.weightHistory?.length ? c.weightHistory : emptyClient().weightHistory,
+              measures: c.measures ?? [],
               lateCancels: c.lateCancels ?? 0,
               sessionsLeft: c.sessionsLeft ?? 0,
               ledger: c.ledger ?? [],
@@ -1625,6 +1629,19 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     hapticNotify("success");
     get().showToast(`Тренировка закрыта · ${mins} мин · ${kcal} ккал`);
+  },
+
+  saveMeasure: (values, date) => {
+    const id = get().activeClientId;
+    const day = date ?? todayIso();
+    const built = buildMeasure(day, values);
+    if (!built.ok) return built.reason;
+    const clients = get().clients.map((c) =>
+      c.id === id ? { ...c, measures: upsertMeasure(c.measures ?? [], built.measure) } : c,
+    );
+    set({ clients });
+    persist(snap(get()));
+    return null;
   },
 
   setWeight: (kg) => {

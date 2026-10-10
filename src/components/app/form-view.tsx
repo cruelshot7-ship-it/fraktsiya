@@ -3,6 +3,7 @@ import { FORM_GOALS, isoDate, MOVE_KINDS } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { readiness, type ReadinessDay } from "@/lib/athlete-metrics";
+import { MeasuresCard } from "@/components/app/measures-card";
 
 export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
@@ -226,6 +227,8 @@ export function FormView() {
           Внести в еду
         </button>
       </Surface>
+
+      <MeasuresCard client={client} />
 
       <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setAutoOpen((open) => !open)}>
         {autoOpen ? "Скрыть авто" : "Само с часов"}
