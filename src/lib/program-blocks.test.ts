@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import type { ProgramBlock } from "./program-blocks.ts";
 import {
   blockLines,
   blocksFromItems,
@@ -42,10 +43,12 @@ test("a text line starts a block and its sets, load and rest attach to it", () =
   assert.equal(c.rest, null);
 });
 
-test("'на каждую руку' counts both sides and survives the round trip", () => {
+test("'на каждую руку / ногу / сторону' counts both sides and survives the round trip", () => {
   const lines = ["Гантели", "3×8 на каждую руку", "20 кг"];
   const [b] = blocksFromItems(lines);
-  assert.equal(b.perSide, true);
+  assert.equal(b.side, "руку");
+  assert.deepEqual(itemsFromBlocks([blocksFromItems(["Разгибание", "3×12 на каждую ногу", "15 кг"])[0]]), ["Разгибание", "3×12 на каждую ногу", "15 кг"]);
+  assert.equal(blocksFromItems(["Выпады", "3×10 на каждую сторону"])[0].side, "сторону");
   assert.deepEqual(itemsFromBlocks([b]), lines);
   assert.deepEqual(planTotalsFromBlocks([{ ...b, id: "x" }], ["x"], {}), { sets: 6, volume: 960, restSec: 0 });
 });
@@ -62,7 +65,7 @@ test("a sets line with no block before it becomes a block of its own, nothing is
 
 test("authored blocks win while they match the lines", () => {
   const authored = [
-    { id: "bl_1", exercise: "Ягодичный мост", sets: 3, reps: "12", load: "", rest: 60, perSide: false, group: null },
+    { id: "bl_1", exercise: "Ягодичный мост", sets: 3, reps: "12", load: "", rest: 60, side: null, group: null },
   ];
   const session = withBlocks({ items: [] as string[] }, authored);
   assert.deepEqual(session.items, blockLines(authored[0]));
@@ -72,7 +75,7 @@ test("authored blocks win while they match the lines", () => {
 test("an older writer that changed the lines wins over stale blocks", () => {
   const session = {
     items: ["Присед", "4×6", "Отдых 120 секунд"],
-    blocks: [{ id: "bl_1", exercise: "Жим", sets: 3, reps: "8", load: "", rest: null, perSide: false, group: null }],
+    blocks: [{ id: "bl_1", exercise: "Жим", sets: 3, reps: "8", load: "", rest: null, side: null, group: null }],
   };
   const plan = sessionPlan(session);
   assert.equal(plan.blocks[0].exercise, "Присед");
@@ -101,4 +104,16 @@ test("totals: planned load, typed fact overrides, rest of checked blocks only", 
 test("a block without load adds sets to no volume", () => {
   const blocks = blocksFromItems(["Подъём на носки", "3×12-15"]);
   assert.deepEqual(planTotalsFromBlocks(blocks, [blocks[0].id], {}), { sets: 0, volume: 0, restSec: 0 });
+});
+
+test("blocks stored before 'side' existed keep their id and lines", () => {
+  // what the previous version stored: perSide flag, items already say "на каждую руку"
+  const legacy = [
+    { id: "bl_old", exercise: "Гантели", sets: 3, reps: "8", load: "20", rest: null, perSide: true, group: null },
+  ] as unknown as ProgramBlock[];
+  const items = ["Гантели", "3×8 на каждую руку", "20 кг"];
+  const plan = sessionPlan({ items, blocks: legacy });
+  assert.equal(plan.blocks[0].id, "bl_old", "consistent legacy blocks keep their ids");
+  assert.equal(plan.blocks[0].side, "руку");
+  assert.deepEqual(itemsFromBlocks(plan.blocks), items);
 });

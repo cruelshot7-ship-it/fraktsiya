@@ -9,6 +9,10 @@
  * are keyed by line position ("3:Тяга"); they are rewritten to block ids on read.
  */
 
+/** Work per side: each arm, each leg, or each side. Sets are counted for both sides. */
+export type Side = "руку" | "ногу" | "сторону";
+export const SIDES: Side[] = ["руку", "ногу", "сторону"];
+
 export type ProgramBlock = {
   id: string;
   /** exercise name, free text or from the trainer's list */
@@ -21,8 +25,8 @@ export type ProgramBlock = {
   load: string;
   /** seconds of rest after the block, null when not set */
   rest: number | null;
-  /** "на каждую руку": counts both sides */
-  perSide: boolean;
+  /** "на каждую руку / ногу / сторону": sets are counted for both sides; null for a single side */
+  side: Side | null;
   /** blocks with the same group are one superset card; null for a single block */
   group: string | null;
 };
@@ -32,7 +36,7 @@ export type Plan = { blocks: ProgramBlock[]; owner: string[] };
 
 type Parsed =
   | { kind: "rest"; rest: number }
-  | { kind: "scheme"; sets: number; reps: string; perSide: boolean }
+  | { kind: "scheme"; sets: number; reps: string; side: Side | null }
   | { kind: "weight"; load: string }
   | { kind: "text" };
 
@@ -44,14 +48,21 @@ function parseLine(text: string): Parsed {
   if (rest) return { kind: "rest", rest: Number(rest[1]) };
   const raw = lower.replace(/х/g, "x").replace(/×/g, "x").replace(/[–—]/g, "-");
   const scheme = /(\d+)\s*x\s*(\d+(?:\s*-\s*\d+)?)/.exec(raw);
-  if (scheme) return { kind: "scheme", sets: Number(scheme[1]), reps: scheme[2].replace(/\s+/g, ""), perSide: /кажд/.test(raw) };
+  if (scheme) return { kind: "scheme", sets: Number(scheme[1]), reps: scheme[2].replace(/\s+/g, ""), side: sideOf(raw) };
   const weight = /(\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?)\s*кг/.exec(raw);
   if (weight) return { kind: "weight", load: weight[1].replace(/\s+/g, "") };
   return { kind: "text" };
 }
 
+/** "на каждую руку" -> руку; other "кажд…" wording without a known noun means a side. */
+function sideOf(raw: string): Side | null {
+  if (!/кажд/.test(raw)) return null;
+  const m = /кажд\S*\s+(руку|ногу|сторону)/.exec(raw);
+  return m ? (m[1] as Side) : "сторону";
+}
+
 function blank(id: string, exercise: string): ProgramBlock {
-  return { id, exercise, sets: 0, reps: "", load: "", rest: null, perSide: false, group: null };
+  return { id, exercise, sets: 0, reps: "", load: "", rest: null, side: null, group: null };
 }
 
 /** Reads plain lines into blocks. A text line starts a block; sets, load and rest attach to it. */
@@ -76,7 +87,7 @@ function parseWithOwners(items: string[]): Plan {
       if (bit.kind === "scheme") {
         cur.sets = bit.sets;
         cur.reps = bit.reps;
-        cur.perSide = bit.perSide;
+        cur.side = bit.side;
       } else if (bit.kind === "weight") cur.load = bit.load;
       else if (bit.kind === "rest") cur.rest = bit.rest;
     } else {
@@ -95,7 +106,7 @@ export function blockLines(b: ProgramBlock): string[] {
   const out: string[] = [];
   const name = b.exercise.trim();
   if (name) out.push(name);
-  if (b.sets > 0 && b.reps) out.push(`${b.sets}×${b.reps}${b.perSide ? " на каждую руку" : ""}`);
+  if (b.sets > 0 && b.reps) out.push(`${b.sets}×${b.reps}${b.side ? ` на каждую ${b.side}` : ""}`);
   if (b.load) out.push(`${b.load} кг`);
   if (b.rest != null && b.rest > 0) out.push(`Отдых ${b.rest} секунд`);
   return out;
@@ -118,10 +129,19 @@ export function newBlockId(): string {
 }
 
 /** Blocks of a session with, for every item line, the id of the block it belongs to. */
+/** Blocks saved before `side` existed carried `perSide: boolean`; "на каждую руку" was their only wording. */
+function fromStored(b: ProgramBlock): ProgramBlock {
+  const legacy = b as ProgramBlock & { perSide?: boolean };
+  if (legacy.side !== undefined) return b;
+  const { perSide, ...rest } = legacy;
+  return { ...rest, side: perSide ? "руку" : null };
+}
+
 export function sessionPlan(session: SessionLike): Plan {
   const items = session.items ?? [];
-  if (session.blocks?.length && sameLines(itemsFromBlocks(session.blocks), items)) {
-    return { blocks: session.blocks, owner: session.blocks.flatMap((b) => blockLines(b).map(() => b.id)) };
+  const stored = session.blocks?.map(fromStored) ?? [];
+  if (stored.length && sameLines(itemsFromBlocks(stored), items)) {
+    return { blocks: stored, owner: stored.flatMap((b) => blockLines(b).map(() => b.id)) };
   }
   return parseWithOwners(items);
 }
@@ -186,7 +206,7 @@ export function planTotalsFromBlocks(blocks: ProgramBlock[], checked: string[], 
     const typed = Number((facts[b.id] ?? "").replace(",", "."));
     const kg = typed > 0 ? typed : loadMid(b.load);
     const reps = repsMid(b.reps);
-    const s = b.sets * (b.perSide ? 2 : 1);
+    const s = b.sets * (b.side ? 2 : 1);
     if (s > 0 && reps > 0 && kg != null) {
       sets += s;
       volume += s * reps * kg;
