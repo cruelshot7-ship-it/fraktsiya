@@ -3,12 +3,12 @@
  * Чистый модуль без импортов: используется клиентом, сервером и тестами.
  */
 export const COACH_TIERS = [
-  { upTo: 15, usd: 10 },
-  { upTo: 30, usd: 15 },
+  { upTo: 10, usd: 10 },
+  { upTo: 20, usd: 15 },
   { upTo: Number.POSITIVE_INFINITY, usd: 20 },
 ] as const;
 
-/** Для текстов в интерфейсе: «до 15 клиентов — $10, 16–30 — $15, от 31 — $20 в месяц». */
+/** Для текстов в интерфейсе: «до 10 клиентов — $10, 11–20 — $15, от 21 — $20 в месяц». */
 export const COACH_TIERS_TEXT =
   `до ${COACH_TIERS[0].upTo} клиентов — $${COACH_TIERS[0].usd}, ` +
   `${COACH_TIERS[0].upTo + 1}–${COACH_TIERS[1].upTo} — $${COACH_TIERS[1].usd}, ` +
