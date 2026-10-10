@@ -152,7 +152,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-export async function syncFromCloud(phone?: string): Promise<null | {
+export async function syncFromCloud(): Promise<null | {
   role: Role;
   payload: StudioPayload;
   created: boolean;
@@ -161,7 +161,7 @@ export async function syncFromCloud(phone?: string): Promise<null | {
   const initData = getTelegramInitData();
   if (!initData) return null;
   try {
-    const res = await pullStudio({ data: { initData, phone } });
+    const res = await pullStudio({ data: { initData } });
     if (!res || !(res as { ok?: boolean }).ok) return null;
     const body = res as {
       ok: boolean;

@@ -12,7 +12,6 @@ import {
   COACH_TRIAL_CAP,
   emptyClient,
   hoursAgoIso,
-  digitsPhone,
   TRAINER_TG_ID,
   type Booking,
   type Client,
@@ -72,7 +71,6 @@ const STUDIO_ID = "ruksha";
 
 const PullInput = z.object({
   initData: z.string().optional(),
-  phone: z.string().optional(),
 });
 
 const PushInput = z.object({
@@ -756,12 +754,10 @@ export const pullStudio = createServerFn({ method: "POST" })
       const byName = uname
         ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
         : undefined;
-      const wantPhone = digitsPhone(data.phone);
-      const byPhone =
-        wantPhone.length >= 10
-          ? payload.clients.find((c) => !c.telegramId && digitsPhone(c.phone).endsWith(wantPhone.slice(-10)))
-          : undefined;
-      const match = byName ?? byPhone;
+      // Phone is typed by the caller and nobody verifies ownership of it, so it can
+      // no longer bind a profile to a Telegram account. Binding goes via @username
+      // (set by the trainer) or via a join request the trainer approves.
+      const match = byName;
       if (!byId && match) {
         payload = {
           ...payload,
