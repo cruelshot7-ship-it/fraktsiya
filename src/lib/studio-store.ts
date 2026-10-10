@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { buildMeasure, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
+import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import {
   BOT_USERNAME,
@@ -170,6 +171,8 @@ type State = {
   setWeight: (kg: number) => void;
   /** Returns an error message, or null when saved. */
   saveMeasure: (values: MeasureInput, date?: string) => string | null;
+  acceptPrivacy: () => void;
+  eraseMyData: () => void;
   addSlot: (date: string, time: string, capacity: number) => void;
   repeatWeek: () => void;
   closeSlot: (id: string) => void;
@@ -1642,6 +1645,40 @@ export const useStudio = create<State>((set, get) => ({
     set({ clients });
     persist(snap(get()));
     return null;
+  },
+
+  acceptPrivacy: () => {
+    const id = get().activeClientId;
+    const now = new Date().toISOString();
+    // Provisional time on this device; the server overwrites it with its own stamp.
+    const clients = get().clients.map((c) =>
+      c.id === id ? { ...c, consent: { version: PRIVACY_VERSION, acceptedAt: now } } : c,
+    );
+    set({ clients });
+    persist(snap(get()));
+  },
+
+  eraseMyData: () => {
+    const id = get().activeClientId;
+    const now = new Date().toISOString();
+    const clients = get().clients.map((c) =>
+      c.id !== id
+        ? c
+        : // telegramId stays until the server has erased the row, so the push can still find it.
+          { ...c, ...anonymizedIdentity(), telegramId: c.telegramId, weight: 0, weightHistory: [], measures: [], erasedAt: now },
+    );
+    set({
+      clients,
+      food: get().food.filter((f) => f.clientId !== id),
+      dayChecks: get().dayChecks.filter((d) => d.clientId !== id),
+      lifts: get().lifts.filter((l) => l.clientId !== id),
+      workoutLogs: get().workoutLogs.filter((w) => w.clientId !== id),
+      waitlist: get().waitlist.filter((w) => w.clientId !== id),
+      notices: get().notices.filter((n) => n.clientId !== id),
+    });
+    persist(snap(get()));
+    flushCloudPush();
+    get().showToast("Ваши данные удалены.");
   },
 
   setWeight: (kg) => {

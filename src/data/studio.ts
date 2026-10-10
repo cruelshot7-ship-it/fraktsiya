@@ -1,4 +1,5 @@
 import type { BodyMeasure } from "@/lib/body-measures";
+import type { Consent } from "@/lib/privacy";
 export const TRAINER_TG_ID = "8144320404";
 
 export type Coach = {
@@ -616,6 +617,8 @@ export type Client = {
   streak: number;
   weightHistory: WeightPoint[];
   measures?: BodyMeasure[];
+  consent?: Consent | null;
+  erasedAt?: string | null;
   lateCancels?: number;
   sessionsLeft: number;
   ledger: SessionTxn[];
