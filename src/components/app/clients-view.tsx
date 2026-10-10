@@ -35,6 +35,7 @@ import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } 
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
+import { joinConfirmText } from "@/lib/join-confirm";
 
 export function ClientsView() {
   const clients = useStudio((s) => s.clients);
@@ -160,7 +161,9 @@ export function ClientsView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={() => approveJoin(req.id)}
+                    onClick={() => {
+                      if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                    }}
                   >
                     Принять
                   </button>

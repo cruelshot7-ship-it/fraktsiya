@@ -513,8 +513,10 @@ export function FoodEditor({
   onBack: () => void;
   onSave: (patch: { kbju: Kbju; kbjuRest: Kbju }) => void;
 }) {
-  const [train, setTrain] = useState(client.kbju.calories ? client.kbju : SAMPLE_KBJU_TRAIN);
-  const [rest, setRest] = useState(client.kbjuRest?.calories ? client.kbjuRest : SAMPLE_KBJU_REST);
+  // an empty target shows zeros, never a sample: a sample saved by accident became the client's goal
+  const empty = { calories: 0, protein: 0, fat: 0, carbs: 0 };
+  const [train, setTrain] = useState(client.kbju.calories ? client.kbju : empty);
+  const [rest, setRest] = useState(client.kbjuRest?.calories ? client.kbjuRest : empty);
   return (
     <div className="flex flex-col gap-3">
       <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
@@ -573,6 +575,8 @@ export function MeasuresEditor({
 }) {
   const [weight, setWeight] = useState(String(client.weight));
   const [firstName, setFirstName] = useState(client.firstName);
+  const [askRemove, setAskRemove] = useState(false);
+  const [typed, setTyped] = useState("");
   const [lastName, setLastName] = useState(client.lastName);
   return (
     <div className="flex flex-col gap-3">
@@ -614,9 +618,26 @@ export function MeasuresEditor({
       >
         Сохранить замеры
       </button>
-      <button type="button" onClick={onRemove} className="h-11 text-sm text-muted-foreground">
-        Удалить клиента
-      </button>
+      {askRemove ? (
+        <div className="flex flex-col gap-2 rounded-xl bg-secondary/40 p-3">
+          <p className="text-tiny text-muted-foreground">
+            Удалятся питание, замеры и записи без возможности вернуть. Чтобы подтвердить, введите имя «{client.firstName}».
+          </p>
+          <input className={inputClass} value={typed} onChange={(e) => setTyped(e.target.value)} />
+          <button
+            type="button"
+            disabled={typed.trim() !== client.firstName.trim()}
+            onClick={onRemove}
+            className="pressable h-11 rounded-xl bg-secondary text-sm font-medium disabled:opacity-40"
+          >
+            Удалить навсегда
+          </button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setAskRemove(true)} className="h-11 text-sm text-muted-foreground">
+          Удалить клиента
+        </button>
+      )}
     </div>
   );
 }

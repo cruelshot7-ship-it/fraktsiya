@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
+import { getTelegramUser } from "@/lib/telegram";
+import { joinConfirmText } from "@/lib/join-confirm";
+import { TRAINER_TG_ID } from "@/data/studio";
 import {
   daysSince,
   formatDayMonth,
@@ -60,7 +63,9 @@ export function TodayView() {
       (b) => isSlotPast(b.date, b.time) && !b.checkedIn && !b.noShow,
     );
     const upcomingToday = todayRows.filter((b) => !isSlotPast(b.date, b.time));
-    const pendingJoins = joinRequests.filter((r) => r.status === "pending");
+    // a request addressed to another trainer is not this trainer's to approve
+    const myTgId = String(getTelegramUser()?.id ?? TRAINER_TG_ID);
+    const pendingJoins = joinRequests.filter((r) => r.status === "pending" && (!r.coachId || r.coachId === myTgId));
     const attention = clients.filter((c) => {
       const low = (c.sessionsLeft ?? 0) <= 2;
       const silent = daysSince(c.lastReportAt, today) >= 7;
@@ -126,6 +131,7 @@ export function TodayView() {
                       type="button"
                       className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
                       onClick={() => {
+                        if (!window.confirm(`Отметить неявку${name ? ` · ${name}` : ""}?`)) return;
                         markNoShow(b.id);
                         showToast(name ? `Неявка · ${name}` : "Неявка отмечена");
                       }}
@@ -167,7 +173,9 @@ export function TodayView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={() => approveJoin(req.id)}
+                    onClick={() => {
+                      if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                    }}
                   >
                     Принять
                   </button>

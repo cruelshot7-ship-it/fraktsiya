@@ -69,6 +69,10 @@ export function MeasuresCard({ client }: { client: Client }) {
 
 /** Trainer side: latest value and change since the first record, per field. */
 export function MeasuresSummary({ client }: { client: Client }) {
+  // the trainer sees measures only where the client gave the special-data consent (same gate as the client's own view)
+  if (!specialDataAllowed(client.consent)) {
+    return <p className="text-sm text-muted-foreground">Клиент не дал согласия на замеры. Данные скрыты.</p>;
+  }
   const measures = client.measures ?? [];
   if (!measures.length) {
     return <p className="text-sm text-muted-foreground">Клиент ещё не вносил замеры.</p>;
