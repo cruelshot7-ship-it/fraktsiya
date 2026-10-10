@@ -50,6 +50,16 @@ function cabinetKeyboard() {
   };
 }
 
+/** Programs can be written while the coach's trial or paid access lasts; the trainer's own account always can. */
+function coachWritesAllowed(coaches: { telegramId?: string | null; addedAt?: string | null; paidUntil?: string | null }[] | undefined, coachId: string) {
+  const mine = coachKey(coachId);
+  if (mine === String(TRAINER_TG_ID)) return true;
+  const row = (coaches ?? []).find((c) => c.telegramId === mine);
+  if (!row) return false;
+  const phase = coachPhase(row);
+  return phase === "trial" || phase === "paid";
+}
+
 async function isCoach(id: string) {
   if (id === String(TRAINER_TG_ID)) return true;
   return (await loadStudioState()).coaches?.some((c) => c.telegramId === id) ?? false;
@@ -261,8 +271,20 @@ export async function handleTelegramUpdate(update: TgUpdate) {
     const action = cut < 0 ? cb.data : cb.data.slice(0, cut);
     const id = cut < 0 ? "" : cb.data.slice(cut + 1);
     if (action === "prog") {
-      if (!(await isCoach(String(cb.from.id)))) {
+      const coachId = String(cb.from.id);
+      if (!(await isCoach(coachId))) {
         await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Только для тренера.", show_alert: true });
+        return;
+      }
+      // a prompt that would be refused at the end is refused now, before the trainer types anything
+      let allowed = true;
+      try {
+        allowed = coachWritesAllowed((await loadStudioState()).coaches, coachId);
+      } catch {
+        allowed = true;
+      }
+      if (!allowed) {
+        await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Пробный доступ закончился. Программы сейчас не записываются.", show_alert: true });
         return;
       }
       await tg("answerCallbackQuery", { callback_query_id: cb.id });
@@ -397,10 +419,8 @@ async function importProgramFromChat(coachId: string, cmd: ImportCommand): Promi
   } catch {
     return "Не удалось открыть данные. Программа не записана, попробуйте ещё раз.";
   }
+  if (!coachWritesAllowed(payload.coaches, coachId)) return "Пробный доступ закончился. Программы сейчас не записываются.";
   const mine = coachKey(coachId);
-  const row = (payload.coaches ?? []).find((c) => c.telegramId === mine);
-  const phase = mine === String(TRAINER_TG_ID) ? "paid" : row ? coachPhase(row) : "expired";
-  if (phase !== "trial" && phase !== "paid") return "Пробный доступ закончился. Программы сейчас не записываются.";
 
   const found = findClients(
     payload.clients.filter((c) => clientCoach(c) === mine),
