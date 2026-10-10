@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
+import { activeLogFor, canUndoWorkout } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import {
@@ -168,6 +169,8 @@ type State = {
   /** rewrite maps legacy "index:line" marks to block ids before toggling */
   toggleCheck: (item: string, rewrite?: Record<string, string>) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
+  /** Reopens today's finished workout within the undo window. Returns false when refused. */
+  undoWorkout: () => boolean;
   setWeight: (kg: number) => void;
   /** Returns an error message, or null when saved. */
   saveMeasure: (values: MeasureInput, date?: string) => string | null;
@@ -1639,6 +1642,11 @@ export const useStudio = create<State>((set, get) => ({
       total,
       at: new Date().toISOString(),
       startedAt,
+      undo: {
+        lastReportAt: client.lastReportAt ?? null,
+        streak: client.streak,
+        bookingId: booking && !booking.checkedIn ? booking.id : null,
+      },
     };
     const nextLogs = [log, ...workoutLogs.filter((w) => !(w.clientId === client.id && w.date === today))].slice(0, 60);
     const nextClients = clients.map((c) =>
@@ -1653,6 +1661,30 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     hapticNotify("success");
     get().showToast(`Тренировка закрыта · ${mins} мин · ${kcal} ккал`);
+  },
+
+  undoWorkout: () => {
+    const { activeClientId, clients, bookings, workoutLogs } = get();
+    const client = clients.find((c) => c.id === activeClientId);
+    if (!client) return false;
+    const today = todayIso();
+    const log = activeLogFor(workoutLogs.filter((w) => w.clientId === client.id && w.date === today));
+    if (!log || !log.undo || !canUndoWorkout(log, Date.now())) {
+      get().showToast("Отменить можно только в течение 20 минут после завершения.");
+      return false;
+    }
+    const u = log.undo;
+    const nextLogs = workoutLogs.map((w) => (w === log ? { ...w, cancelledAt: new Date().toISOString() } : w));
+    const nextClients = clients.map((c) =>
+      c.id === client.id ? { ...c, lastReportAt: u.lastReportAt, streak: u.streak } : c,
+    );
+    const nextBookings = u.bookingId
+      ? bookings.map((b) => (b.id === u.bookingId ? { ...b, checkedIn: false } : b))
+      : bookings;
+    set({ workoutLogs: nextLogs, clients: nextClients, bookings: nextBookings });
+    persist(snap(get()));
+    get().showToast("Завершение отменено. Тренировка снова открыта.");
+    return true;
   },
 
   saveMeasure: (values, date) => {
