@@ -344,3 +344,20 @@
   min-height: 0;
   overflow: hidden;
 }
+
+/* Fonts ship with the app (SIL OFL 1.1, texts in public/fonts). Nothing is loaded from Google,
+   so a visitor's IP does not go to a third party just by opening the app. */
+@font-face {
+  font-family: "Golos Text";
+  src: url("/fonts/GolosText-Variable.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Oswald";
+  src: url("/fonts/Oswald-Variable.ttf") format("truetype");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
