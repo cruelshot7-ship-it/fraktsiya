@@ -9,6 +9,7 @@ import {
   lookupBarcode,
   rememberProduct,
   searchCatalog,
+  shareFoodProduct,
 } from "@/lib/barcode";
 import { Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
 import { hapticNotify } from "@/lib/haptics";
@@ -208,8 +209,10 @@ export function ScannerSheet({
     if (q.length >= 2) setError(null);
   }
 
-  function commitProduct(next: ScanProduct, portion: number) {
+  /** `share`: the user typed this product by hand, so it goes to the shared studio catalog too. */
+  function commitProduct(next: ScanProduct, portion: number, share = false) {
     rememberProduct(next);
+    if (share) void shareFoodProduct(next);
     onAdd(next, portion);
   }
 
@@ -478,6 +481,7 @@ export function ScannerSheet({
                             source: "studio",
                           },
                           100,
+                          true,
                         );
                       }}
                     >

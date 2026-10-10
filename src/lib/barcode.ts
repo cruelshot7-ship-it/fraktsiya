@@ -1,5 +1,6 @@
 import { BARCODE_CATALOG, type Kbju, type ScanProduct } from "@/data/studio";
-import { getTelegram } from "@/lib/telegram";
+import { getTelegram, getTelegramInitData } from "@/lib/telegram";
+import { addFoodProductFn, listFoodProductsFn } from "@/lib/food-catalog";
 
 const OFF_HOST = "https://world.openfoodfacts.org";
 const OFF_UA = "Ruksha/1.0 (telegram-miniapp; studio-fit-by)";
@@ -31,6 +32,7 @@ const OVERLAY_KEY = "ruksha:food-overlay:v2";
 const CIRCUIT_KEY = "ruksha:off-circuit:v2";
 const META_KEY = "ruksha:food-meta:v2";
 const REMOTE_KEY = "ruksha:food-remote:v2";
+const SHARED_KEY = "ruksha:food-shared:v1";
 
 const FRESH_TTL = 7 * 86400000;
 const STALE_TTL = 30 * 86400000;
@@ -79,6 +81,7 @@ let lastOffAt = 0;
 let overlay: OverlayMap = {};
 let overlayReady = false;
 let remoteCatalog: OverlayMap = {};
+let shared: OverlayMap = {};
 let features: FoodFeatures = { offLookup: true, remoteSearch: false };
 let catalogVersion = 0;
 let primedAt = 0;
@@ -115,6 +118,7 @@ function loadOverlay() {
   if (overlayReady) return;
   overlay = readJson<OverlayMap>(OVERLAY_KEY, {});
   remoteCatalog = readJson<OverlayMap>(REMOTE_KEY, {});
+  shared = readJson<OverlayMap>(SHARED_KEY, {});
   const meta = readJson<FoodMeta | null>(META_KEY, null);
   if (meta?.version) catalogVersion = meta.version;
   if (meta?.features) features = meta.features;
@@ -193,6 +197,8 @@ function fromLayers(code: string): ScanProduct | null {
   loadOverlay();
   const studio = overlay[code];
   if (studio) return { barcode: code, ...studio, source: "studio" };
+  const sharedHit = shared[code];
+  if (sharedHit) return { barcode: code, ...sharedHit, source: "studio" };
   const remote = remoteCatalog[code];
   if (remote) return { barcode: code, ...remote, source: "studio" };
   const local = BARCODE_CATALOG[code];
@@ -455,6 +461,9 @@ function allKnown(): ScanProduct[] {
   for (const [code, item] of Object.entries(remoteCatalog)) {
     map.set(code, { barcode: code, ...item, source: "studio" });
   }
+  for (const [code, item] of Object.entries(shared)) {
+    map.set(code, { barcode: code, ...item, source: "studio" });
+  }
   for (const [code, item] of Object.entries(overlay)) {
     map.set(code, { barcode: code, ...item, source: "studio" });
   }
@@ -530,8 +539,65 @@ function ingestProducts(products: unknown): OverlayMap {
   return map;
 }
 
+/** Products the users added to the shared studio catalog (see food-catalog.ts). Offline: the cached copy stays. */
+async function pullShared() {
+  try {
+    const res = await listFoodProductsFn({ data: { initData: getTelegramInitData() } });
+    if (!res.ok) return;
+    const next: OverlayMap = {};
+    for (const item of res.products) {
+      next[item.barcode] = {
+        name: item.name,
+        brand: item.brand,
+        per100: item.per100,
+        quantity: item.quantity,
+        servingGrams: item.servingGrams,
+      };
+    }
+    shared = next;
+    writeJson(SHARED_KEY, shared);
+  } catch {
+    /* no network: the cached list still works */
+  }
+}
+
+/**
+ * Sends a product the user entered by hand (never an Open Food Facts record) to the shared catalog.
+ * The product stays in the device overlay either way, so the diary is not blocked by a failed send.
+ */
+export async function shareFoodProduct(product: ScanProduct): Promise<{ ok: boolean; reason?: string; existed?: boolean }> {
+  if (!/^\d{8,14}$/.test(product.barcode)) return { ok: false, reason: "barcode" };
+  const res = await addFoodProductFn({
+    data: {
+      initData: getTelegramInitData(),
+      product: {
+        barcode: product.barcode,
+        name: product.name,
+        brand: product.brand,
+        per100: product.per100,
+        quantity: product.quantity,
+        servingGrams: product.servingGrams,
+      },
+    },
+  }).catch(() => ({ ok: false, reason: "offline", existed: undefined, product: undefined }));
+  if (res.ok && res.product) {
+    loadOverlay();
+    const winner = res.product;
+    shared[winner.barcode] = {
+      name: winner.name,
+      brand: winner.brand,
+      per100: winner.per100,
+      quantity: winner.quantity,
+      servingGrams: winner.servingGrams,
+    };
+    writeJson(SHARED_KEY, shared);
+  }
+  return { ok: res.ok, reason: res.reason, existed: res.existed };
+}
+
 async function doPrime() {
   loadOverlay();
+  await pullShared();
   try {
     const ctrl = new AbortController();
     const timer = window.setTimeout(() => ctrl.abort(), 4000);
