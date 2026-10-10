@@ -65,6 +65,9 @@ export function ProgramView() {
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
   const setTab = useStudio((s) => s.setTab);
+  const role = useStudio((s) => s.role);
+  // the trainer sees the program but does not check in, start or finish the client's workout, or tick blocks
+  const isTrainer = role === "trainer";
   const client = activeClient({ clients, activeClientId });
   const options = useMemo(
     () =>
@@ -267,7 +270,7 @@ export function ProgramView() {
             Маршрут
           </a>
         ) : null}
-        {(todayBook || trainDay) && !arrived ? (
+        {!isTrainer && (todayBook || trainDay) && !arrived ? (
           <button
             type="button"
             onClick={() => arrive()}
@@ -275,7 +278,7 @@ export function ProgramView() {
           >
             Я на месте
           </button>
-        ) : arrived ? (
+        ) : arrived && !isTrainer ? (
           <p className="mt-3 text-sm text-ok">Вы на месте. Вода +250 мл.</p>
         ) : null}
       </Surface>
@@ -333,6 +336,7 @@ export function ProgramView() {
                     block={b}
                     on={checked.includes(b.id)}
                     fact={factsById[b.id] ?? ""}
+                    readOnly={isTrainer}
                     onToggle={() => toggleCheck(b.id, legacy)}
                     onFact={(value) => {
                       const next = { ...factsById, [b.id]: value };
@@ -350,7 +354,7 @@ export function ProgramView() {
           <div className="mt-4 border-t border-hairline pt-3">
             <SectionLabel>Сожжено</SectionLabel>
             <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
-              {todayWorkout ? todayWorkout.kcal : liveKcal}
+              {todayWorkout ? todayWorkout.kcal : isTrainer ? 0 : liveKcal}
               <span className="text-base font-sans font-normal text-muted-foreground">ккал</span>
               <Flame className="size-4 text-primary" />
             </p>
@@ -359,14 +363,16 @@ export function ProgramView() {
                 ? `${todayWorkout.minutes} мин${todayWorkout.startedAt ? ` · ${clock(Date.parse(todayWorkout.startedAt))}–${clock(Date.parse(todayWorkout.at))}` : ""}`
                 : startedAt
                   ? `${clock(startedAt)} · ${String(Math.floor(elapsedSec / 60)).padStart(2, "0")}:${String(elapsedSec % 60).padStart(2, "0")}`
-                  : "Нажмите «Начать», время пойдёт в калории"}
+                  : isTrainer
+                    ? "Клиент ещё не начал тренировку"
+                    : "Нажмите «Начать», время пойдёт в калории"}
             </p>
           </div>
           {todayWorkout ? (
             <p className="mt-3 text-sm text-ok">
               Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.kcal} ккал
             </p>
-          ) : (
+          ) : isTrainer ? null : (
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -583,12 +589,14 @@ function BlockRow({
   block,
   on,
   fact,
+  readOnly,
   onToggle,
   onFact,
 }: {
   block: ProgramBlock;
   on: boolean;
   fact: string;
+  readOnly: boolean;
   onToggle: () => void;
   onFact: (value: string) => void;
 }) {
@@ -606,20 +614,35 @@ function BlockRow({
           <span className={cn("block font-medium", on && "line-through opacity-70")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
         </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-pressed={on}
-          aria-label={on ? `Снять отметку: ${block.exercise}` : `Отметить выполненным: ${block.exercise}`}
-          className={cn(
-            "pressable grid size-11 shrink-0 place-items-center rounded-full border-2 transition-colors",
-            on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
-          )}
-        >
-          <Check className="size-5" strokeWidth={on ? 3 : 2} />
-        </button>
+        {readOnly ? (
+          <span
+            aria-label={on ? `Выполнено: ${block.exercise}` : `Не выполнено: ${block.exercise}`}
+            className={cn(
+              "grid size-11 shrink-0 place-items-center rounded-full border-2",
+              on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
+            )}
+          >
+            <Check className="size-5" strokeWidth={on ? 3 : 2} />
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-pressed={on}
+            aria-label={on ? `Снять отметку: ${block.exercise}` : `Отметить выполненным: ${block.exercise}`}
+            className={cn(
+              "pressable grid size-11 shrink-0 place-items-center rounded-full border-2 transition-colors",
+              on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
+            )}
+          >
+            <Check className="size-5" strokeWidth={on ? 3 : 2} />
+          </button>
+        )}
       </div>
-      {on && block.load ? (
+      {readOnly && on && fact ? (
+        <p className="mt-1 mb-2 ml-2 text-tiny text-muted-foreground">Факт: {fact} кг</p>
+      ) : null}
+      {!readOnly && on && block.load ? (
         <input
           className={cn(inputClass, "mt-1 mb-2 ml-2")}
           inputMode="decimal"
