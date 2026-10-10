@@ -1,6 +1,9 @@
 import { BARCODE_CATALOG, type Kbju, type ScanProduct } from "@/data/studio";
 import { getTelegram, getTelegramInitData } from "@/lib/telegram";
 import { addFoodProductFn, listFoodProductsFn } from "@/lib/food-catalog";
+import { normalizeGtin, parseScanText } from "@/lib/barcode-parse";
+
+export { normalizeGtin, parseScanText };
 
 const OFF_HOST = "https://world.openfoodfacts.org";
 const OFF_UA = "Ruksha/1.0 (telegram-miniapp; studio-fit-by)";
@@ -268,31 +271,7 @@ function fromOff(barcode: string, product: Record<string, unknown>): ScanProduct
   };
 }
 
-export function normalizeGtin(digits: string): string {
-  let d = digits.replace(/\D/g, "");
-  if (d.length === 12) d = d.padStart(13, "0");
-  if (d.length === 14 && d.startsWith("0")) d = d.slice(1);
-  return d;
-}
 
-export function parseScanText(raw: string): string {
-  const s = String(raw ?? "").trim();
-  if (!s) return "";
-  const fromUrl = s.match(/(?:openfoodfacts\.org\/(?:product|продукт)\/|id\.gs1\.org\/01\/)(\d{8,14})/i);
-  if (fromUrl?.[1]) return normalizeGtin(fromUrl[1]);
-  try {
-    const u = new URL(s);
-    for (const key of ["ean", "gtin", "barcode", "code", "ean13"]) {
-      const v = u.searchParams.get(key);
-      if (v && /^\d{8,14}$/.test(v)) return normalizeGtin(v);
-    }
-  } catch {
-    /* not a URL */
-  }
-  const digits = s.replace(/\D/g, "");
-  if ([8, 12, 13, 14].includes(digits.length)) return normalizeGtin(digits);
-  return "";
-}
 
 function allowOffCall(): boolean {
   const t = now();
