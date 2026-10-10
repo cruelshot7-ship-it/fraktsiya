@@ -60,6 +60,7 @@ export function ProgramView() {
   const [chartReady, setChartReady] = useState(false);
   const [facts, setFacts] = useState<Record<string, string>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [showDone, setShowDone] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
@@ -161,6 +162,9 @@ export function ProgramView() {
   const legacy = shown ? legacyMarkMap(shown) : {};
   const checked = rewriteMarks(checks[`${client.id}:${today}`] ?? [], legacy);
   const factsById = shown ? rewriteFacts(facts, shown) : {};
+  const doneCount = plan.blocks.filter((b) => checked.includes(b.id)).length;
+  // done blocks leave the list (less to scroll); totals and marks still count them
+  const visibleBlocks = showDone ? plan.blocks : plan.blocks.filter((b) => !checked.includes(b.id));
   const itemCount = plan.blocks.length;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
@@ -296,8 +300,23 @@ export function ProgramView() {
               </button>
             </div>
           ) : null}
-          <ul className="mt-3 space-y-2">
-            {cardsOf(plan.blocks).map((card) => (
+          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span className="tabular-nums">Выполнено {doneCount} из {plan.blocks.length}</span>
+            {doneCount > 0 ? (
+              <button
+                type="button"
+                className="pressable h-9 rounded-lg px-3 text-primary"
+                onClick={() => setShowDone((v) => !v)}
+              >
+                {showDone ? "Скрыть выполненные" : `Показать выполненные (${doneCount})`}
+              </button>
+            ) : null}
+          </div>
+          {!showDone && plan.blocks.length > 0 && doneCount === plan.blocks.length ? (
+            <p className="mt-2 text-sm text-ok">Всё выполнено</p>
+          ) : null}
+          <ul className="mt-2 space-y-2">
+            {cardsOf(visibleBlocks).map((card) => (
               <li
                 key={`card-${card[0].id}`}
                 className={cn(
@@ -582,30 +601,27 @@ function BlockRow({
     .join(" · ");
   return (
     <>
-      <button
-        type="button"
-        onClick={onToggle}
-        className={cn(
-          "pressable flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
-          on ? "bg-ok-dim text-foreground" : "bg-transparent",
-        )}
-      >
-        <span
-          className={cn(
-            "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border",
-            on ? "border-ok bg-ok text-ok-foreground" : "border-hairline",
-          )}
-        >
-          {on ? <Check className="size-3" /> : null}
-        </span>
+      <div className={cn("flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm", on && "bg-ok-dim")}>
         <span className="min-w-0 flex-1">
           <span className={cn("block font-medium", on && "line-through opacity-70")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
         </span>
-      </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={on}
+          aria-label={on ? `Снять отметку: ${block.exercise}` : `Отметить выполненным: ${block.exercise}`}
+          className={cn(
+            "pressable grid size-11 shrink-0 place-items-center rounded-full border-2 transition-colors",
+            on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
+          )}
+        >
+          <Check className="size-5" strokeWidth={on ? 3 : 2} />
+        </button>
+      </div>
       {on && block.load ? (
         <input
-          className={cn(inputClass, "mt-1 mb-2 ml-10")}
+          className={cn(inputClass, "mt-1 mb-2 ml-2")}
           inputMode="decimal"
           placeholder="факт, кг — если другой"
           value={fact}
