@@ -1,3 +1,4 @@
+import type { BodyMeasure } from "@/lib/body-measures";
 export const TRAINER_TG_ID = "8144320404";
 
 export type Coach = {
@@ -614,6 +615,7 @@ export type Client = {
   lastReportAt: string | null;
   streak: number;
   weightHistory: WeightPoint[];
+  measures?: BodyMeasure[];
   lateCancels?: number;
   sessionsLeft: number;
   ledger: SessionTxn[];
@@ -1287,6 +1289,7 @@ export function emptyClient(): Client {
     lastReportAt: null,
     streak: 0,
     weightHistory: [],
+    measures: [],
     lateCancels: 0,
     sessionsLeft: 0,
     ledger: [],
