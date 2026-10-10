@@ -378,6 +378,11 @@ async function importProgramFromChat(coachId: string, cmd: ImportCommand): Promi
     return `Под «${cmd.query}» подходят: ${names}. Уточните имя или напишите @ник.`;
   }
   const target = found[0];
+  const who = `${target.firstName} ${target.lastName}`.trim();
+  const existing = (target.sessions ?? []).filter((s) => (s.items ?? []).length > 0);
+  if (existing.length && !cmd.force) {
+    return `У «${who}» уже есть программа (${existing.length} дн.). Чтобы заменить её, отправьте /program! ${cmd.query} и строки программы. Старая пропадёт.`;
+  }
 
   const split = splitDays(cmd.body);
   if (!split.ok) return split.error;
@@ -395,7 +400,6 @@ async function importProgramFromChat(coachId: string, cmd: ImportCommand): Promi
   }
   const exercises = sessions.reduce((n, s) => n + s.blocks.length, 0);
   const lines = sessions.map((s) => `${s.name}: ${s.blocks.length} упр.`);
-  const who = `${target.firstName} ${target.lastName}`.trim();
   return [
     `Программа «${who}» записана: ${sessions.length} дн., ${exercises} упр.`,
     ...lines,

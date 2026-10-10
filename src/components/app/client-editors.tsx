@@ -227,6 +227,8 @@ export function ProgramEditor({
         type="button"
         className="pressable h-11 rounded-xl bg-secondary text-sm"
         onClick={() => {
+          const hasDays = draft.sessions.some((s) => s.items.length > 0);
+          if (hasDays && !window.confirm("Заменить дни сборкой по цели? Правки дней, что не сохранены, пропадут.")) return;
           const built = buildProgram(draft, goal, preset);
           const n = built.sessions.length;
           const defaultDays: Record<number, number[]> = {

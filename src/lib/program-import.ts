@@ -22,20 +22,22 @@ export const MAX_DAYS = 7;
 export const MAX_LINES = 300;
 export const MAX_LINE = 120;
 
-const COMMAND = /^\/(?:program|программа)(?:@\w+)?(?:[ \t]+([^\n]*))?(?:\n([\s\S]*))?$/i;
+// "/program!" replaces a client's existing days; without "!" the bot refuses to overwrite them.
+const COMMAND = /^\/(?:program|программа)(!?)(?:@\w+)?(?:[ \t]+([^\n]*))?(?:\n([\s\S]*))?$/i;
 const DAY = /^(день|day)\s+\S+/i;
 
-export type ImportCommand = { ok: true; query: string; body: string } | { ok: false; error: string };
+export type ImportCommand = { ok: true; query: string; body: string; force: boolean } | { ok: false; error: string };
 
 /** null when the message is not a /program command at all. */
 export function parseImportCommand(text: string): ImportCommand | null {
   const m = COMMAND.exec(text.trim());
   if (!m) return null;
-  const query = (m[1] ?? "").trim();
-  const body = (m[2] ?? "").trim();
+  const force = m[1] === "!";
+  const query = (m[2] ?? "").trim();
+  const body = (m[3] ?? "").trim();
   if (!query) return { ok: false, error: "Укажите клиента: /program Имя, затем строки программы с новой строки." };
   if (!body) return { ok: false, error: `Программа для «${query}» пустая. Добавьте упражнения с новой строки.` };
-  return { ok: true, query, body };
+  return { ok: true, query, body, force };
 }
 
 export type DayText = { name: string; lines: string[] };
