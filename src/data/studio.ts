@@ -1,5 +1,6 @@
 import type { BodyMeasure } from "@/lib/body-measures";
 import type { Consent } from "@/lib/privacy";
+import { hoursUntilSlotAt, isLateCancelAt, slotStartMs } from "@/lib/minsk-time";
 export const TRAINER_TG_ID = "8144320404";
 
 export type Coach = {
@@ -188,6 +189,8 @@ export type Booking = {
   time: string;
   duration: number;
   held?: boolean;
+  /** id of the session hold ledger entry that paid for this booking */
+  holdId?: string;
   checkedIn?: boolean;
   noShow?: boolean;
   reminded24?: boolean;
@@ -622,6 +625,8 @@ export type Client = {
   lateCancels?: number;
   sessionsLeft: number;
   ledger: SessionTxn[];
+  /** ids of every balance event already applied on the server (dedupe for sync) */
+  txnIds?: string[];
   frozenUntil?: string | null;
   packExpiresAt?: string | null;
   telegramId?: string | null;
@@ -810,21 +815,15 @@ export function nowHM() {
 }
 
 export function isSlotPast(date: string, time: string) {
-  const today = isoDate(new Date());
-  if (date < today) return true;
-  if (date > today) return false;
-  return time <= nowHM();
+  return slotStartMs(date, time) <= Date.now();
 }
 
 export function hoursUntilSlot(date: string, time: string) {
-  const [h, m] = time.split(":").map(Number);
-  const d = parseISODate(date);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return (d.getTime() - Date.now()) / 3600000;
+  return hoursUntilSlotAt(date, time, Date.now());
 }
 
 export function isLateCancel(date: string, time: string, windowHours: number) {
-  return hoursUntilSlot(date, time) < windowHours;
+  return isLateCancelAt(date, time, Date.now(), windowHours);
 }
 
 export function hoursRu(n: number) {
