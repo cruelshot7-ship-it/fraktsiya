@@ -9,6 +9,8 @@ import {
   programFor,
   splitDays,
   trainerCabinetText,
+  parsePastedProgram,
+  stripProgramHeader,
   type DayText,
 } from "./program-import.ts";
 
@@ -145,4 +147,34 @@ test("reply to the prompt: name first line becomes a /program command; a typed c
   assert.equal(programCommandFromReply("/program! Елена\nЖим лежа\n4×8"), "/program! Елена\nЖим лежа\n4×8");
   const cmd = parseImportCommand(programCommandFromReply("Елена\nЖим лежа\n4×8\n80 кг"));
   assert.ok(cmd && cmd.ok && cmd.query === "Елена");
+});
+
+test("stripProgramHeader drops the command line only", () => {
+  assert.equal(stripProgramHeader("/program Елена\nЖим лежа\n4×8"), "Жим лежа\n4×8");
+  assert.equal(stripProgramHeader("Жим лежа\n4×8"), "Жим лежа\n4×8");
+  assert.equal(stripProgramHeader("  /программа Елена  "), "");
+});
+
+test("parsePastedProgram reads a pasted program with or without the command line", () => {
+  const plain = parsePastedProgram(PROGRAM_EXAMPLE.split("\n").slice(1).join("\n"), 1);
+  const withHeader = parsePastedProgram(PROGRAM_EXAMPLE, 1);
+  if (!plain.ok || !withHeader.ok) throw new Error("pasted program must parse");
+  assert.equal(plain.sessions.length, 2);
+  assert.deepEqual(plain.sessions.map((s) => s.name), ["День A", "День B"]);
+  assert.equal(plain.exercises, 3);
+  assert.deepEqual(
+    plain.sessions.map((s) => s.blocks.map((b) => b.exercise)),
+    withHeader.sessions.map((s) => s.blocks.map((b) => b.exercise)),
+  );
+});
+
+test("parsePastedProgram: a text without days is one day; empty or empty-day text is refused", () => {
+  const one = parsePastedProgram("Приседания\n5×5\n100 кг", 1);
+  if (!one.ok) throw new Error("one-day text must parse");
+  assert.equal(one.sessions.length, 1);
+  assert.equal(one.sessions[0].name, "День A");
+  assert.equal(parsePastedProgram("   ", 1).ok, false);
+  const empty = parsePastedProgram("День A\nЖим лежа\n4×8\nДень B", 1);
+  assert.equal(empty.ok, false);
+  if (!empty.ok) assert.match(empty.error, /В «День B» нет упражнений/);
 });

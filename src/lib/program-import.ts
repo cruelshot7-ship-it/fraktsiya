@@ -180,3 +180,25 @@ export function programCommandFromReply(text: string): string {
   const t = text.trim();
   return COMMAND.test(t) ? t : `/program ${t}`;
 }
+
+/** A pasted program may start with its "/program Имя" line or without it: the window already knows the client. */
+export function stripProgramHeader(text: string): string {
+  const t = text.trim();
+  const m = COMMAND.exec(t);
+  return m ? (m[3] ?? "").trim() : t;
+}
+
+export type PastedProgram =
+  | { ok: true; sessions: BuiltSession[]; warnings: string[]; exercises: number }
+  | { ok: false; error: string };
+
+/** The trainer's paste in the assign window: the same reading as the bot's import, without the client lookup. */
+export function parsePastedProgram(text: string, now: number = Date.now()): PastedProgram {
+  const body = stripProgramHeader(text);
+  if (!body) return { ok: false, error: "Вставьте программу: упражнения построчно, дни — «День A», «День B»." };
+  const split = splitDays(body);
+  if (!split.ok) return { ok: false, error: split.error };
+  const { sessions, warnings } = buildSessions(split.days, now);
+  const exercises = sessions.reduce((n, s) => n + s.blocks.length, 0);
+  return { ok: true, sessions, warnings, exercises };
+}
