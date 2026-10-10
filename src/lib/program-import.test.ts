@@ -10,7 +10,9 @@ function daysOf(body: string): DayText[] {
 
 test("command: name on the first line, program below", () => {
   const r = parseImportCommand("/program Иванов\nДень A\nЖим лежа\n4×8");
-  assert.deepEqual(r, { ok: true, query: "Иванов", body: "День A\nЖим лежа\n4×8" });
+  assert.deepEqual(r, { ok: true, query: "Иванов", body: "День A\nЖим лежа\n4×8", force: false });
+  const forced = parseImportCommand("/program! Иванов\nЖим\n3×5");
+  assert.ok(forced && forced.ok && forced.force, "the ! form is a forced replace");
 });
 
 test("command: alias and bot suffix; other messages are not commands", () => {
