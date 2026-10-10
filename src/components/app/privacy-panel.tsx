@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { PRIVACY_VERSION } from "@/lib/privacy";
+import { PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
 import { POLICY_SECTIONS } from "@/lib/privacy-text";
 import { useStudio, activeClient } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
-function PolicyText() {
+export function PolicyText() {
   return (
     <div className="flex flex-col gap-4">
       {POLICY_SECTIONS.map((section) => (
@@ -27,47 +27,40 @@ export function PrivacyGate() {
   const acceptPrivacy = useStudio((s) => s.acceptPrivacy);
   const declinePrivacy = useStudio((s) => s.declinePrivacy);
   const showToast = useStudio((s) => s.showToast);
-  const [declined, setDeclined] = useState(false);
   return (
     <div className="flex flex-col gap-4">
       <Surface>
         <p className="text-sm">
-          Перед работой в приложении прочитайте, какие данные мы собираем и зачем. Без согласия приложение не будет
-          вести ваши данные.
+          Перед работой в приложении прочитайте, какие данные мы собираем и зачем.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Если не согласны на замеры и самочувствие, приложение всё равно работает: записи, программа и баланс. Согласие
+          можно дать или отозвать позже в «Ещё» → «Мои данные».
         </p>
       </Surface>
       <PolicyText />
-      {declined ? (
-        <Surface>
-          <p className="text-sm text-muted-foreground">
-            Без согласия мы не можем вести программу и записи. Закройте приложение, если не согласны. Передумаете,
-            откройте его снова.
-          </p>
-        </Surface>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="pressable h-12 rounded-xl bg-secondary text-sm"
-            onClick={() => {
-              declinePrivacy();
-              setDeclined(true);
-            }}
-          >
-            Не согласен
-          </button>
-          <button
-            type="button"
-            className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-            onClick={() => {
-              acceptPrivacy();
-              showToast("Спасибо, согласие сохранено.");
-            }}
-          >
-            Согласен
-          </button>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className="pressable h-12 rounded-xl bg-secondary text-sm"
+          onClick={() => {
+            declinePrivacy();
+            showToast("Замеры и самочувствие не ведём. Остальное работает.");
+          }}
+        >
+          Не согласен
+        </button>
+        <button
+          type="button"
+          className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+          onClick={() => {
+            acceptPrivacy();
+            showToast("Спасибо, согласие сохранено.");
+          }}
+        >
+          Согласен
+        </button>
+      </div>
     </div>
   );
 }
@@ -80,15 +73,34 @@ export function MyDataPanel() {
   const client = activeClient({ clients, activeClientId });
   const [confirming, setConfirming] = useState(false);
   const acceptedAt = client?.consent?.acceptedAt;
+  const allowed = specialDataAllowed(client?.consent);
+  const acceptPrivacy = useStudio((s) => s.acceptPrivacy);
+  const declinePrivacy = useStudio((s) => s.declinePrivacy);
+  const showToast = useStudio((s) => s.showToast);
   return (
     <div className="flex flex-col gap-4">
       <Surface>
-        <SectionLabel>Ваше согласие</SectionLabel>
+        <SectionLabel>Замеры и самочувствие</SectionLabel>
         <p className="mt-2 text-sm text-muted-foreground">
-          {acceptedAt
-            ? `Согласие от ${new Date(acceptedAt).toLocaleDateString("ru-RU")}, версия ${PRIVACY_VERSION}.`
-            : "Согласие ещё не записано."}
+          {allowed
+            ? `Согласие от ${new Date(acceptedAt ?? "").toLocaleDateString("ru-RU")}, версия ${PRIVACY_VERSION}. Замеры и самочувствие ведём.`
+            : "Согласия нет: замеры и самочувствие не ведём. Записи, программа и баланс работают."}
         </p>
+        <button
+          type="button"
+          className={`pressable mt-3 h-11 w-full rounded-lg text-sm ${allowed ? "border border-border" : "bg-primary font-medium text-primary-foreground"}`}
+          onClick={() => {
+            if (allowed) {
+              declinePrivacy();
+              showToast("Согласие отозвано. Замеры и самочувствие больше не ведём.");
+            } else {
+              acceptPrivacy();
+              showToast("Спасибо, согласие сохранено.");
+            }
+          }}
+        >
+          {allowed ? "Отозвать согласие" : "Дать согласие"}
+        </button>
       </Surface>
       <Surface>
         <SectionLabel>Удалить мои данные</SectionLabel>

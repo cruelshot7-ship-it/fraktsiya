@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { anonymizedIdentity, needsConsent, PRIVACY_VERSION, stampConsent } from "./privacy.ts";
+import { anonymizedIdentity, needsConsent, needsDecision, PRIVACY_VERSION, specialDataAllowed, stampConsent } from "./privacy.ts";
 
 test("needsConsent: missing, old version or unstamped means consent is required", () => {
   assert.equal(needsConsent(null), true);
@@ -47,9 +47,9 @@ test("consent log records a new acceptance once, with the server time", async ()
 });
 
 test("consent log keeps earlier versions when the policy is bumped", async () => {
-  const { consentLogAfter, appendConsentLog } = await import("./privacy.ts");
+  const { consentLogAfter, appendConsentLog, PRIVACY_VERSION: CURRENT } = await import("./privacy.ts");
   const old = [{ version: "2026-01-01", at: "2026-01-02T00:00:00.000Z", action: "accept" as const }];
-  const next = consentLogAfter({ consent: { version: "2026-01-01", acceptedAt: "x" }, consentLog: old }, { version: "2026-10-10", acceptedAt: "y" }, "2026-10-10T09:00:00.000Z");
+  const next = consentLogAfter({ consent: { version: "2026-01-01", acceptedAt: "x" }, consentLog: old }, { version: CURRENT, acceptedAt: "y" }, "2026-10-10T09:00:00.000Z");
   assert.equal(next?.length, 2);
   assert.equal(next?.[0].version, "2026-01-01");
   assert.equal(appendConsentLog(undefined, { version: "v", at: "t", action: "erase" }).length, 1);
@@ -112,4 +112,25 @@ test("consent log: refusal then acceptance keeps both events in order", async ()
     log?.map((e) => e.action),
     ["decline", "accept"],
   );
+});
+
+test("a refusal is a decision: the gate closes, but special data stays off", () => {
+  const declined = { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "2026-10-10T07:00:00.000Z" };
+  assert.equal(needsDecision(declined), false);
+  assert.equal(specialDataAllowed(declined), false);
+});
+
+test("no decision yet: the gate is shown and special data is off", () => {
+  assert.equal(needsDecision(null), true);
+  assert.equal(needsDecision({ version: PRIVACY_VERSION, acceptedAt: null }), true);
+  assert.equal(specialDataAllowed(null), false);
+});
+
+test("accepted current version grants special data; an older acceptance does not", () => {
+  const accepted = { version: PRIVACY_VERSION, acceptedAt: "2026-10-10T10:00:00Z" };
+  assert.equal(specialDataAllowed(accepted), true);
+  assert.equal(needsDecision(accepted), false);
+  const old = { version: "2026-10-10", acceptedAt: "2026-10-01T10:00:00Z" };
+  assert.equal(specialDataAllowed(old), false, "consent to an older text does not cover this one");
+  assert.equal(needsDecision(old), true);
 });

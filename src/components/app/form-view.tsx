@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FORM_GOALS, isoDate, MOVE_KINDS } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
+import { specialDataAllowed } from "@/lib/privacy";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { readiness, type ReadinessDay } from "@/lib/athlete-metrics";
 import { MeasuresCard } from "@/components/app/measures-card";
@@ -117,6 +118,7 @@ export function FormView() {
             ))}
           </div>
         </div>
+        {specialDataAllowed(client?.consent) ? (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted-foreground">Восстановление</p>
           <div className="flex flex-col gap-1.5">
@@ -174,6 +176,11 @@ export function FormView() {
             </div>
           </div>
         </div>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Усталость, крепатуру и боль отмечаем только с согласия. Дать или отозвать его можно в «Ещё» → «Мои данные».
+          </p>
+        )}
         {recoveryLabel ? (
           <p className="mt-2 text-xs text-muted-foreground" role="status">
             Сегодня: {recoveryLabel}
