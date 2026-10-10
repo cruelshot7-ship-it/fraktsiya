@@ -596,6 +596,8 @@ export type JoinRequest = {
   goal?: string;
   pack?: string;
   coachId?: string | null;
+  /** the policy version the person accepted when sending the request, and when */
+  consent?: { version: string; at: string };
 };
 
 export type NotifyPrefs = {

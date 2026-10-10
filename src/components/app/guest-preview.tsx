@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { STUDIO, formatLongDate, isSlotPast } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
+import { PRIVACY_VERSION } from "@/lib/privacy";
 import { requestJoin } from "@/lib/studio-sync";
 import { getTelegramInitData } from "@/lib/telegram";
 import { SectionLabel } from "@/components/app/bits";
@@ -62,7 +63,14 @@ export function OfferLanding({ live }: { live: boolean }) {
     setBusy(true);
     sendJoinRequest(offer, { slotId: picked.id, goal, pack: `${pack.title} · ${pack.price} ${pack.unit}` });
     const res = await requestJoin({
-      data: { initData: getTelegramInitData(), offer, slotId: picked.id, goal, pack: pack.title },
+      data: {
+        initData: getTelegramInitData(),
+        offer,
+        slotId: picked.id,
+        goal,
+        pack: pack.title,
+        consentVersion: PRIVACY_VERSION,
+      },
     }).catch(() => ({ ok: false }));
     setBusy(false);
     if (!res.ok) {
@@ -208,7 +216,8 @@ export function OfferLanding({ live }: { live: boolean }) {
                     onChange={(e) => setAgreed(e.target.checked)}
                   />
                   <span>
-                    Согласен(на) на обработку имени, @username и времени для заявки. Политика — в «Ещё» → «Политика конфиденциальности».
+                    Согласен(на) на обработку имени, @username и времени для заявки, а также на передачу этих данных
+                    сервисам вне Беларуси (хостинг, база данных, Telegram). Политика — в «Ещё» → «Политика конфиденциальности».
                   </span>
                 </label>
                 <button

@@ -10,7 +10,8 @@ import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/progr
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { coachTierLine } from "@/lib/coach-tier";
-import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
+import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
+import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
 import {
   clientCoach,
@@ -56,6 +57,8 @@ export type StudioPayload = {
   coaches: Coach[];
   foreignHolds?: Record<string, number>;
   visits?: Visit[];
+  /** revision of the stored row (see studio-revision): a save is refused when the row has moved on */
+  rev?: number;
   /** the trainer's program templates; clients never receive them (see scopePayload) */
   programTemplates?: ProgramTemplate[];
 };
@@ -670,23 +673,46 @@ async function normalizedState(raw: Partial<StudioPayload> | null | undefined) {
     return Boolean(now && (now.coachId || "") !== (client.coachId || ""));
   });
   const stamped = (raw?.coaches ?? []).some((coach) => !coach.addedAt);
-  if (changed || stamped) await saveStudioState(next);
-  return next;
+  if (!changed && !stamped) return next;
+  try {
+    return await saveStudioState(next);
+  } catch (err) {
+    // housekeeping only: a racing save already moved the row; the next read repeats this step
+    if (!(err instanceof StateConflictError)) throw err;
+    return next;
+  }
 }
 
+/**
+ * The studio state. Neon is the truth. Errors reach the caller: an empty state returned after a failed
+ * read would be saved over the real one, so there is no fallback to an empty state here.
+ */
 export async function loadStudioState(): Promise<StudioPayload> {
-  const { loadRemote } = await import("@/lib/studio-remote");
-  const remote = await loadRemote();
-  if (remote) return normalizedState(remote);
-  try {
-    const { getSql, dbSource } = await import("@/lib/db");
-    if (dbSource !== "neon") return emptyPayload();
-    const sql = await getSql();
-    const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
-    return normalizedState(rows[0]?.payload);
-  } catch {
-    return emptyPayload();
+  const db = await import("@/lib/db");
+  const sql = await db.getSql();
+  if (db.dbSource !== "neon") {
+    // local preview without a database: the Telegram copy, as before
+    const { loadRemote } = await import("@/lib/studio-remote");
+    const remote = await loadRemote();
+    return remote ? normalizedState(remote) : emptyPayload();
   }
+  const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
+  const row = rows[0]?.payload;
+  if (row && isRevisioned(row)) return normalizedState(row);
+  // A row without a revision predates them. The Telegram copy is today's truth, so it becomes the first revision.
+  const { loadRemoteStrict } = await import("@/lib/studio-remote");
+  const copy = await loadRemoteStrict();
+  const state = await normalizedState(copy ?? row ?? null);
+  const first: StudioPayload = { ...state, rev: nextRevision(row) };
+  const written = await sql<{ id: string }>`
+    insert into studio_state (id, payload, updated_at) values (${STUDIO_ID}, ${JSON.stringify(first)}::jsonb, now())
+    on conflict (id) do update set payload = excluded.payload, updated_at = now()
+    where coalesce((studio_state.payload->>'rev')::int, 0) = 0
+    returning id`;
+  if (written.length > 0) return first;
+  // another request migrated the row first: its revision is the truth
+  const again = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
+  return normalizedState(again[0]?.payload);
 }
 
 const BACKUP_ID = "ruksha-backup";
@@ -745,6 +771,14 @@ export async function maybeDailyBackup(payload: StudioPayload) {
   return backupFlight;
 }
 
+/** Another request saved the studio between this request's read and its write. The caller reads again. */
+export class StateConflictError extends Error {
+  constructor() {
+    super("studio state changed by another request");
+    this.name = "StateConflictError";
+  }
+}
+
 export async function saveStudioState(payload: StudioPayload) {
   let next = payload;
   try {
@@ -753,30 +787,44 @@ export async function saveStudioState(payload: StudioPayload) {
   } catch {
     next = payload;
   }
-  const { saveRemote } = await import("@/lib/studio-remote");
-  await saveRemote(next);
-  try {
-    const { getSql, dbSource } = await import("@/lib/db");
-    if (dbSource !== "neon") return;
-    const sql = await getSql();
-    await sql.query(
-      "insert into studio_state (id, payload, updated_at) values ($1, $2::jsonb, now()) on conflict (id) do update set payload = excluded.payload, updated_at = now()",
-      [STUDIO_ID, JSON.stringify(next)],
-    );
-    for (const visit of next.visits ?? []) {
-      await sql.query(
-        "insert into visits (id, client_id, date, at, water_ml) values ($1, $2, $3, $4, $5) on conflict (id) do update set water_ml = excluded.water_ml, at = excluded.at",
-        [visit.id, visit.clientId, visit.date, visit.at, visit.waterMl],
-      );
+  const db = await import("@/lib/db");
+  if (db.dbSource === "neon") {
+    const sql = await db.getSql();
+    const expected = readRevision(next);
+    const data: StudioPayload = { ...next, rev: expected + 1 };
+    // the write lands only if the row still has the revision this state was read with
+    const won = await sql<{ id: string }>`
+      insert into studio_state (id, payload, updated_at) values (${STUDIO_ID}, ${JSON.stringify(data)}::jsonb, now())
+      on conflict (id) do update set payload = excluded.payload, updated_at = now()
+      where coalesce((studio_state.payload->>'rev')::int, 0) = ${expected}
+      returning id`;
+    if (won.length === 0) throw new StateConflictError();
+    next = data;
+    try {
+      for (const visit of next.visits ?? []) {
+        await sql.query(
+          "insert into visits (id, client_id, date, at, water_ml) values ($1, $2, $3, $4, $5) on conflict (id) do update set water_ml = excluded.water_ml, at = excluded.at",
+          [visit.id, visit.clientId, visit.date, visit.at, visit.waterMl],
+        );
+      }
+    } catch (err) {
+      console.error("[studio-visits]", err);
     }
+  }
+  // The Telegram copy is a backup, written after the database. Its failure does not undo the save.
+  try {
+    const { saveRemote } = await import("@/lib/studio-remote");
+    await saveRemote(next);
   } catch (err) {
-    console.error("[studio-save]", err);
+    console.error("[studio-backup]", err);
   }
   try {
     await maybeDailyBackup(next);
   } catch (err) {
     console.error("[studio-save]", err);
   }
+  // the state as stored, with its new revision: a caller that saves again must carry this one
+  return next;
 }
 
 export const pullStudio = createServerFn({ method: "POST" })
@@ -855,6 +903,7 @@ export const requestJoin = createServerFn({ method: "POST" })
       slotId: z.string().optional(),
       goal: z.string().optional(),
       pack: z.string().optional(),
+      consentVersion: z.string().optional(),
     }),
   )
   .handler(async ({ data }): Promise<{ ok: boolean; already?: boolean }> => {
@@ -869,12 +918,15 @@ export const requestJoin = createServerFn({ method: "POST" })
     }
     const coachId = coachFromStart(session.startParam, payload);
     if (!coachId) return { ok: false };
+    // the request goes in only with the policy accepted in its current version; the record goes with it
+    if (data.consentVersion !== PRIVACY_VERSION) return { ok: false };
     return bot.registerJoin(session.user, {
       message: data.offer ?? "",
       slotId: data.slotId,
       goal: data.goal,
       pack: data.pack,
       coachId,
+      consent: { version: PRIVACY_VERSION, at: new Date().toISOString() },
     });
   });
 
@@ -939,46 +991,52 @@ export const pushStudio = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
 
     const incoming = (data.payload ?? emptyPayload()) as StudioPayload;
-    const current = await loadStudioState();
-    const trainer = isCoachUser(current, session.user);
-    const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
-    const known =
-      trainer ||
-      current.clients.some((c) => c.telegramId === session.user.id) ||
-      Boolean(
-        uname &&
-          current.clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
-      );
-    let next: StudioPayload;
-    if (trainer) {
-      next = mergeCoachPayload(current, normalizePayload(incoming), session.user.id);
-    } else if (!known) {
-      return { ok: true };
-    } else {
-      let bound = current;
-      if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
-        const byName = current.clients.find(
-          (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
+    // Another request may save between this read and this write. Then the push is merged again onto the fresh state.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const current = await loadStudioState();
+      const trainer = isCoachUser(current, session.user);
+      const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
+      const known =
+        trainer ||
+        current.clients.some((c) => c.telegramId === session.user.id) ||
+        Boolean(
+          uname &&
+            current.clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
         );
-        if (byName) {
-          bound = {
-            ...current,
-            clients: current.clients.map((c) =>
-              c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
-            ),
-          };
+      let next: StudioPayload;
+      if (trainer) {
+        next = mergeCoachPayload(current, normalizePayload(incoming), session.user.id);
+      } else if (!known) {
+        return { ok: true };
+      } else {
+        let bound = current;
+        if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
+          const byName = current.clients.find(
+            (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
+          );
+          if (byName) {
+            bound = {
+              ...current,
+              clients: current.clients.map((c) =>
+                c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
+              ),
+            };
+          }
         }
+        next = mergeClientWrite(bound, incoming, session.user.id);
       }
-      next = mergeClientWrite(bound, incoming, session.user.id);
+      try {
+        await saveStudioState(next);
+        return { ok: true };
+      } catch (err) {
+        if (!(err instanceof StateConflictError)) {
+          console.error("[studio-save]", err);
+          return { ok: false, reason: "save-failed" };
+        }
+        // lost the race: the next pass reads the fresh state and merges again
+      }
     }
-
-    try {
-      await saveStudioState(next);
-    } catch (err) {
-      console.error("[studio-save]", err);
-      return { ok: false, reason: "save-failed" };
-    }
-    return { ok: true };
+    return { ok: false, reason: "conflict" };
   });
 
 export const addCoachFn = createServerFn({ method: "POST" })
