@@ -6,7 +6,7 @@ import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
 import { mergeMeasures } from "@/lib/body-measures";
-import { anonymizedIdentity, stampConsent } from "@/lib/privacy";
+import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
 import {
   clientCoach,
@@ -562,7 +562,17 @@ function eraseClientRows(current: StudioPayload, id: string): StudioPayload {
   return {
     ...current,
     clients: current.clients.map((c) =>
-      c.id !== id ? c : { ...c, ...anonymizedIdentity(), weight: 0, weightHistory: [], measures: [], erasedAt: now },
+      c.id !== id
+        ? c
+        : {
+            ...c,
+            ...anonymizedIdentity(),
+            weight: 0,
+            weightHistory: [],
+            measures: [],
+            erasedAt: now,
+            consentLog: appendConsentLog(c.consentLog, { version: c.consent?.version ?? "", at: now, action: "erase" }),
+          },
     ),
     food: keep(current.food),
     dayChecks: keep(current.dayChecks ?? []),
@@ -570,7 +580,7 @@ function eraseClientRows(current: StudioPayload, id: string): StudioPayload {
     workoutLogs: keep(current.workoutLogs),
     waitlist: keep(current.waitlist),
     visits: keep(current.visits ?? []),
-    notices: keep(current.notices),
+    notices: [erasureNotice(id, now), ...keep(current.notices)].slice(0, 40),
     checks: Object.fromEntries(Object.entries(current.checks).filter(([k]) => !k.startsWith(`${id}:`))),
   };
 }
@@ -581,6 +591,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
   if (!mine || !incomingSelf) return current;
   if (incomingSelf.erasedAt && !mine.erasedAt) return eraseClientRows(current, mine.id);
   const id = mine.id;
+  const now = new Date().toISOString();
   // Balance and bookings are settled by the server from ledger events (see lib/balance.ts).
   const settled = settleOwned(
     current,
@@ -601,7 +612,8 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     weight: incomingSelf.weight ?? mine.weight,
     weightHistory: incomingSelf.weightHistory?.length ? incomingSelf.weightHistory : mine.weightHistory,
     measures: mergeMeasures(mine.measures, incomingSelf.measures),
-    consent: stampConsent(mine.consent, incomingSelf.consent, new Date().toISOString()),
+    consent: stampConsent(mine.consent, incomingSelf.consent, now),
+    consentLog: consentLogAfter(mine, incomingSelf.consent, now),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
     healthToken: incomingSelf.healthToken || mine.healthToken || null,
