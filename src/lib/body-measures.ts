@@ -69,3 +69,13 @@ export function changeSinceFirst(list: BodyMeasure[], key: MeasureKey): number |
   const change = (points[points.length - 1][key] as number) - (points[0][key] as number);
   return Math.round(change * 10) / 10;
 }
+
+/**
+ * Union by calendar day, so a copy that is missing a day cannot delete it.
+ * Rows from `incoming` win for the same day (the client edits its own rows).
+ */
+export function mergeMeasures(base: BodyMeasure[] = [], incoming: BodyMeasure[] = []): BodyMeasure[] {
+  const byDate = new Map(base.map((m) => [m.date, m]));
+  for (const m of incoming) byDate.set(m.date, m);
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}

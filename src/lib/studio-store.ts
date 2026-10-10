@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { buildMeasure, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
+import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import {
@@ -376,6 +376,14 @@ function pushNotice(list: Notice[], notice: Notice) {
 
 
 /** Client cloud merge: local unsynced rows win; booking attendance flags OR-merge. */
+/** Measures are written only by the client on this device. A pull must not drop a row that is not on the server yet. */
+function withLocalMeasures(local: Client[], merged: Client[]): Client[] {
+  return merged.map((c) => {
+    const prev = local.find((x) => x.id === c.id);
+    return prev?.measures?.length ? { ...c, measures: mergeMeasures(c.measures, prev.measures) } : c;
+  });
+}
+
 function mergeClientCloudPayload(
   local: {
     food: FoodLog[];
@@ -597,7 +605,7 @@ export const useStudio = create<State>((set, get) => ({
         ? get().clients
         : cloud.role === "trainer"
           ? [...(payload.clients ?? []), ...localFresh]
-          : mergeClients(get().clients, payload.clients);
+          : withLocalMeasures(get().clients, mergeClients(get().clients, payload.clients));
       const next = ensureApprovedClients({
         ...payload,
         clients: seed,
@@ -673,7 +681,7 @@ export const useStudio = create<State>((set, get) => ({
         ? get().clients
         : cloud.role === "trainer"
           ? [...(payload.clients ?? []), ...localFresh]
-          : mergeClients(get().clients, payload.clients);
+          : withLocalMeasures(get().clients, mergeClients(get().clients, payload.clients));
       const next = ensureApprovedClients({
         ...payload,
         clients: seed,
