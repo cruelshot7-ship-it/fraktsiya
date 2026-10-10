@@ -153,7 +153,8 @@ export function MiniApp() {
   const navItems = role === "trainer" ? TRAINER_NAV : CLIENT_NAV;
 
   const title = useMemo(() => {
-    if (role === "trainer") return TITLES[tab] ?? "Сегодня";
+    // the trainer always sees whose program is open: the name is the only guard against editing the wrong client
+    if (role === "trainer") return tab === "program" && client ? `${client.firstName} · программа` : TITLES[tab] ?? "Сегодня";
     if (inviteBlocked) return "Заявка в зал";
     if (tab === "today") return client ? `${client.firstName} · сегодня` : "Мой день";
     if (tab === "schedule" || tab === "slots" || tab === "bookings") return "Расписание";
