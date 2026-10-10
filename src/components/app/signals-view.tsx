@@ -9,6 +9,7 @@ import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
+import { joinConfirmText } from "@/lib/join-confirm";
 
 type Pane = "tasks" | "settings" | "tools";
 
@@ -81,7 +82,9 @@ export function SignalsView() {
                 <button
                   type="button"
                   className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={() => approveJoin(req.id)}
+                  onClick={() => {
+                    if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                  }}
                 >
                   Принять
                 </button>

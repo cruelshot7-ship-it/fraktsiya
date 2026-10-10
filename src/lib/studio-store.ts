@@ -802,9 +802,13 @@ export const useStudio = create<State>((set, get) => ({
       return;
     }
     const uname = (req.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
-    const existing =
-      get().clients.find((c) => c.telegramId === req.telegramId) ??
-      get().clients.find((c) => uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname);
+    // A username match counts only for a client with no Telegram account linked yet: otherwise the
+    // request would take over someone else's program, balance and history (usernames can change).
+    const byAccount = get().clients.find((c) => c.telegramId === req.telegramId);
+    const byHandle = get().clients.find(
+      (c) => uname && !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
+    );
+    const existing = byAccount ?? byHandle;
     const today = todayIso();
     const starter = buildProgram({ weight: 0, trainDays: [0, 2, 4] }, "shape", "beginner");
     const packTxn = {
@@ -955,7 +959,7 @@ export const useStudio = create<State>((set, get) => ({
     if (telegramLocked()) return;
     let tab = get().tab;
     if (role === "trainer") {
-      if (tab === "food" || tab === "program" || tab === "hall" || tab === "form") tab = "clients";
+      if (tab === "food" || tab === "program" || tab === "hall" || tab === "form" || tab === "more") tab = "clients";
     } else if (tab === "clients" || tab === "signals") {
       tab = "program";
     }

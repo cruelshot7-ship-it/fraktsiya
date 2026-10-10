@@ -21,6 +21,7 @@ export function SessionCard({ bookingId }: Props) {
   const slots = useStudio((s) => s.slots);
   const clients = useStudio((s) => s.clients);
   const setTab = useStudio((s) => s.setTab);
+  const setActiveClient = useStudio((s) => s.setActiveClient);
   const checkIn = useStudio((s) => s.checkIn);
   const markNoShow = useStudio((s) => s.markNoShow);
   const cancelBooking = useStudio((s) => s.cancelBooking);
@@ -95,7 +96,11 @@ export function SessionCard({ bookingId }: Props) {
           <button
             type="button"
             className="pressable rounded-xl bg-secondary px-3 py-2 text-sm"
-            onClick={() => setTab("program")}
+            onClick={() => {
+              // the program tab shows the active client: select this booking's client first
+              setActiveClient(booking.clientId);
+              setTab("program");
+            }}
           >
             Программа
           </button>

@@ -192,13 +192,16 @@ export function BookingsView() {
                     К программе
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => setPendingId(booking.id)}
-                  className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                >
-                  {role === "trainer" ? "Отменить · вернуть занятие" : "Отменить запись"}
-                </button>
+                {/* a visit that already happened cannot be cancelled back by the trainer */}
+                {role === "trainer" && booking.checkedIn ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setPendingId(booking.id)}
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    {role === "trainer" ? "Отменить · вернуть занятие" : "Отменить запись"}
+                  </button>
+                )}
                 {role === "client" ? (
                   <button
                     type="button"

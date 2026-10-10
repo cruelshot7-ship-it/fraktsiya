@@ -164,7 +164,14 @@ export function TrainerSlots() {
                         {people.map(({ booking, client }) => (
                             <div key={booking.id} className="flex items-center justify-between gap-2">
                               <p className="text-sm">{client ? shortName(client) : "Клиент"}</p>
-                              <button type="button" className="text-tiny text-primary" onClick={() => cancelBooking(booking.id, "trainer")}>
+                              <button
+                                type="button"
+                                className="text-tiny text-primary"
+                                onClick={() => {
+                                  if (!window.confirm(`Снять ${client ? shortName(client) : "клиента"} из слота ${slot.time}? Занятие вернётся ему.`)) return;
+                                  cancelBooking(booking.id, "trainer");
+                                }}
+                              >
                                 Снять
                               </button>
                             </div>
@@ -209,13 +216,17 @@ export function TrainerSlots() {
                     <button
                       type="button"
                       onClick={() => {
+                        const msg = people.length
+                          ? `Закрыть слот ${slot.time}? ${people.length} клиент(ов) получат отмену, занятия вернутся им.`
+                          : `Закрыть слот ${slot.time}?`;
+                        if (!window.confirm(msg)) return;
                         cancelSlotBookings(slot.id);
                         closeSlot(slot.id);
                         setOpenId(null);
                       }}
                       className="pressable mt-2 h-11 w-full rounded-lg bg-primary-dim text-sm text-primary"
                     >
-                      Удалить слот
+                      Закрыть слот
                     </button>
                   </div>
                 ) : null}
