@@ -186,11 +186,11 @@ export function KbjuMacroRing({
       ? "var(--color-ok)"
       : "var(--color-primary)";
   const glow = over
-    ? "0 0 14px rgb(221 51 42 / 0.4)"
+    ? "0 0 14px rgb(232 56 47 / 0.4)"
     : complete
-      ? "0 0 14px rgb(139 207 163 / 0.4)"
+      ? "0 0 14px rgb(69 212 228 / 0.4)"
       : ratio > 0
-        ? "0 0 10px rgb(221 51 42 / 0.22)"
+        ? "0 0 10px rgb(232 56 47 / 0.22)"
         : "none";
 
   return (
