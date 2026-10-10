@@ -25,6 +25,7 @@ function PolicyText() {
 /** Shown instead of the app until the client accepts the current policy version. */
 export function PrivacyGate() {
   const acceptPrivacy = useStudio((s) => s.acceptPrivacy);
+  const declinePrivacy = useStudio((s) => s.declinePrivacy);
   const showToast = useStudio((s) => s.showToast);
   const [declined, setDeclined] = useState(false);
   return (
@@ -48,7 +49,10 @@ export function PrivacyGate() {
           <button
             type="button"
             className="pressable h-12 rounded-xl bg-secondary text-sm"
-            onClick={() => setDeclined(true)}
+            onClick={() => {
+              declinePrivacy();
+              setDeclined(true);
+            }}
           >
             Не согласен
           </button>

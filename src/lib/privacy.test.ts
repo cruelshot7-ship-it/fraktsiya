@@ -62,3 +62,54 @@ test("erasure notice to the trainer carries no name and no phone", async () => {
   assert.equal(n.clientId, "c9");
   assert.ok(!/\+?\d{6,}/.test(n.body));
 });
+
+test("stampConsent: a payload without acceptedAt never grants consent", () => {
+  const now = "2026-10-10T07:00:00.000Z";
+  assert.equal(stampConsent(null, { version: PRIVACY_VERSION, acceptedAt: null }, now), null);
+});
+
+test("stampConsent: a refusal is stamped with server time once and not overwritten", () => {
+  const first = stampConsent(null, { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "client" }, "2026-10-10T07:00:00.000Z");
+  assert.deepEqual(first, { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "2026-10-10T07:00:00.000Z" });
+  const again = stampConsent(first, { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "x" }, "2026-10-11T07:00:00.000Z");
+  assert.deepEqual(again, first);
+  assert.equal(needsConsent(first), true, "a refusal does not count as consent");
+});
+
+test("stampConsent: a later acceptance replaces the refusal", () => {
+  const declined = { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "2026-10-10T07:00:00.000Z" };
+  const accepted = stampConsent(declined, { version: PRIVACY_VERSION, acceptedAt: "client" }, "2026-10-11T08:00:00.000Z");
+  assert.deepEqual(accepted, { version: PRIVACY_VERSION, acceptedAt: "2026-10-11T08:00:00.000Z" });
+});
+
+test("stampConsent: a refusal sent after acceptance does not revoke it", () => {
+  const accepted = { version: PRIVACY_VERSION, acceptedAt: "2026-10-10T07:00:00.000Z" };
+  assert.deepEqual(stampConsent(accepted, { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "x" }, "2026-10-11T00:00:00.000Z"), accepted);
+});
+
+test("consent log: a refusal is logged once with server time", async () => {
+  const { consentLogAfter } = await import("./privacy.ts");
+  const now = "2026-10-10T09:00:00.000Z";
+  const first = consentLogAfter({ consent: null, consentLog: [] }, { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "client" }, now);
+  assert.deepEqual(first, [{ version: PRIVACY_VERSION, at: now, action: "decline" }]);
+  const repeat = consentLogAfter(
+    { consent: { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: now }, consentLog: first },
+    { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "again" },
+    "2026-10-10T10:00:00.000Z",
+  );
+  assert.equal(repeat?.length, 1, "a repeated refusal is not logged again");
+});
+
+test("consent log: refusal then acceptance keeps both events in order", async () => {
+  const { consentLogAfter } = await import("./privacy.ts");
+  const declinedLog = [{ version: PRIVACY_VERSION, at: "2026-10-10T09:00:00.000Z", action: "decline" as const }];
+  const log = consentLogAfter(
+    { consent: { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: "2026-10-10T09:00:00.000Z" }, consentLog: declinedLog },
+    { version: PRIVACY_VERSION, acceptedAt: "client" },
+    "2026-10-11T09:00:00.000Z",
+  );
+  assert.deepEqual(
+    log?.map((e) => e.action),
+    ["decline", "accept"],
+  );
+});
