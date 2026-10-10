@@ -9,7 +9,6 @@ export function CopySessionPanel() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const updateClient = useStudio((s) => s.updateClient);
   const showToast = useStudio((s) => s.showToast);
-  const notices = useStudio((s) => s.notices);
   const client = activeClient({ clients, activeClientId });
   const [sourceId, setSourceId] = useState("");
 
@@ -29,12 +28,12 @@ export function CopySessionPanel() {
       id: `nt_copy_${day.id}`,
       audience: "client" as const,
       clientId: client!.id,
-      kind: "reschedule" as const,
-      title: "В план добавлена копия дня",
+      kind: "alert" as const,
+      title: "В программу добавлен день",
       body: day.name,
       at: new Date().toISOString(),
     };
-    useStudio.setState({ notices: [n, ...notices].slice(0, 40) });
+    useStudio.setState((st) => ({ notices: [n, ...st.notices].slice(0, 40) }));
     showToast("День скопирован в план клиента.");
   }
 

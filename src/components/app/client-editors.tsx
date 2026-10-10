@@ -17,7 +17,8 @@ import {
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
-import { newBlockId, SIDES, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
+import { blockLines, newBlockId, SIDES, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
+import { parsePastedProgram, type PastedProgram } from "@/lib/program-import";
 
 export function Kpi({
   value,
@@ -95,11 +96,91 @@ export function ProgramEditor({
   const [exerciseError, setExerciseError] = useState<string | null>(null);
   const [goal, setGoal] = useState<BuildGoal>("shape");
   const [preset, setPreset] = useState<ProgramPreset>("beginner");
+  const [paste, setPaste] = useState("");
+  const [parsed, setParsed] = useState<PastedProgram | null>(null);
+
+  // the pasted program becomes the client's days: replaced, or added after the current ones
+  const assign = (mode: "replace" | "append") => {
+    if (!parsed || !parsed.ok) return;
+    const hasDays = draft.sessions.some((s) => s.items.length > 0);
+    if (mode === "replace" && hasDays && !window.confirm(`Заменить ${draft.sessions.length} дн. на ${parsed.sessions.length}? Текущие дни уйдут.`)) return;
+    const sessions = mode === "replace" ? parsed.sessions : [...draft.sessions, ...parsed.sessions];
+    // same stamp as the bot's import, so a stale copy read before this save cannot overwrite it
+    onSave({ sessions, programAt: new Date().toISOString() });
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
         Назад
       </button>
+      <SectionLabel>Вставить программу текстом</SectionLabel>
+      <p className="text-tiny text-muted-foreground">
+        Вставьте программу как есть: из заметок или чата. «День A», «День B» — заголовки дней. Под упражнением, каждое с новой строки: подходы×повторения (4×8), вес (80 кг), отдых (Отдых 90 секунд). Строка «/program» не нужна.
+      </p>
+      <textarea
+        className="min-h-40 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+        placeholder={"День A\nЖим лежа\n4×8\n80 кг\nОтдых 90 секунд"}
+        value={paste}
+        onChange={(e) => {
+          setPaste(e.target.value);
+          setParsed(null);
+        }}
+      />
+      <button
+        type="button"
+        disabled={!paste.trim()}
+        className="pressable h-11 rounded-xl bg-secondary text-sm disabled:opacity-50"
+        onClick={() => setParsed(parsePastedProgram(paste))}
+      >
+        Разобрать по дням
+      </button>
+      {parsed && !parsed.ok ? <p className="text-tiny text-destructive">{parsed.error}</p> : null}
+      {parsed && parsed.ok ? (
+        <div className="flex flex-col gap-2 rounded-xl bg-card p-3 shadow-border">
+          <p className="text-sm font-medium">
+            Распознано: {parsed.sessions.length} дн., {parsed.exercises} упр.
+          </p>
+          {parsed.sessions.map((s) => (
+            <div key={s.id}>
+              <p className="text-xs font-medium">
+                {s.name} · {s.blocks.length} упр.
+              </p>
+              <ul className="mt-1 flex flex-col gap-1">
+                {s.blocks.map((b) => {
+                  const details = blockLines(b).slice(1).join(" · ");
+                  return (
+                    <li key={b.id} className="text-tiny text-muted-foreground">
+                      <span className="text-foreground">{b.exercise}</span>
+                      {details ? ` · ${details}` : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          {parsed.warnings.map((w, i) => (
+            <p key={i} className="text-tiny text-primary">
+              ⚠ {w}
+            </p>
+          ))}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+              onClick={() => assign("replace")}
+            >
+              Заменить дни
+            </button>
+            <button type="button" className="pressable h-11 rounded-xl bg-secondary text-sm" onClick={() => assign("append")}>
+              Добавить в конец
+            </button>
+          </div>
+          <p className="text-tiny text-muted-foreground">
+            «Заменить» — текущие дни уйдут. «Добавить» — новые дни встанут после них. Сохраняется сразу, как в боте.
+          </p>
+        </div>
+      ) : null}
       <Field label="Название программы">
         <input className={inputClass} value={draft.programTitle} onChange={(e) => setDraft({ ...draft, programTitle: e.target.value })} />
       </Field>
