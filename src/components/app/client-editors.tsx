@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { MeasuresSummary } from "@/components/app/measures-card";
 import { useState, type ReactNode } from "react";
 import {
@@ -105,8 +106,8 @@ export function ProgramEditor({
   const showToast = useStudio((s) => s.showToast);
   // unsaved work: pasted text, or days/title/weeks that differ from the client's saved copy
   const dirty = paste.trim() !== "" || JSON.stringify(draft) !== JSON.stringify(client);
-  const leave = () => {
-    if (dirty && !window.confirm("Выйти без сохранения? Несохранённые правки пропадут.")) return;
+  const leave = async () => {
+    if (dirty && !await confirmAction("Выйти без сохранения? Несохранённые правки пропадут.")) return;
     onBack();
   };
   const dayToTemplate = (session: ProgramSession) => {
@@ -120,10 +121,10 @@ export function ProgramEditor({
   };
 
   // the pasted program becomes the client's days: replaced, or added after the current ones
-  const assign = (mode: "replace" | "append") => {
+  const assign = async (mode: "replace" | "append") => {
     if (!parsed || !parsed.ok) return;
     const hasDays = draft.sessions.some((s) => s.items.length > 0);
-    if (mode === "replace" && hasDays && !window.confirm(`Заменить ${draft.sessions.length} дн. на ${parsed.sessions.length}? Текущие дни уйдут.`)) return;
+    if (mode === "replace" && hasDays && !await confirmAction(`Заменить ${draft.sessions.length} дн. на ${parsed.sessions.length}? Текущие дни уйдут.`)) return;
     const sessions = mode === "replace" ? parsed.sessions : [...draft.sessions, ...parsed.sessions];
     // same stamp as the bot's import, so a stale copy read before this save cannot overwrite it
     onSave({ sessions, programAt: new Date().toISOString() });
@@ -327,9 +328,9 @@ export function ProgramEditor({
       <button
         type="button"
         className="pressable h-11 rounded-xl bg-secondary text-sm"
-        onClick={() => {
+        onClick={async () => {
           const hasDays = draft.sessions.some((s) => s.items.length > 0);
-          if (hasDays && !window.confirm("Заменить дни сборкой по цели? Правки дней, что не сохранены, пропадут.")) return;
+          if (hasDays && !await confirmAction("Заменить дни сборкой по цели? Правки дней, что не сохранены, пропадут.")) return;
           const built = buildProgram(draft, goal, preset);
           const n = built.sessions.length;
           const defaultDays: Record<number, number[]> = {
@@ -391,9 +392,9 @@ export function ProgramEditor({
           options={exerciseOptions({ custom: draft.exerciseNames ?? [] })}
           onChange={(next) => setDraft({ ...draft, sessions: draft.sessions.map((s) => (s.id === session.id ? next : s)) })}
           onSaveTemplate={() => dayToTemplate(session)}
-          onRemove={() => {
+          onRemove={async () => {
             if (draft.sessions.length === 1) return;
-            if (!window.confirm(`Удалить день «${session.name}» вместе с упражнениями?`)) return;
+            if (!await confirmAction(`Удалить день «${session.name}» вместе с упражнениями?`)) return;
             setDraft({ ...draft, sessions: draft.sessions.filter((s) => s.id !== session.id) });
           }}
         />
@@ -516,8 +517,8 @@ function SessionEditor({
                 <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
                 <IconButton
                   label="Убрать блок"
-                  onClick={() => {
-                    if (window.confirm(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
+                  onClick={async () => {
+                    if (await confirmAction(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
                   }}
                 >
                   ×

@@ -16,7 +16,8 @@ function agoLabel(ts: number | null): string {
 /**
  * Честный статус: устройство vs сервер (dirty сбрасывается только после ok от pushStudio).
  */
-export function SyncStatusChip({ className }: { className?: string }) {
+/** quietWhenOk: show nothing while everything is saved; the client sees the chip only on a problem. */
+export function SyncStatusChip({ className, quietWhenOk = false }: { className?: string; quietWhenOk?: boolean }) {
   const toast = useStudio((s) => s.toast);
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -68,6 +69,7 @@ export function SyncStatusChip({ className }: { className?: string }) {
     tone = "muted";
   }
 
+  if (quietWhenOk && tone === "muted") return null;
   return (
     <p
       className={cn(

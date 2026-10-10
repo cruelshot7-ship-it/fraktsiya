@@ -7,9 +7,9 @@
  * последний @theme перебивает предыдущие.
  */
 @theme {
-  --text-3xs: 0.5625rem;
-  --text-2xs: 0.625rem;
-  --text-tiny: 0.6875rem;
+  --text-3xs: 0.6875rem;
+  --text-2xs: 0.75rem;
+  --text-tiny: 0.8125rem;
 
   --radius-xs: 0.375rem;
   --radius-sm: 0.75rem;
@@ -272,7 +272,7 @@
 
 @media (max-width: 340px) {
   :root {
-    --text-tiny: 0.625rem;
+    --text-tiny: 0.75rem;
   }
   header h1 {
     font-size: 1.25rem;
@@ -281,7 +281,7 @@
 
 @media (max-width: 360px) {
   :root {
-    --text-tiny: 0.625rem;
+    --text-tiny: 0.75rem;
   }
 }
 

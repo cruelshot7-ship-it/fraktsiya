@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { useState } from "react";
 import { Bell, X } from "lucide-react";
 import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
@@ -91,8 +92,8 @@ export function SignalsView() {
                 <button
                   type="button"
                   className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={() => {
-                    if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                  onClick={async () => {
+                    if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
                   }}
                 >
                   Принять
@@ -100,8 +101,8 @@ export function SignalsView() {
                 <button
                   type="button"
                   className="pressable h-11 rounded-xl bg-secondary text-sm"
-                  onClick={() => {
-                    if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                  onClick={async () => {
+                    if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
                   }}
                 >
                   Отклонить

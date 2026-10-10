@@ -32,6 +32,8 @@ export type TelegramWebApp = {
     selectionChanged: () => void;
   };
   showScanQrPopup?: (params: { text?: string }, cb: (text: string) => void) => void;
+  /** Bot API 6.2+: Telegram's own yes/no dialog. */
+  showConfirm?: (message: string, cb: (ok: boolean) => void) => void;
   closeScanQrPopup?: () => void;
 };
 

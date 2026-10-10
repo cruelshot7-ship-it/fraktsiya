@@ -197,10 +197,6 @@ export function MiniApp() {
                   <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
                   <SyncStatusChip className="mt-1" />
                 </div>
-                <button type="button" onClick={() => setTab("signals")} className="pressable relative grid size-11 place-items-center rounded-2xl bg-secondary text-muted-foreground" aria-label="Сигналы">
-                  <Bell className="size-4" />
-                  {trainerBadge > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
-                </button>
               </div>
             </>
           ) : (
@@ -221,7 +217,7 @@ export function MiniApp() {
               {inviteBlocked ? null : (
               <>
               <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
-              <SyncStatusChip className="mt-1" />
+              <SyncStatusChip className="mt-1" quietWhenOk />
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
                   ? inviteBlocked ? "Тренер добавит вас в зал" : "Профиль появится, когда тренер добавит вас в зал"
