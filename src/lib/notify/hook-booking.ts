@@ -1,4 +1,5 @@
 import { enqueueLocal } from "@/lib/notify/local-outbox-store";
+import { getTelegramInitData } from "@/lib/telegram";
 
 export function enqueueBookingConfirmed(opts: {
   telegramId?: string | null;
@@ -48,6 +49,7 @@ export function tryFlushPending() {
       const { flushOutboxServerFn } = await import("@/lib/notify/flush-server");
       await flushOutboxServerFn({
         data: {
+          initData: getTelegramInitData(),
           events: pending.map((e) => ({
             id: e.id,
             kind: e.kind,

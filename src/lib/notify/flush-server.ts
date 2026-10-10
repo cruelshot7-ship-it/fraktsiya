@@ -1,16 +1,19 @@
 /**
  * Server: durable outbox on Neon + Telegram Bot delivery (best-effort).
+ * Вызов без подписанного initData отклоняется. Кому и что можно отправить — в flush-rules.ts.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { prepareEvent } from "@/lib/notify/flush-rules";
 
 const Input = z.object({
+  initData: z.string().max(4096),
   events: z
     .array(
       z.object({
-        id: z.string(),
-        kind: z.string(),
-        telegramId: z.string(),
+        id: z.string().max(200),
+        kind: z.string().max(64),
+        telegramId: z.string().max(32),
         payload: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -25,6 +28,15 @@ export type FlushResult = {
 export const flushOutboxServerFn = createServerFn({ method: "POST" })
   .validator(Input)
   .handler(async ({ data }): Promise<FlushResult> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const session = verifyTelegramInitData(data.initData);
+    if (!session) {
+      return {
+        results: data.events.map((e) => ({ id: e.id, ok: false, error: "unauthorized" })),
+        durable: false,
+      };
+    }
+
     const { sendBotLink } = await import("@/lib/telegram-bot.server");
     const results: FlushResult["results"] = [];
     let durable = false;
@@ -41,7 +53,12 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
     }
 
     for (const e of data.events) {
-      const payload = e.payload ?? {};
+      const prep = prepareEvent(session, e);
+      if (!prep.ok) {
+        results.push({ id: e.id, ok: false, error: prep.error });
+        continue;
+      }
+
       if (sql) {
         try {
           await sql.query(
@@ -50,7 +67,7 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
              on conflict (id) do update set
                payload = excluded.payload,
                updated_at = now()`,
-            [e.id, e.kind, e.telegramId, JSON.stringify(payload)],
+            [e.id, prep.kind, e.telegramId, JSON.stringify(prep.payload)],
           );
         } catch (err) {
           console.error("[outbox] persist failed", err);
@@ -58,22 +75,8 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
         }
       }
 
-      const date = String(payload.date ?? "");
-      const time = String(payload.time ?? "");
-      let text = "";
-      if (e.kind === "booking_confirmed") {
-        text =
-          date && time
-            ? `Запись подтверждена: ${date} · ${time}`
-            : "Запись подтверждена.";
-      } else if (e.kind === "booking_cancelled") {
-        text = "Запись отменена.";
-      } else {
-        text = `Уведомление: ${e.kind}`;
-      }
-
       try {
-        const r = await sendBotLink(e.telegramId, text);
+        const r = await sendBotLink(e.telegramId, prep.text);
         const ok = Boolean(r && (r as { ok?: boolean }).ok !== false);
         const error = (r as { description?: string })?.description;
         results.push({ id: e.id, ok, error });
