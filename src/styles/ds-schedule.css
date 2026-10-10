@@ -3,28 +3,28 @@
 @theme {
   --font-sans: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Oswald", "Arial Narrow", "Helvetica Neue", Impact, sans-serif;
-  --color-background: #15171b;
-  --color-foreground: #edeff2;
-  --color-card: #1c1f26;
-  --color-card-foreground: #edeff2;
-  --color-popover: #242830;
-  --color-popover-foreground: #edeff2;
+  --color-background: #131211;
+  --color-foreground: #f2eee6;
+  --color-card: #1a1917;
+  --color-card-foreground: #f2eee6;
+  --color-popover: #22211e;
+  --color-popover-foreground: #f2eee6;
   --color-primary: #dd332a;
   --color-primary-foreground: #ffffff;
   --color-primary-dim: rgb(221 51 42 / 0.14);
-  --color-secondary: #2a2f38;
-  --color-secondary-foreground: #edeff2;
-  --color-muted: #2a2f38;
-  --color-muted-foreground: #9aa3b2;
-  --color-accent: #2a2f38;
-  --color-accent-foreground: #edeff2;
+  --color-secondary: #24231f;
+  --color-secondary-foreground: #f2eee6;
+  --color-muted: #24231f;
+  --color-muted-foreground: #9a958a;
+  --color-accent: #24231f;
+  --color-accent-foreground: #f2eee6;
   --color-destructive: #dd332a;
-  --color-border: rgb(237 239 242 / 0.08);
-  --color-input: rgb(237 239 242 / 0.1);
-  --color-ring: #45d4e4;
-  --color-ok: #45d4e4;
-  --color-ok-foreground: #15171b;
-  --color-ok-dim: rgb(69 212 228 / 0.13);
+  --color-border: rgb(242 238 230 / 0.08);
+  --color-input: rgb(242 238 230 / 0.1);
+  --color-ring: #8bcfa3;
+  --color-ok: #8bcfa3;
+  --color-ok-foreground: #131211;
+  --color-ok-dim: rgb(139 207 163 / 0.13);
 }
 
 /* Ambient glow — red top-right, cyan bottom-left */
@@ -40,7 +40,7 @@
   inset: -20% -10% auto auto;
   width: 70%;
   height: 55%;
-  background: radial-gradient(ellipse at 70% 20%, rgb(221 51 42 / 0.22), transparent 65%);
+  background: none;
   z-index: 0;
 }
 .ambient-glow::after {
@@ -50,19 +50,19 @@
   inset: auto auto -15% -15%;
   width: 65%;
   height: 50%;
-  background: radial-gradient(ellipse at 30% 80%, rgb(69 212 228 / 0.14), transparent 65%);
+  background: none;
   z-index: 0;
 }
 
 .ds-slot {
   border-radius: 1rem;
-  border: 1px solid rgb(237 239 242 / 0.06);
+  border: 1px solid rgb(242 238 230 / 0.06);
   transition: box-shadow 280ms var(--ease-apple, cubic-bezier(0.32, 0.72, 0, 1)),
     border-color 220ms ease;
 }
 .ds-slot.is-mine {
-  border-color: rgb(69 212 228 / 0.35);
-  box-shadow: 0 0 0 1px rgb(69 212 228 / 0.12), 0 0 24px rgb(69 212 228 / 0.08);
+  border-color: rgb(139 207 163 / 0.35);
+  box-shadow: 0 0 0 1px rgb(139 207 163 / 0.12), 0 0 24px rgb(139 207 163 / 0.08);
 }
 .ds-slot.is-past {
   opacity: 0.55;

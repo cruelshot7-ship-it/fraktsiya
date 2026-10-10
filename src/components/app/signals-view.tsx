@@ -78,7 +78,7 @@ export function SignalsView() {
 
           {pending.map((req) => (
             <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border glow-ok">
-              <p className="text-2xs font-medium tracking-wide text-ok uppercase">Заявка в зал</p>
+              <p className="text-2xs font-medium tracking-wide text-ok ">Заявка в зал</p>
               <p className="font-display mt-1 text-base">
                 {req.firstName} {req.lastName}
               </p>

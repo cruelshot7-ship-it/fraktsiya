@@ -19,11 +19,11 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 1.75rem;
 
-  --shadow-border: inset 0 1px 0 rgb(237 239 242 / 0.07), 0 0 0 1px rgb(237 239 242 / 0.055), 0 10px 28px rgb(0 0 0 / 0.28);
-  --shadow-border-hover: inset 0 1px 0 rgb(237 239 242 / 0.1), 0 0 0 1px rgb(237 239 242 / 0.1), 0 14px 32px rgb(0 0 0 / 0.34);
-  --shadow-glow-ok: 0 0 0 1px rgb(69 212 228 / 0.24), 0 0 22px rgb(69 212 228 / 0.12);
-  --shadow-glow-alert: 0 0 0 1px rgb(221 51 42 / 0.26), 0 0 22px rgb(221 51 42 / 0.12);
-  --shadow-popover: 0 0 0 1px #2f343d, 0 18px 40px rgb(0 0 0 / 0.45);
+  --shadow-border: 0 0 0 1px rgb(242 238 230 / 0.08);
+  --shadow-border-hover: 0 0 0 1px rgb(242 238 230 / 0.16);
+  --shadow-glow-ok: 0 0 0 1px rgb(139 207 163 / 0.42);
+  --shadow-glow-alert: 0 0 0 1px rgb(221 51 42 / 0.55);
+  --shadow-popover: 0 0 0 1px rgb(242 238 230 / 0.12), 0 18px 40px rgb(0 0 0 / 0.5);
 
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-press: cubic-bezier(0.2, 0, 0, 1);
@@ -32,6 +32,14 @@
 }
 
 @layer base {
+  /* Insets: the device's notch (env) and Telegram's own bars (set from telegram.ts), whichever is larger. */
+  :root {
+    --inset-top: max(env(safe-area-inset-top, 0px), var(--tg-inset-top, 0px));
+    --inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-inset-bottom, 0px));
+    --inset-left: max(env(safe-area-inset-left, 0px), var(--tg-inset-left, 0px));
+    --inset-right: max(env(safe-area-inset-right, 0px), var(--tg-inset-right, 0px));
+  }
+
   * {
     border-color: var(--color-border);
     -webkit-tap-highlight-color: transparent;
@@ -100,6 +108,15 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
+}
+
+.display-num {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 15vw, 4.25rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes rise-in {
@@ -190,10 +207,8 @@
 .apple-block {
   position: relative;
   isolation: isolate;
-  border-radius: 1.375rem;
-  background:
-    linear-gradient(180deg, rgb(237 239 242 / 0.05), transparent 32%),
-    var(--color-card);
+  border-radius: 1rem;
+  background: var(--color-card);
   box-shadow: var(--shadow-border);
   transition: transform 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
 }
@@ -205,7 +220,7 @@
 }
 
 .nav-blur {
-  background: rgb(21 23 27 / 0.88);
+  background: rgb(19 18 17 / 0.88);
   -webkit-backdrop-filter: blur(16px) saturate(1.45);
   backdrop-filter: blur(16px) saturate(1.45);
 }
@@ -215,14 +230,10 @@
 }
 
 .chrome.is-scrolled {
-  background: rgb(21 23 27 / 0.78);
+  background: rgb(19 18 17 / 0.78);
   -webkit-backdrop-filter: blur(18px) saturate(1.35);
   backdrop-filter: blur(18px) saturate(1.35);
-  box-shadow: inset 0 -1px 0 rgb(237 239 242 / 0.08);
-}
-
-.chrome header {
-  transition: padding 280ms var(--ease-apple);
+  box-shadow: inset 0 -1px 0 rgb(242 238 230 / 0.08);
 }
 
 .scroll-progress {
@@ -283,19 +294,29 @@
   :root {
     --text-tiny: 0.75rem;
   }
+  .display-num {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ambient-glow {
+    box-shadow: 0 0 0 1px rgb(242 238 230 / 0.06);
+  }
 }
 
 @media (min-width: 768px) {
   .ambient-glow {
-    box-shadow: 0 0 0 1px rgb(237 239 242 / 0.06), 0 40px 80px rgb(0 0 0 / 0.35);
+    box-shadow: 0 0 0 1px rgb(242 238 230 / 0.06), 0 40px 80px rgb(0 0 0 / 0.35);
   }
 }
 
 @media (min-width: 1024px) {
-  .ambient-glow {
+  .app-frame.ambient-glow {
     border-radius: 1.5rem;
     margin: 1.25rem 0;
-    min-height: calc(var(--app-height, 100dvh) - 2.5rem);
+    height: calc(var(--app-height, 100dvh) - 2.5rem);
+    max-height: calc(var(--app-height, 100dvh) - 2.5rem);
   }
 }
 

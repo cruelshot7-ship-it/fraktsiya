@@ -185,7 +185,7 @@ export function MiniApp() {
         {sheetClientId ? null : (
         <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>
         <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
-        <header className="px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))] pt-[max(0.85rem,env(safe-area-inset-top,0px))] pb-3">
+        <header className="pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)] pt-[calc(var(--inset-top)+0.75rem)] pb-3">
           {role === "trainer" ? (
             <>
               <div className="flex items-center justify-between gap-3">
@@ -237,8 +237,8 @@ export function MiniApp() {
         )}
 
         <main ref={scroller} onScroll={readScroll} className={cn(
-            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]",
-            showNav ? "pb-24" : "pb-10",
+            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)]",
+            showNav ? "pb-[calc(5.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
           )}>
           <div key={`${role}-${tab}`} className="pt-4">
             {inviteBlocked && role === "client" ? (
@@ -281,7 +281,7 @@ export function MiniApp() {
 
         {showNav ? (
           <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
-            <div className="flex px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))]">
+            <div className="flex pt-1.5 pb-[calc(var(--inset-bottom)+0.375rem)] pl-[calc(var(--inset-left)+0.5rem)] pr-[calc(var(--inset-right)+0.5rem)]">
               {navItems.map((item) => {
                 const active = navActive(item.id, tab);
                 const Icon = item.icon;
@@ -346,17 +346,17 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
               {items.map((item) => (
                 <div key={item.id} className={cn("rounded-xl bg-card p-4", item.kind === "cancel" ? "shadow-glow-alert" : "shadow-border")}>
                   {item.kind === "cancel" ? (
-                    <p className="text-2xs font-medium tracking-wide text-primary uppercase">Отмена записи</p>
+                    <p className="text-2xs font-medium tracking-wide text-primary ">Отмена записи</p>
                   ) : item.kind === "reschedule" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok uppercase">Перенос</p>
+                    <p className="text-2xs font-medium tracking-wide text-ok ">Перенос</p>
                   ) : item.kind === "wallet" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok uppercase">Баланс</p>
+                    <p className="text-2xs font-medium tracking-wide text-ok ">Баланс</p>
                   ) : item.kind === "waitlist" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok uppercase">Лист ожидания</p>
+                    <p className="text-2xs font-medium tracking-wide text-ok ">Лист ожидания</p>
                   ) : item.kind === "freeze" ? (
-                    <p className="text-2xs font-medium tracking-wide text-primary uppercase">Заморозка</p>
+                    <p className="text-2xs font-medium tracking-wide text-primary ">Заморозка</p>
                   ) : item.kind === "book" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok uppercase">Запись</p>
+                    <p className="text-2xs font-medium tracking-wide text-ok ">Запись</p>
                   ) : null}
                   <p className="mt-1 text-sm font-medium">{item.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
