@@ -165,7 +165,8 @@ type State = {
   importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
   ensureHealthToken: () => string;
   addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
-  toggleCheck: (item: string) => void;
+  /** rewrite maps legacy "index:line" marks to block ids before toggling */
+  toggleCheck: (item: string, rewrite?: Record<string, string>) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
   setWeight: (kg: number) => void;
   /** Returns an error message, or null when saved. */
@@ -1600,10 +1601,10 @@ export const useStudio = create<State>((set, get) => ({
     );
   },
 
-  toggleCheck: (item) => {
+  toggleCheck: (item, rewrite) => {
     const id = get().activeClientId;
     const key = `${id}:${todayIso()}`;
-    const current = get().checks[key] ?? [];
+    const current = [...new Set((get().checks[key] ?? []).map((m) => rewrite?.[m] ?? m))];
     const next = current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
     set({ checks: { ...get().checks, [key]: next } });
     persist(snap(get()));
