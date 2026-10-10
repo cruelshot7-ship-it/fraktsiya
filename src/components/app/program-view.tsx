@@ -19,13 +19,18 @@ import {
   visitSession,
   WEEK_GOAL,
   weekVisitCount,
-  planTotals,
-  lineGroup,
-  readPlanLine,
   workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { exerciseOptions, sameExercise } from "@/lib/exercises";
+import {
+  legacyMarkMap,
+  planTotalsFromBlocks,
+  rewriteFacts,
+  rewriteMarks,
+  sessionPlan,
+  type ProgramBlock,
+} from "@/lib/program-blocks";
 import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -53,7 +58,7 @@ export function ProgramView() {
   const [sets, setSets] = useState("4");
   const [rir, setRir] = useState<number | null>(null);
   const [chartReady, setChartReady] = useState(false);
-  const [facts, setFacts] = useState<Record<number, string>>({});
+  const [facts, setFacts] = useState<Record<string, string>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
@@ -98,7 +103,7 @@ export function ProgramView() {
   useEffect(() => {
     if (!factKey) return;
     try {
-      setFacts(JSON.parse(localStorage.getItem(factKey) || "{}") as Record<number, string>);
+      setFacts(JSON.parse(localStorage.getItem(factKey) || "{}") as Record<string, string>);
     } catch {
       setFacts({});
     }
@@ -152,11 +157,14 @@ export function ProgramView() {
         : `Рабочие веса по ${bw} кг (укажите свой вес в профиле)`,
     );
   };
-  const checked = checks[`${client.id}:${today}`] ?? [];
-  const itemCount = shown?.items.length ?? 0;
+  const plan = shown ? sessionPlan(shown) : { blocks: [] as ProgramBlock[], owner: [] as string[] };
+  const legacy = shown ? legacyMarkMap(shown) : {};
+  const checked = rewriteMarks(checks[`${client.id}:${today}`] ?? [], legacy);
+  const factsById = shown ? rewriteFacts(facts, shown) : {};
+  const itemCount = plan.blocks.length;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
-  const totals = planTotals(shown?.items ?? [], checked, facts);
+  const totals = planTotalsFromBlocks(plan.blocks, checked, factsById);
   const restMin = Math.round(totals.restSec / 60);
   const withRest = elapsedMin + restMin;
   const clock = (ts: number) => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
@@ -289,80 +297,33 @@ export function ProgramView() {
             </div>
           ) : null}
           <ul className="mt-3 space-y-2">
-            {(() => {
-              const items = shown.items;
-              const groups: number[][] = [];
-              const seen = new Set<number>();
-              for (let i = 0; i < items.length; i += 1) {
-                if (seen.has(i)) continue;
-                const g = lineGroup(items, i);
-                g.forEach((j) => seen.add(j));
-                groups.push(g);
-              }
-              return groups.map((group) => {
-                const bits = group.map((i) => ({ i, item: items[i], bit: readPlanLine(items[i]) }));
-                const restOnly = bits.every((b) => b.bit.kind === "rest");
-                if (restOnly) {
-                  return (
-                    <li key={`rest-${group[0]}`} className="px-2 py-1.5 text-tiny text-muted-foreground">
-                      {bits.map((b) => b.item).join(" · ")}
-                    </li>
-                  );
-                }
-                const title = bits.find((b) => b.bit.kind === "text") ?? bits[0];
-                const meta = bits.filter((b) => b.i !== title.i);
-                const marks = group.map((i) => `${i}:${items[i]}`);
-                const on = marks.every((m) => checked.includes(m));
-                const weightBit = bits.find((b) => b.bit.kind === "weight");
-                return (
-                  <li key={`g-${group[0]}`} className="rounded-lg border border-hairline/60 px-1 py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allOn = marks.every((m) => checked.includes(m));
-                        for (const markId of marks) {
-                          if (checked.includes(markId) === allOn) toggleCheck(markId);
-                        }
-                      }}
-                      className={cn(
-                        "pressable flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
-                        on ? "bg-ok-dim text-foreground" : "bg-transparent",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border",
-                          on ? "border-ok bg-ok text-ok-foreground" : "border-hairline",
-                        )}
-                      >
-                        {on ? <Check className="size-3" /> : null}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={cn("block font-medium", on && "line-through opacity-70")}>{title.item}</span>
-                        {meta.length ? (
-                          <span className="mt-0.5 block text-tiny text-muted-foreground">
-                            {meta.map((b) => b.item).join(" · ")}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                    {on && weightBit ? (
-                      <input
-                        className={cn(inputClass, "mt-1 mb-2 ml-10")}
-                        inputMode="decimal"
-                        placeholder="факт, кг — если другой"
-                        value={facts[weightBit.i] ?? ""}
-                        onChange={(e) => {
-                          const next = { ...facts, [weightBit.i]: e.target.value };
-                          setFacts(next);
-                          if (factKey) localStorage.setItem(factKey, JSON.stringify(next));
-                        }}
-                      />
-                    ) : null}
-                  </li>
-                );
-              });
-            })()}
+            {cardsOf(plan.blocks).map((card) => (
+              <li
+                key={`card-${card[0].id}`}
+                className={cn(
+                  "rounded-lg px-1 py-1",
+                  card.length > 1 ? "border border-primary/40 bg-secondary/30" : "border border-hairline/60",
+                )}
+              >
+                {card.length > 1 ? (
+                  <p className="px-2 pt-1 text-2xs uppercase tracking-wide text-primary">Суперсет</p>
+                ) : null}
+                {card.map((b) => (
+                  <BlockRow
+                    key={b.id}
+                    block={b}
+                    on={checked.includes(b.id)}
+                    fact={factsById[b.id] ?? ""}
+                    onToggle={() => toggleCheck(b.id, legacy)}
+                    onFact={(value) => {
+                      const next = { ...factsById, [b.id]: value };
+                      setFacts(next);
+                      if (factKey) localStorage.setItem(factKey, JSON.stringify(next));
+                    }}
+                  />
+                ))}
+              </li>
+            ))}
           </ul>
           <p className="mt-3 text-xs text-muted-foreground">
             Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
@@ -587,3 +548,70 @@ function RitualTick({ on, label }: { on: boolean; label: string }) {
 
 
   
+
+/** Consecutive blocks with the same superset group form one card. */
+function cardsOf(blocks: ProgramBlock[]): ProgramBlock[][] {
+  const cards: ProgramBlock[][] = [];
+  for (const b of blocks) {
+    const last = cards.at(-1);
+    if (last && b.group && last[0].group === b.group) last.push(b);
+    else cards.push([b]);
+  }
+  return cards;
+}
+
+function BlockRow({
+  block,
+  on,
+  fact,
+  onToggle,
+  onFact,
+}: {
+  block: ProgramBlock;
+  on: boolean;
+  fact: string;
+  onToggle: () => void;
+  onFact: (value: string) => void;
+}) {
+  const meta = [
+    block.sets > 0 && block.reps ? `${block.sets}×${block.reps}${block.perSide ? " на каждую руку" : ""}` : "",
+    block.load ? `${block.load} кг` : "",
+    block.rest != null ? `отдых ${block.rest} с` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "pressable flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left text-sm",
+          on ? "bg-ok-dim text-foreground" : "bg-transparent",
+        )}
+      >
+        <span
+          className={cn(
+            "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border",
+            on ? "border-ok bg-ok text-ok-foreground" : "border-hairline",
+          )}
+        >
+          {on ? <Check className="size-3" /> : null}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={cn("block font-medium", on && "line-through opacity-70")}>{block.exercise}</span>
+          {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
+        </span>
+      </button>
+      {on && block.load ? (
+        <input
+          className={cn(inputClass, "mt-1 mb-2 ml-10")}
+          inputMode="decimal"
+          placeholder="факт, кг — если другой"
+          value={fact}
+          onChange={(e) => onFact(e.target.value)}
+        />
+      ) : null}
+    </>
+  );
+}

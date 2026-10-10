@@ -16,7 +16,8 @@ import {
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
-import { addExerciseName } from "@/lib/exercises";
+import { addExerciseName, exerciseOptions } from "@/lib/exercises";
+import { newBlockId, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
 
 export function Kpi({
   value,
@@ -284,6 +285,7 @@ export function ProgramEditor({
           key={session.id}
           session={session}
           index={idx}
+          options={exerciseOptions({ custom: draft.exerciseNames ?? [] })}
           onChange={(next) => setDraft({ ...draft, sessions: draft.sessions.map((s) => (s.id === session.id ? next : s)) })}
           onRemove={() => {
             if (draft.sessions.length === 1) return;
@@ -296,12 +298,15 @@ export function ProgramEditor({
         className="h-10 rounded-lg border border-hairline text-xs text-muted-foreground"
         onClick={() => {
           const n = draft.sessions.length + 1;
-          const session: ProgramSession = {
-            id: `s_${Date.now()}`,
-            name: `День ${String.fromCharCode(64 + n)}`,
-            focus: "Фокус",
-            items: ["Упражнение 3×8"],
-          };
+          const session: ProgramSession = withBlocks(
+            {
+              id: `s_${Date.now()}`,
+              name: `День ${String.fromCharCode(64 + n)}`,
+              focus: "Фокус",
+              items: [],
+            },
+            [newBlock()],
+          );
           setDraft({ ...draft, sessions: [...draft.sessions, session] });
         }}
       >
@@ -328,17 +333,43 @@ export function ProgramEditor({
   );
 }
 
+function newBlock(): ProgramBlock {
+  return { id: newBlockId(), exercise: "Упражнение", sets: 3, reps: "8-10", load: "", rest: 90, perSide: false, group: null };
+}
+
 function SessionEditor({
   session,
   index,
+  options,
   onChange,
   onRemove,
 }: {
   session: ProgramSession;
   index: number;
+  options: string[];
   onChange: (s: ProgramSession) => void;
   onRemove: () => void;
 }) {
+  const blocks = sessionPlan(session).blocks;
+  const listId = `ex-${session.id}`;
+  const update = (next: ProgramBlock[]) => onChange(withBlocks(session, next));
+  const patch = (i: number, change: Partial<ProgramBlock>) =>
+    update(blocks.map((b, j) => (j === i ? { ...b, ...change } : b)));
+  const move = (i: number, to: number) => {
+    const next = [...blocks];
+    [next[i], next[to]] = [next[to], next[i]];
+    update(next);
+  };
+  const toggleSuperset = (i: number) => {
+    const b = blocks[i];
+    const prev = blocks[i - 1];
+    if (b.group && b.group === prev.group) {
+      patch(i, { group: null });
+      return;
+    }
+    const group = prev.group ?? newBlockId();
+    update(blocks.map((x, j) => (j === i - 1 || j === i ? { ...x, group } : x)));
+  };
   return (
     <div className="rounded-xl bg-secondary/60 p-3 shadow-border">
       <div className="flex items-center justify-between gap-2">
@@ -351,18 +382,120 @@ function SessionEditor({
         <input className={inputClass} value={session.name} onChange={(e) => onChange({ ...session, name: e.target.value })} />
         <input className={inputClass} value={session.focus} onChange={(e) => onChange({ ...session, focus: e.target.value })} />
       </div>
-      <textarea
-        className={`${inputClass} mt-2 h-36 resize-none py-2`}
-        placeholder={"1. Тяга верхнего блока\n3×8-10\n60-70 кг\nОтдых 90 секунд"}
-        value={session.items.join("\n")}
-        onChange={(e) =>
-          onChange({ ...session, items: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) })
-        }
-      />
+      <datalist id={listId}>
+        {options.map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
+      <div className="mt-3 flex flex-col gap-2">
+        {blocks.map((b, i) => {
+          const sameAsPrev = i > 0 && Boolean(b.group) && b.group === blocks[i - 1].group;
+          return (
+            <div key={b.id} className={cn("rounded-lg bg-background/40 p-2.5", sameAsPrev && "border border-primary/40")}>
+              <div className="flex items-center gap-1.5">
+                <input
+                  className={cn(inputClass, "min-w-0 flex-1")}
+                  list={listId}
+                  aria-label={`Упражнение ${i + 1}`}
+                  value={b.exercise}
+                  onChange={(e) => patch(i, { exercise: e.target.value })}
+                />
+                <IconButton label="Выше" disabled={i === 0} onClick={() => move(i, i - 1)}>↑</IconButton>
+                <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
+                <IconButton label="Убрать блок" onClick={() => update(blocks.filter((_, j) => j !== i))}>×</IconButton>
+              </div>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                <Field label="Подходы">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={b.sets || ""}
+                    onChange={(e) => patch(i, { sets: Number(e.target.value.replace(/\D/g, "")) || 0 })}
+                  />
+                </Field>
+                <Field label="Повторы">
+                  <input className={inputClass} placeholder="8-10" value={b.reps} onChange={(e) => patch(i, { reps: e.target.value.trim() })} />
+                </Field>
+                <Field label="Вес, кг">
+                  <input className={inputClass} placeholder="—" value={b.load} onChange={(e) => patch(i, { load: e.target.value.trim() })} />
+                </Field>
+                <Field label="Отдых, с">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={b.rest ?? ""}
+                    onChange={(e) => {
+                      const n = Number(e.target.value.replace(/\D/g, ""));
+                      patch(i, { rest: n > 0 ? n : null });
+                    }}
+                  />
+                </Field>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <ChipToggle on={b.perSide} onClick={() => patch(i, { perSide: !b.perSide })}>
+                  на каждую руку
+                </ChipToggle>
+                {i > 0 ? (
+                  <ChipToggle on={sameAsPrev} onClick={() => toggleSuperset(i)}>
+                    в суперсет с предыдущим
+                  </ChipToggle>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        className="mt-2 h-10 w-full rounded-lg border border-hairline text-xs text-muted-foreground"
+        onClick={() => update([...blocks, newBlock()])}
+      >
+        Добавить блок
+      </button>
       <p className="mt-2 text-tiny leading-relaxed text-muted-foreground">
-        Одна строка — один пункт. Название, затем подходы, вес и отдых. «кг» и слово «Отдых» обязательны. «на каждую руку» считает две стороны.
+        Блок — это упражнение с подходами и повторами. Вес и отдых необязательны. «на каждую руку» считает обе стороны. Суперсет — блоки подряд с отметкой.
       </p>
     </div>
+  );
+}
+
+function IconButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="pressable grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-sm text-muted-foreground disabled:opacity-30"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ChipToggle({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "pressable h-8 rounded-full px-3 text-tiny",
+        on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
