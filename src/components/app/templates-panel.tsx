@@ -34,7 +34,6 @@ export function TemplatesPanel() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const updateClient = useStudio((s) => s.updateClient);
   const showToast = useStudio((s) => s.showToast);
-  const notices = useStudio((s) => s.notices);
   const client = clients.find((c) => c.id === activeClientId);
   const [tpl] = useState(SEED);
   const preview = useMemo(() => exercisesToItems(tpl.exercises), [tpl]);
@@ -42,6 +41,15 @@ export function TemplatesPanel() {
   if (role !== "trainer" || !client) return null;
 
   function assign() {
+    if (client!.sessions.some((s) => s.name === tpl.title)) {
+      showToast("Этот шаблон уже есть в программе клиента.");
+      return;
+    }
+    // the template's loads are fixed numbers, not this client's: the trainer checks them first
+    const ok = window.confirm(
+      `Добавить клиенту день «${tpl.title}»?\n\n${preview.join("\n")}\n\nСуществующие дни не меняются. Веса в шаблоне общие — проверьте под клиента.`,
+    );
+    if (!ok) return;
     const copy = assignTemplateToClient(tpl, client!.id);
     const day = {
       id: copy.id,
@@ -57,12 +65,12 @@ export function TemplatesPanel() {
       id: `nt_tpl_${copy.id}`,
       audience: "client" as const,
       clientId: client!.id,
-      kind: "reschedule" as const,
-      title: "В план добавлен шаблон",
+      kind: "alert" as const,
+      title: "В программу добавлен день",
       body: copy.title,
       at: new Date().toISOString(),
     };
-    useStudio.setState({ notices: [n, ...notices].slice(0, 40) });
+    useStudio.setState((st) => ({ notices: [n, ...st.notices].slice(0, 40) }));
     showToast("Шаблон назначен клиенту (копия).");
   }
 
