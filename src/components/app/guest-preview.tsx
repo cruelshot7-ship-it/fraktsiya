@@ -41,6 +41,8 @@ export function OfferLanding({ live }: { live: boolean }) {
   const [goal, setGoal] = useState<(typeof GOALS)[number]>("Форма");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  // the request sends the name, @username and the chosen time: the trainer sees them only after this consent
+  const [agreed, setAgreed] = useState(false);
 
   const pack = OFFERS.find((o) => o.id === packId) ?? OFFERS[0];
   const picked = openings.find((s) => s.id === slotId);
@@ -198,9 +200,20 @@ export function OfferLanding({ live }: { live: boolean }) {
                     ))}
                   </div>
                 </div>
+                <label className="mt-5 flex items-start gap-3 text-sm leading-relaxed">
+                  <input
+                    type="checkbox"
+                    className="mt-1 size-5 shrink-0"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  <span>
+                    Согласен(на) на обработку имени, @username и времени для заявки. Политика — в «Ещё» → «Политика конфиденциальности».
+                  </span>
+                </label>
                 <button
                   type="button"
-                  disabled={busy || !picked}
+                  disabled={busy || !picked || !agreed}
                   className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
                   onClick={() => void submit()}
                 >

@@ -8,6 +8,7 @@ import {
 } from "@/lib/templates/program-template";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
+/** Built-in template: always in the library, cannot be removed. */
 const SEED: ProgramTemplate = {
   id: "tpl_base_a",
   coachId: String(TRAINER_TG_ID),
@@ -28,14 +29,19 @@ function exercisesToItems(ex: TemplateExercise[]): string[] {
   });
 }
 
+/** Library of day templates: the built-in one plus the trainer's own, saved from a program. */
 export function TemplatesPanel() {
   const role = useStudio((s) => s.role);
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const updateClient = useStudio((s) => s.updateClient);
   const showToast = useStudio((s) => s.showToast);
+  const saved = useStudio((s) => s.programTemplates);
+  const removeTemplate = useStudio((s) => s.removeTemplate);
   const client = clients.find((c) => c.id === activeClientId);
-  const [tpl] = useState(SEED);
+  const library = useMemo(() => [SEED, ...saved], [saved]);
+  const [selectedId, setSelectedId] = useState(SEED.id);
+  const tpl = library.find((t) => t.id === selectedId) ?? SEED;
   const preview = useMemo(() => exercisesToItems(tpl.exercises), [tpl]);
 
   if (role !== "trainer" || !client) return null;
@@ -74,13 +80,34 @@ export function TemplatesPanel() {
     showToast("Шаблон назначен клиенту (копия).");
   }
 
+  function remove() {
+    if (!window.confirm(`Удалить шаблон «${tpl.title}»? Дни, уже назначенные клиентам, не меняются.`)) return;
+    removeTemplate(tpl.id);
+    setSelectedId(SEED.id);
+    showToast("Шаблон удалён.");
+  }
+
   return (
     <Surface>
-      <SectionLabel>Шаблон программы</SectionLabel>
-      <p className="mt-2 text-sm font-medium">{tpl.title}</p>
+      <SectionLabel>Библиотека шаблонов</SectionLabel>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {library.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setSelectedId(t.id)}
+            className={`pressable h-9 rounded-lg px-3 text-xs ${
+              t.id === tpl.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            {t.title}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-sm font-medium">{tpl.title}</p>
       <ul className="mt-2 space-y-1 text-tiny text-muted-foreground">
-        {preview.map((line) => (
-          <li key={line}>{line}</li>
+        {preview.map((line, i) => (
+          <li key={`${i}-${line}`}>{line}</li>
         ))}
       </ul>
       <p className="mt-2 text-2xs text-muted-foreground">Назначение создаёт копию у клиента.</p>
@@ -91,6 +118,11 @@ export function TemplatesPanel() {
       >
         Назначить активному клиенту
       </button>
+      {tpl.id !== SEED.id ? (
+        <button type="button" onClick={remove} className="mt-2 h-10 w-full text-xs text-muted-foreground">
+          Удалить шаблон
+        </button>
+      ) : null}
     </Surface>
   );
 }

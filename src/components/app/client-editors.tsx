@@ -1,6 +1,7 @@
 import { MeasuresSummary } from "@/components/app/measures-card";
 import { useState, type ReactNode } from "react";
 import {
+  coachKey,
   DOW,
   isoDate,
   SAMPLE_KBJU_REST,
@@ -19,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
 import { blockLines, newBlockId, SIDES, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
 import { parsePastedProgram, type PastedProgram } from "@/lib/program-import";
+import { templateFromSession } from "@/lib/templates/program-template";
+import { useStudio } from "@/lib/studio-store";
 
 export function Kpi({
   value,
@@ -98,6 +101,23 @@ export function ProgramEditor({
   const [preset, setPreset] = useState<ProgramPreset>("beginner");
   const [paste, setPaste] = useState("");
   const [parsed, setParsed] = useState<PastedProgram | null>(null);
+  const saveTemplate = useStudio((s) => s.saveTemplate);
+  const showToast = useStudio((s) => s.showToast);
+  // unsaved work: pasted text, or days/title/weeks that differ from the client's saved copy
+  const dirty = paste.trim() !== "" || JSON.stringify(draft) !== JSON.stringify(client);
+  const leave = () => {
+    if (dirty && !window.confirm("Выйти без сохранения? Несохранённые правки пропадут.")) return;
+    onBack();
+  };
+  const dayToTemplate = (session: ProgramSession) => {
+    const tpl = templateFromSession(session, coachKey(client.coachId), `tpl_${Date.now().toString(36)}`);
+    if (tpl.exercises.length === 0) {
+      showToast("В дне нет упражнений — сохранять в шаблоны нечего.");
+      return;
+    }
+    saveTemplate(tpl);
+    showToast(`День «${tpl.title}» сохранён в шаблоны.`);
+  };
 
   // the pasted program becomes the client's days: replaced, or added after the current ones
   const assign = (mode: "replace" | "append") => {
@@ -111,7 +131,7 @@ export function ProgramEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+      <button type="button" onClick={leave} className="pressable self-start min-h-11 text-sm text-muted-foreground">
         Назад
       </button>
       <SectionLabel>Вставить программу текстом</SectionLabel>
@@ -370,8 +390,10 @@ export function ProgramEditor({
           index={idx}
           options={exerciseOptions({ custom: draft.exerciseNames ?? [] })}
           onChange={(next) => setDraft({ ...draft, sessions: draft.sessions.map((s) => (s.id === session.id ? next : s)) })}
+          onSaveTemplate={() => dayToTemplate(session)}
           onRemove={() => {
             if (draft.sessions.length === 1) return;
+            if (!window.confirm(`Удалить день «${session.name}» вместе с упражнениями?`)) return;
             setDraft({ ...draft, sessions: draft.sessions.filter((s) => s.id !== session.id) });
           }}
         />
@@ -426,12 +448,14 @@ function SessionEditor({
   options,
   onChange,
   onRemove,
+  onSaveTemplate,
 }: {
   session: ProgramSession;
   index: number;
   options: string[];
   onChange: (s: ProgramSession) => void;
   onRemove: () => void;
+  onSaveTemplate: () => void;
 }) {
   const blocks = sessionPlan(session).blocks;
   const listId = `ex-${session.id}`;
@@ -457,9 +481,14 @@ function SessionEditor({
     <div className="rounded-xl bg-secondary/60 p-3 shadow-border">
       <div className="flex items-center justify-between gap-2">
         <p className="text-2xs text-muted-foreground">Визит {index + 1} на неделе</p>
-        <button type="button" onClick={onRemove} className="text-2xs text-muted-foreground">
-          убрать
-        </button>
+        <div className="flex gap-3">
+          <button type="button" onClick={onSaveTemplate} className="text-2xs text-muted-foreground">
+            в шаблон
+          </button>
+          <button type="button" onClick={onRemove} className="text-2xs text-muted-foreground">
+            убрать
+          </button>
+        </div>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <input className={inputClass} value={session.name} onChange={(e) => onChange({ ...session, name: e.target.value })} />
@@ -485,7 +514,14 @@ function SessionEditor({
                 />
                 <IconButton label="Выше" disabled={i === 0} onClick={() => move(i, i - 1)}>↑</IconButton>
                 <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
-                <IconButton label="Убрать блок" onClick={() => update(blocks.filter((_, j) => j !== i))}>×</IconButton>
+                <IconButton
+                  label="Убрать блок"
+                  onClick={() => {
+                    if (window.confirm(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
+                  }}
+                >
+                  ×
+                </IconButton>
               </div>
               <div className="mt-2 grid grid-cols-4 gap-1.5">
                 <Field label="Подходы">

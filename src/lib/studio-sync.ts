@@ -6,6 +6,7 @@ import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
 import { programFor } from "@/lib/program-import";
+import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/program-template";
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { coachTierLine } from "@/lib/coach-tier";
@@ -55,6 +56,8 @@ export type StudioPayload = {
   coaches: Coach[];
   foreignHolds?: Record<string, number>;
   visits?: Visit[];
+  /** the trainer's program templates; clients never receive them (see scopePayload) */
+  programTemplates?: ProgramTemplate[];
 };
 
 // Re-export domain types so consumers (studio-scope, tests) can import from here
@@ -125,6 +128,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     bookings: raw.bookings ?? [],
     food: raw.food ?? [],
     dayChecks: raw.dayChecks ?? [],
+    programTemplates: raw.programTemplates ?? [],
     lifts: raw.lifts ?? [],
     extraSlots: raw.extraSlots ?? [],
     closedSlotIds: raw.closedSlotIds ?? [],
@@ -197,6 +201,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
     foreignHolds: slots.foreignHolds,
     food: id ? payload.food.filter((f) => f.clientId === id) : [],
     dayChecks: id ? (payload.dayChecks ?? []).filter((d) => d.clientId === id) : [],
+    programTemplates: [],
     lifts: id ? payload.lifts.filter((l) => l.clientId === id) : [],
     workoutLogs: id ? payload.workoutLogs.filter((w) => w.clientId === id) : [],
     notices: id ? payload.notices.filter((n) => n.audience === "client" && n.clientId === id) : [],
@@ -295,6 +300,7 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
     notices: payload.notices.filter((n) => n.clientId && ids.has(n.clientId)),
     checks: Object.fromEntries(Object.entries(payload.checks).filter(([k]) => [...ids].some((id) => k.startsWith(`${id}:`)))),
     joinRequests: (payload.joinRequests ?? []).filter((r) => coachKey(r.coachId) === mine),
+    programTemplates: (payload.programTemplates ?? []).filter((t) => coachKey(t.coachId) === mine),
     removedClientIds: payload.removedClientIds ?? [],
     coaches:
       mine === String(TRAINER_TG_ID)
@@ -433,6 +439,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
   return ensureApprovedClients({
     ...current,
     clients,
+    programTemplates: mergeCoachTemplates(current.programTemplates ?? [], incoming.programTemplates ?? [], mine, coachKey),
     bookings: settled.bookings.filter((row) => !oldIds.has(row.clientId) || myIds.has(row.clientId)),
     food: takeMine(current.food, incoming.food ?? []),
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
-import { getTelegramUser } from "@/lib/telegram";
+import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
@@ -27,6 +27,7 @@ export function TodayView() {
   const food = useStudio((s) => s.food);
   const activeClientId = useStudio((s) => s.activeClientId);
   const setTab = useStudio((s) => s.setTab);
+  const trainerUsername = useStudio((s) => s.trainerUsername);
   const setClientFilter = useStudio((s) => s.setClientFilter);
   const checkIn = useStudio((s) => s.checkIn);
   const markNoShow = useStudio((s) => s.markNoShow);
@@ -256,6 +257,8 @@ export function TodayView() {
   const isToday = next?.date === today;
   const afterSession = Boolean(visit?.todayDone && !next);
   const lowPack = (me?.sessionsLeft ?? 0) <= 2;
+  // no sessions left: booking is refused, so the button leads to the trainer instead
+  const noBalance = Boolean(me) && (me?.sessionsLeft ?? 0) <= 0;
 
   return (
     <div className="space-y-4">
@@ -316,14 +319,22 @@ export function TodayView() {
           </Surface>
         ) : (
           <Surface glow="alert">
-            <p className="text-sm font-medium">Нет ближайшей записи</p>
-            <p className="mt-1 text-tiny text-muted-foreground">Выберите слот — это первый шаг визита</p>
+            <p className="text-sm font-medium">{noBalance ? "Занятия закончились" : "Нет ближайшей записи"}</p>
+            <p className="mt-1 text-tiny text-muted-foreground">
+              {noBalance ? "Запись откроется после продления пакета. Напишите тренеру." : "Выберите слот — это первый шаг визита"}
+            </p>
             <button
               type="button"
               className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-              onClick={() => setTab("schedule")}
+              onClick={() => {
+                if (!noBalance) {
+                  setTab("schedule");
+                  return;
+                }
+                if (!openTrainerChat(trainerUsername)) showToast("Тренер не указал @ник. Напишите ему в зал.");
+              }}
             >
-              Записаться
+              {noBalance ? "Написать тренеру" : "Записаться"}
             </button>
           </Surface>
         )}

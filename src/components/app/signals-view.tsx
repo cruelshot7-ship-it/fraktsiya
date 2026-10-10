@@ -10,6 +10,7 @@ import { OutboxPanel } from "@/components/app/outbox-panel";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
+import { PolicyText } from "@/components/app/privacy-panel";
 
 type Pane = "tasks" | "settings" | "tools";
 
@@ -226,6 +227,12 @@ export function SignalsView() {
           <TrainerShareCard />
           <OutboxPanel />
           <SyncStatusChip />
+          <Surface>
+            <SectionLabel>Политика конфиденциальности</SectionLabel>
+            <div className="mt-3">
+              <PolicyText />
+            </div>
+          </Surface>
         </>
       ) : null}
     </div>
