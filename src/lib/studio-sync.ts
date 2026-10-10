@@ -6,8 +6,7 @@ import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
 import { mergeMeasures } from "@/lib/body-measures";
-import { appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
-import { anonymizedIdentity, stampConsent } from "@/lib/privacy";
+import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
 import {
   clientCoach,
