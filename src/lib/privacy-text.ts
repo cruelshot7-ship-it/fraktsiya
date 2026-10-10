@@ -1,14 +1,15 @@
 /**
  * Policy text shown in the app. DRAFT: the legal wording must be checked by a
  * lawyer before real clients see it (see the notes marked "проверить у юриста").
+ * Contacts are the operator's own public contacts for data requests.
  */
 export const OPERATOR_LINE = "ООО «Фитнес Фракция», УНП 591034938, Гродно, Беларусь";
-export const CONTACT_PLACEHOLDER = "[укажите e-mail или Telegram для обращений]";
+export const CONTACTS = "cruelshot7@gmail.com, +375 29 866-88-00";
 
 export const POLICY_SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "Кто обрабатывает данные",
-    body: [OPERATOR_LINE, `Обращения: ${CONTACT_PLACEHOLDER}`],
+    body: [OPERATOR_LINE, `Обращения: ${CONTACTS}`],
   },
   {
     title: "Какие данные",

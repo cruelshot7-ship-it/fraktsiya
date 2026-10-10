@@ -6,10 +6,11 @@
 
 export const PRIVACY_VERSION = "2026-10-10";
 
-export type Consent = { version: string; acceptedAt: string | null };
+/** declinedAt is set only while the client has refused the current version; an acceptance clears it. */
+export type Consent = { version: string; acceptedAt: string | null; declinedAt?: string | null };
 
 /** Append-only evidence trail. Times are server time. Never edited or trimmed. */
-export type ConsentEvent = { version: string; at: string; action: "accept" | "erase" };
+export type ConsentEvent = { version: string; at: string; action: "accept" | "decline" | "erase" };
 
 export function appendConsentLog(log: ConsentEvent[] | undefined, event: ConsentEvent): ConsentEvent[] {
   return [...(log ?? []), event];
@@ -33,24 +34,40 @@ export function needsConsent(consent: Consent | null | undefined): boolean {
   return !consent || consent.version !== PRIVACY_VERSION || !consent.acceptedAt;
 }
 
-/** Server-side stamp: the server time is the record, the client's clock is not trusted. */
+/**
+ * Server-side stamp: the server time is the record, the client's clock is not trusted.
+ * Only an explicit acceptance (acceptedAt set) grants consent; a refusal is recorded as declinedAt.
+ */
 export function stampConsent(prev: Consent | null | undefined, next: Consent | null | undefined, now: string): Consent | null {
   if (!next || next.version !== PRIVACY_VERSION) return prev ?? null;
   if (prev && prev.version === PRIVACY_VERSION && prev.acceptedAt) return prev;
-  return { version: PRIVACY_VERSION, acceptedAt: now };
+  if (next.acceptedAt) return { version: PRIVACY_VERSION, acceptedAt: now };
+  if (next.declinedAt) {
+    if (prev && prev.version === PRIVACY_VERSION && prev.declinedAt) return prev;
+    return { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: now };
+  }
+  return prev ?? null;
 }
 
-/** Logs an acceptance only when the server actually stamps a new one; repeats are not logged. */
+/**
+ * Logs an acceptance or a refusal only when the server actually stamps a new one.
+ * Repeats (the same state sent again) are not logged, so the trail holds one line per decision.
+ */
 export function consentLogAfter(
   mine: { consent?: Consent | null; consentLog?: ConsentEvent[] },
   next: Consent | null | undefined,
   now: string,
 ): ConsentEvent[] | undefined {
-  const stamped = stampConsent(mine.consent, next, now);
-  const changed =
-    !!stamped && (!mine.consent || mine.consent.version !== stamped.version || mine.consent.acceptedAt !== stamped.acceptedAt);
-  if (!changed || !stamped?.acceptedAt) return mine.consentLog;
-  return appendConsentLog(mine.consentLog, { version: stamped.version, at: stamped.acceptedAt, action: "accept" });
+  const before = mine.consent;
+  const stamped = stampConsent(before, next, now);
+  if (!stamped) return mine.consentLog;
+  if (stamped.acceptedAt && (!before || before.version !== stamped.version || before.acceptedAt !== stamped.acceptedAt)) {
+    return appendConsentLog(mine.consentLog, { version: stamped.version, at: stamped.acceptedAt, action: "accept" });
+  }
+  if (!stamped.acceptedAt && stamped.declinedAt && before?.declinedAt !== stamped.declinedAt) {
+    return appendConsentLog(mine.consentLog, { version: stamped.version, at: stamped.declinedAt, action: "decline" });
+  }
+  return mine.consentLog;
 }
 
 /** Identity fields replaced on erasure. Nothing that identifies the person remains. */

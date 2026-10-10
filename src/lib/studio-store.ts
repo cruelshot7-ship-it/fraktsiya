@@ -171,6 +171,7 @@ type State = {
   /** Returns an error message, or null when saved. */
   saveMeasure: (values: MeasureInput, date?: string) => string | null;
   acceptPrivacy: () => void;
+  declinePrivacy: () => void;
   eraseMyData: () => void;
   addSlot: (date: string, time: string, capacity: number) => void;
   repeatWeek: () => void;
@@ -1672,6 +1673,17 @@ export const useStudio = create<State>((set, get) => ({
     // Provisional time on this device; the server overwrites it with its own stamp.
     const clients = get().clients.map((c) =>
       c.id === id ? { ...c, consent: { version: PRIVACY_VERSION, acceptedAt: now } } : c,
+    );
+    set({ clients });
+    persist(snap(get()));
+  },
+
+  declinePrivacy: () => {
+    const id = get().activeClientId;
+    const now = new Date().toISOString();
+    // Provisional time; the server records the refusal with its own stamp and writes it to the consent log.
+    const clients = get().clients.map((c) =>
+      c.id === id ? { ...c, consent: { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: now } } : c,
     );
     set({ clients });
     persist(snap(get()));
