@@ -285,6 +285,10 @@ export type WorkoutLog = {
   total: number;
   at: string;
   startedAt?: string;
+  /** set when the workout was reopened: kept, not deleted, so a sync merge cannot revive it */
+  cancelledAt?: string;
+  /** values finishing changed, put back on undo (see lib/workout-undo) */
+  undo?: { lastReportAt: string | null; streak: number; bookingId: string | null };
 };
 
 export type ScanProduct = {

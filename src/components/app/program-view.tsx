@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
-  buildProgram,
   countdownLabel,
   dayRitual,
   dayKbju,
@@ -35,6 +34,7 @@ import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { detectPRs, e1rm, e1rmTrend, isReliable } from "@/lib/athlete-metrics";
+import { activeLogFor, canUndoWorkout } from "@/lib/workout-undo";
 import { Check, Flame } from "lucide-react";
 
 export function ProgramView() {
@@ -48,7 +48,7 @@ export function ProgramView() {
   const visits = useStudio((s) => s.visits);
   const toggleCheck = useStudio((s) => s.toggleCheck);
   const completeWorkout = useStudio((s) => s.completeWorkout);
-  const updateClient = useStudio((s) => s.updateClient);
+  const undoWorkout = useStudio((s) => s.undoWorkout);
   const checks = useStudio((s) => s.checks);
   const workoutLogs = useStudio((s) => s.workoutLogs);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
@@ -61,6 +61,8 @@ export function ProgramView() {
   const [facts, setFacts] = useState<Record<string, string>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [showDone, setShowDone] = useState(false);
+  // the block ticked last stays in the list until the next tick, so its fact can be typed right away
+  const [justDone, setJustDone] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
@@ -137,37 +139,21 @@ export function ProgramView() {
 
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
   const t = dayKbju(client, today, bookings).kbju;
-  const todayWorkout = workoutLogs.find((w) => w.clientId === client.id && w.date === today) ?? null;
+  const todayWorkout = activeLogFor(workoutLogs.filter((w) => w.clientId === client.id && w.date === today));
   const shown = session ?? nextSession;
   const planMissingWeights = Boolean(
     shown?.items?.length &&
       !shown.items.some((line) => /\d+(?:[.,]\d+)?\s*кг/i.test(line)),
   );
-  const prescribeWorkingWeights = () => {
-    const bw = client.weight > 0 ? client.weight : 70;
-    const days = client.trainDays?.length ? client.trainDays : [0, 2, 4];
-    const rebuilt = buildProgram({ weight: bw, trainDays: days }, "shape", "beginner");
-    updateClient(client.id, {
-      weight: bw,
-      programTitle: rebuilt.programTitle,
-      sessions: rebuilt.sessions,
-      programWeeks: client.programWeeks || 8,
-      programStart: client.programStart || today,
-      trainDays: days,
-    });
-    showToast(
-      client.weight > 0
-        ? `Рабочие веса по вашим ${bw} кг`
-        : `Рабочие веса по ${bw} кг (укажите свой вес в профиле)`,
-    );
-  };
   const plan = shown ? sessionPlan(shown) : { blocks: [] as ProgramBlock[], owner: [] as string[] };
   const legacy = shown ? legacyMarkMap(shown) : {};
   const checked = rewriteMarks(checks[`${client.id}:${today}`] ?? [], legacy);
   const factsById = shown ? rewriteFacts(facts, shown) : {};
   const doneCount = plan.blocks.filter((b) => checked.includes(b.id)).length;
   // done blocks leave the list (less to scroll); totals and marks still count them
-  const visibleBlocks = showDone ? plan.blocks : plan.blocks.filter((b) => !checked.includes(b.id));
+  const visibleBlocks = showDone
+    ? plan.blocks
+    : plan.blocks.filter((b) => !checked.includes(b.id) || b.id === justDone);
   const itemCount = plan.blocks.length;
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
@@ -292,15 +278,10 @@ export function ProgramView() {
           {planMissingWeights ? (
             <div className="mt-3 rounded-xl border border-border/60 bg-secondary/40 px-3 py-2.5">
               <p className="text-xs text-muted-foreground">
-                В плане нет рабочих весов (часто так, если вес тела не указан при сборке).
+                {isTrainer
+                  ? "В плане нет рабочих весов. Проставьте их в редакторе программы."
+                  : "Тренер ещё не проставил рабочие веса в вашем плане."}
               </p>
-              <button
-                type="button"
-                className="pressable mt-2 h-10 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-                onClick={prescribeWorkingWeights}
-              >
-                Проставить рабочие веса
-              </button>
             </div>
           ) : null}
           <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -337,7 +318,10 @@ export function ProgramView() {
                     on={checked.includes(b.id)}
                     fact={factsById[b.id] ?? ""}
                     readOnly={isTrainer}
-                    onToggle={() => toggleCheck(b.id, legacy)}
+                    onToggle={() => {
+                      if (!checked.includes(b.id)) setJustDone(b.id);
+                      toggleCheck(b.id, legacy);
+                    }}
                     onFact={(value) => {
                       const next = { ...factsById, [b.id]: value };
                       setFacts(next);
@@ -369,9 +353,32 @@ export function ProgramView() {
             </p>
           </div>
           {todayWorkout ? (
-            <p className="mt-3 text-sm text-ok">
-              Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.kcal} ккал
-            </p>
+            <div className="mt-3">
+              <p className="text-sm text-ok">
+                Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.kcal} ккал
+              </p>
+              {!isTrainer && canUndoWorkout(todayWorkout, Date.now()) ? (
+                <button
+                  type="button"
+                  className="pressable mt-2 h-10 w-full rounded-lg bg-secondary text-sm"
+                  onClick={() => {
+                    // undo keeps the record cancelled and restores the day; the timer resumes from the original start
+                    const restored = todayWorkout.startedAt ? Date.parse(todayWorkout.startedAt) : null;
+                    if (!undoWorkout()) return;
+                    if (restored && startKey) {
+                      try {
+                        localStorage.setItem(startKey, String(restored));
+                      } catch {
+                        /* ignore */
+                      }
+                      setStartedAt(restored);
+                    }
+                  }}
+                >
+                  Отменить завершение
+                </button>
+              ) : null}
+            </div>
           ) : isTrainer ? null : (
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
