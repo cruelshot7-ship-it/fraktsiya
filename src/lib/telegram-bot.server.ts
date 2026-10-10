@@ -84,14 +84,9 @@ export async function registerJoin(
       c.telegramId === user.id ||
       (uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
   );
-  if (inHall) {
-    await tg("sendMessage", {
-      chat_id: user.id,
-      text: "Вы уже в зале. Откройте приложение.",
-      reply_markup: webAppKeyboard("Открыть зал"),
-    });
-    return { ok: true, already: true };
-  }
+  // The app calls this on every open (studio-store), so an existing client gets no message here:
+  // a bot message on each open was spam. The app itself is already open for them.
+  if (inHall) return { ok: true, already: true };
   if (!message) return { ok: false, already: false };
   const coachId = (offer?.coachId ?? "").trim();
   if (!coachId) {
