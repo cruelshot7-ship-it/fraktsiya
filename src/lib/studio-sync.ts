@@ -6,6 +6,7 @@ import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
 import { programFor } from "@/lib/program-import";
+import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
@@ -404,7 +405,8 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     // A program imported from the bot after the trainer's copy was read is not overwritten by it.
     const program = programFor(prev, { sessions: c.sessions, programAt: c.programAt });
     // Client-authored fields (measures, consent, streak...) are never taken from a trainer's copy.
-    const owned = keepClientOwned(prev, { ...c, ...program });
+    const history = mergeWeightHistory(prev?.weightHistory, c.weightHistory);
+    const owned = keepClientOwned(prev, { ...c, ...program, weightHistory: history, weight: weightNow(history, c.weight) });
     const balance: Balance | undefined = settled.balances.get(c.id);
     if (!balance) return owned;
     const packExpiresAt = c.packExpiresAt ?? (prev?.packExpiresAt ?? null);
@@ -611,10 +613,11 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ),
   );
   const balance = settled.balances.get(id);
+  const weights = mergeWeightHistory(mine.weightHistory, incomingSelf.weightHistory);
   const nextSelf: Client = {
     ...mine,
-    weight: incomingSelf.weight ?? mine.weight,
-    weightHistory: incomingSelf.weightHistory?.length ? incomingSelf.weightHistory : mine.weightHistory,
+    weightHistory: weights,
+    weight: weightNow(weights, incomingSelf.weight ?? mine.weight),
     measures: mergeMeasures(mine.measures, incomingSelf.measures),
     consent: stampConsent(mine.consent, incomingSelf.consent, now),
     consentLog: consentLogAfter(mine, incomingSelf.consent, now),
