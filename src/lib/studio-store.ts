@@ -1795,7 +1795,7 @@ export const useStudio = create<State>((set, get) => ({
       get().showToast("Вы в зале.");
       return true;
     }
-    const cloud = await syncFromCloud(raw);
+    const cloud = await syncFromCloud();
     if (cloud && !cloud.blocked && cloud.payload.clients[0]) {
       const extra = cloud.payload.extraSlots ?? get().extraSlots;
       set({
