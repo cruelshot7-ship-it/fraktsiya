@@ -57,7 +57,7 @@ export function SessionResultForm({
         <p className="mt-2 text-sm text-muted-foreground">
           {role === "trainer"
             ? "Отметьте явку участника, затем зафиксируйте подходы. Истечение времени слота ≠ посещение."
-            : "Сначала отметьте присутствие («Я на месте» / «Был»). Без явки результат не сохраняется."}
+            : "Сначала отметьте явку. Без явки результат не сохраняется."}
         </p>
       </Surface>
     );
@@ -119,7 +119,7 @@ export function SessionResultForm({
         return;
       }
       if (res.reason === "no-attendance") {
-        showToast("Сначала отметьте явку («Я на месте» / «Был»).");
+        showToast("Сначала отметьте явку.");
         return;
       }
       const { saveLocalResult, findLocalResult } = await import("@/lib/session-results-local");

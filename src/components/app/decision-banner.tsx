@@ -12,7 +12,6 @@ export function DecisionBanner() {
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const dismissSignal = useStudio((s) => s.dismissSignal);
-  const setTab = useStudio((s) => s.setTab);
   const me = activeClient({ clients, activeClientId });
 
   if (role !== "client" || !me) return null;
@@ -45,13 +44,6 @@ export function DecisionBanner() {
           <p className="text-sm font-medium">{n.title}</p>
           <p className="mt-1 text-tiny text-muted-foreground">{n.body}</p>
           <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              className="pressable rounded-lg bg-secondary px-3 py-1.5 text-xs"
-              onClick={() => setTab("program")}
-            >
-              К плану
-            </button>
             <button
               type="button"
               className="pressable rounded-lg px-3 py-1.5 text-xs text-muted-foreground"

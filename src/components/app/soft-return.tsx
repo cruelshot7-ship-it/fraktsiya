@@ -9,6 +9,7 @@ export function SoftReturnPanel() {
   const activeClientId = useStudio((s) => s.activeClientId);
   const bookings = useStudio((s) => s.bookings);
   const setTab = useStudio((s) => s.setTab);
+  const tab = useStudio((s) => s.tab);
   const client = activeClient({ clients, activeClientId });
 
   if (role !== "client" || !client) return null;
@@ -43,13 +44,16 @@ export function SoftReturnPanel() {
         >
           Выбрать слот
         </button>
-        <button
-          type="button"
-          className="pressable h-11 rounded-xl bg-secondary text-sm font-medium"
-          onClick={() => setTab("program")}
-        >
-          Контекст плана
-        </button>
+        {/* on the program tab this button would open the tab already on screen */}
+        {tab !== "program" ? (
+          <button
+            type="button"
+            className="pressable h-11 rounded-xl bg-secondary text-sm font-medium"
+            onClick={() => setTab("program")}
+          >
+            Контекст плана
+          </button>
+        ) : null}
       </div>
     </Surface>
   );
