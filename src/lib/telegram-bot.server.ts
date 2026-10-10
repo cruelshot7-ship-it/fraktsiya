@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
-import { dueReminders, findByToken, markReminder, remindToken } from "@/lib/studio-remind";
-import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
+import { claimReminders, dueReminders, findByToken, remindToken } from "@/lib/studio-remind";
+import { commitStudioState, dropTombstones, emptyPayload, loadStudioState, saveStudioState, StateConflictError } from "@/lib/studio-sync";
 import {
   buildSessions,
   findClients,
@@ -249,9 +249,8 @@ type TgUpdate = {
 
 export async function handleTelegramUpdate(update: TgUpdate) {
   try {
-    const current = await loadStudioState();
-    const next = await sendDueReminders(current);
-    if (next !== current) await saveStudioState(next);
+    // sendDueReminders commits its own marks: nothing to save here
+    await sendDueReminders(await loadStudioState());
   } catch {
     /* a missed ping must not block /start */
   }
@@ -480,16 +479,33 @@ export async function sendBotLink(telegramId: string, text: string) {
 
 let remindBusy = false;
 
+/**
+ * Sends the reminders that are due. Order matters:
+ * 1. claim: the marks are committed first, in one conditional write. A request that loaded the same
+ *    revision loses that write and sends nothing; a retry of a failed save never reaches the send.
+ * 2. send: only the claimed reminders go out. A failed send is not retried, so a reminder goes out at most once.
+ * Returns the state as stored, with the marks.
+ */
 export async function sendDueReminders(payload: import("@/lib/studio-sync").StudioPayload) {
   if (remindBusy) return payload;
-  const due = dueReminders(payload.bookings, Date.now());
+  const due = dueReminders(payload.bookings, Date.now()).filter((item) => {
+    const booking = payload.bookings.find((row) => row.id === item.id);
+    return Boolean(booking && payload.clients.find((row) => row.id === booking.clientId)?.telegramId);
+  });
   if (!due.length) return payload;
   remindBusy = true;
-  let bookings = payload.bookings;
   try {
+    let stored: import("@/lib/studio-sync").StudioPayload;
+    try {
+      stored = await commitStudioState({ ...payload, bookings: claimReminders(payload.bookings, due) });
+    } catch (err) {
+      // another request moved the state on; it owns this round, the next ping picks up what is still due
+      if (err instanceof StateConflictError) return payload;
+      throw err;
+    }
     for (const item of due) {
-      const booking = bookings.find((row) => row.id === item.id);
-      const client = payload.clients.find((row) => row.id === booking?.clientId);
+      const booking = stored.bookings.find((row) => row.id === item.id);
+      const client = stored.clients.find((row) => row.id === booking?.clientId);
       if (!booking || !client?.telegramId) continue;
       const when = `${formatLongDate(booking.date)} · ${booking.time}`;
       const text =
@@ -497,23 +513,26 @@ export async function sendDueReminders(payload: import("@/lib/studio-sync").Stud
           ? `Через пару часов тренировка\n${when}\nПодтвердите или перенесите.`
           : `Завтра тренировка\n${when}\nПодтвердите или перенесите.`;
       const token = remindToken(booking.id);
-      const sent = await tg("sendMessage", {
-        chat_id: client.telegramId,
-        text,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "Подтверждаю", callback_data: `y:${token}` },
-              { text: "Перенести", callback_data: `m:${token}` },
+      try {
+        const sent = await tg("sendMessage", {
+          chat_id: client.telegramId,
+          text,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "Подтверждаю", callback_data: `y:${token}` },
+                { text: "Перенести", callback_data: `m:${token}` },
+              ],
             ],
-          ],
-        },
-      });
-      if (sent.ok) bookings = markReminder(bookings, booking.id, item.kind);
+          },
+        });
+        if (!sent.ok) console.error("[reminder] not delivered", booking.id, item.kind);
+      } catch (err) {
+        console.error("[reminder] send failed", booking.id, item.kind, err);
+      }
     }
+    return stored;
   } finally {
     remindBusy = false;
   }
-  if (bookings === payload.bookings) return payload;
-  return { ...payload, bookings };
 }

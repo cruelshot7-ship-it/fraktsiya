@@ -779,14 +779,24 @@ export class StateConflictError extends Error {
   }
 }
 
+/**
+ * Writes the state, then pings due reminders. The write comes first: a reminder is sent only once its
+ * mark is committed, so a conflict or a retry here never sends the same reminder twice.
+ */
 export async function saveStudioState(payload: StudioPayload) {
-  let next = payload;
+  const stored = await commitStudioState(payload);
   try {
     const { sendDueReminders } = await import("@/lib/telegram-bot.server");
-    next = await sendDueReminders(payload);
+    return await sendDueReminders(stored);
   } catch {
-    next = payload;
+    // a missed ping must not fail the save
+    return stored;
   }
+}
+
+/** The conditional write alone, without reminders. Throws StateConflictError when the row moved on. */
+export async function commitStudioState(payload: StudioPayload) {
+  let next = payload;
   const db = await import("@/lib/db");
   if (db.dbSource === "neon") {
     const sql = await db.getSql();
@@ -837,11 +847,8 @@ export const pullStudio = createServerFn({ method: "POST" })
     let payload = await loadStudioState();
     try {
       const { sendDueReminders } = await import("@/lib/telegram-bot.server");
-      const reminded = await sendDueReminders(payload);
-      if (reminded !== payload) {
-        payload = reminded;
-        await saveStudioState(payload);
-      }
+      // returns the state as stored, with the reminder marks committed
+      payload = await sendDueReminders(payload);
     } catch {
       /* a missed ping must not block the cabinet */
     }
