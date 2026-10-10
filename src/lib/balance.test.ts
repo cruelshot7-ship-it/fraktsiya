@@ -14,7 +14,7 @@ function client(over: Partial<C> = {}): C {
   return { id: "c1", sessionsLeft: 4, ledger: [], lateCancels: 0, ...over } as C;
 }
 function booking(over: Partial<B> = {}): B {
-  return { id: "bk_s1_c1", slotId: "s1", clientId: "c1", date: "2026-10-12", time: "18:00", duration: 60, held: true, holdId: "tx_hold_1", ...over } as B;
+  return { id: "bk_s1_c1", slotId: "2026-10-12_19:00", clientId: "c1", date: "2026-10-12", time: "19:00", duration: 60, held: true, holdId: "tx_hold_1", ...over } as B;
 }
 function hold(over: Partial<T> = {}): T {
   return { id: "tx_hold_1", clientId: "c1", kind: "hold", delta: -1, at: "", note: "Запись", bookingId: "bk_s1_c1", ...over };
@@ -117,7 +117,7 @@ test("trainer credit applies once; client cannot credit", () => {
 });
 
 test("stale client copy does not remove a booking the trainer just made", () => {
-  const trainerBooking = booking({ id: "bk_s2_c1", slotId: "s2", holdId: "tx_hold_9" });
+  const trainerBooking = booking({ id: "bk_s2_c1", slotId: "2026-10-12_19:00", holdId: "tx_hold_9" });
   const r = settleOwned(snap([client({ sessionsLeft: 2, txnIds: [] })], [trainerBooking]), snap([client()], []), owners, "client", RULE, NOW);
   assert.equal(r.bookings.length, 1);
   assert.equal(one(r).sessionsLeft, 2);
@@ -152,8 +152,8 @@ test("legacy hold in the ledger is not charged again, and its booking is not adm
 });
 
 test("a booking moved to a later slot is judged by its new time", () => {
-  const old = booking({ date: "2026-10-10", time: "11:00" });
-  const moved = booking({ date: "2026-10-12", time: "18:00" });
+  const old = booking({ slotId: "2026-10-10_11:00", date: "2026-10-10", time: "11:00" });
+  const moved = booking({ date: "2026-10-12", time: "19:00" });
   const base = client({ sessionsLeft: 3, txnIds: ["tx_hold_1"] });
   const r = settleOwned(snap([base], [old]), snap([client({ ledger: [cancel("refund", old)] })], [moved]), owners, "client", RULE, NOW);
   assert.equal(one(r).sessionsLeft, 4, "not late against the new slot, so a refund");
@@ -163,14 +163,15 @@ test("a booking moved to a later slot is judged by its new time", () => {
 /* ---- capacity, closed and past slots ---- */
 
 const SLOT_DAY = "2026-10-12";
+const S8 = "2026-10-12_08:00";
 const other = (id: string, clientId: string, over: Partial<B> = {}): B =>
-  booking({ id, slotId: "s8", clientId, date: SLOT_DAY, time: "08:00", holdId: `h_${id}`, ...over });
+  booking({ id, slotId: S8, clientId, date: SLOT_DAY, time: "08:00", holdId: `h_${id}`, ...over });
 
 test("capacity: a hold is refused when the slot is already full", () => {
   const full = [other("bk_a", "c2"), other("bk_b", "c3")]; // 08:00 holds 2
   const r = settleOwned(
     snap([client()], full),
-    snap([client({ ledger: [hold({ id: "tx_hold_1" })] })], [booking({ slotId: "s8", date: SLOT_DAY, time: "08:00" })]),
+    snap([client({ ledger: [hold({ id: "tx_hold_1" })] })], [booking({ slotId: S8, date: SLOT_DAY, time: "08:00" })]),
     owners,
     "client",
     RULE,
@@ -178,20 +179,20 @@ test("capacity: a hold is refused when the slot is already full", () => {
   );
   assert.deepEqual(r.rejected, ["tx_hold_1"]);
   assert.equal(one(r).sessionsLeft, 4);
-  assert.equal(r.bookings.filter((b) => b.slotId === "s8").length, 2);
+  assert.equal(r.bookings.filter((b) => b.slotId === S8).length, 2);
 });
 
 test("capacity: occupancy is shared across owners in one settlement", () => {
   const names = ["c1", "c2", "c3"];
   const clients = names.map((id) => client({ id, ledger: [hold({ id: `tx_${id}`, clientId: id, bookingId: `bk_${id}` })] }));
-  const incoming = names.map((id) => booking({ id: `bk_${id}`, clientId: id, slotId: "s8", date: SLOT_DAY, time: "08:00", holdId: `tx_${id}` }));
+  const incoming = names.map((id) => booking({ id: `bk_${id}`, clientId: id, slotId: S8, date: SLOT_DAY, time: "08:00", holdId: `tx_${id}` }));
   const r = settleOwned(snap(names.map((id) => client({ id })), []), snap(clients, incoming), new Set(names), "client", RULE, NOW);
   assert.deepEqual(r.rejected, ["tx_c3"], "the third hold on a two-place slot is refused");
   assert.equal(r.bookings.length, 2);
 });
 
 test("capacity: a cancel earlier in the same ledger frees the place for a later hold", () => {
-  const stored = booking({ id: "bk_old", slotId: "s8", date: SLOT_DAY, time: "08:00", holdId: "tx_old" });
+  const stored = booking({ id: "bk_old", slotId: S8, date: SLOT_DAY, time: "08:00", holdId: "tx_old" });
   const c2 = other("bk_c2", "c2");
   const c1 = client({ sessionsLeft: 4 });
   const cancelTxn = cancel("refund", stored, { id: "cancel:tx_old" });
@@ -199,7 +200,7 @@ test("capacity: a cancel earlier in the same ledger frees the place for a later 
   const incoming = client({ ledger: [newHold, cancelTxn] }); // newest first
   const r = settleOwned(
     snap([c1], [stored, c2]),
-    snap([incoming], [booking({ id: "bk_new", slotId: "s8", date: SLOT_DAY, time: "08:00", holdId: "tx_new" })]),
+    snap([incoming], [booking({ id: "bk_new", slotId: S8, date: SLOT_DAY, time: "08:00", holdId: "tx_new" })]),
     owners,
     "client",
     RULE,
@@ -212,7 +213,7 @@ test("capacity: a cancel earlier in the same ledger frees the place for a later 
 
 test("closed slot: a hold is refused", () => {
   const r = settleOwned(
-    { ...snap([client()]), closedSlotIds: ["s1"] },
+    { ...snap([client()]), closedSlotIds: ["2026-10-12_19:00"] },
     snap([client({ ledger: [hold()] })], [booking()]),
     owners,
     "client",
@@ -226,7 +227,7 @@ test("closed slot: a hold is refused", () => {
 test("past slot: a hold is refused once the slot has started", () => {
   const r = settleOwned(
     snap([client()]),
-    snap([client({ ledger: [hold()] })], [booking({ date: "2026-10-09", time: "18:00" })]),
+    snap([client({ ledger: [hold()] })], [booking({ date: "2026-10-09", time: "19:00" })]),
     owners,
     "client",
     RULE,
@@ -237,12 +238,63 @@ test("past slot: a hold is refused once the slot has started", () => {
 
 test("extra slot uses its own capacity, not the generated one", () => {
   const extraFull = {
-    ...snap([client()], [other("bk_x", "c2", { slotId: "x1", time: "18:00" })]),
-    extraSlots: [{ id: "x1", capacity: 1 }],
+    ...snap([client()], [other("bk_x", "c2", { slotId: "x1", time: "19:00" })]),
+    extraSlots: [{ id: "x1", capacity: 1, date: "2026-10-12", time: "19:00" }],
   };
-  const incoming = snap([client({ ledger: [hold({ bookingId: "bk_new" })] })], [booking({ id: "bk_new", slotId: "x1", time: "18:00", holdId: "tx_hold_1" })]);
+  const incoming = snap([client({ ledger: [hold({ bookingId: "bk_new" })] })], [booking({ id: "bk_new", slotId: "x1", time: "19:00", holdId: "tx_hold_1" })]);
   assert.deepEqual(settleOwned(extraFull, incoming, owners, "client", RULE, NOW).rejected, ["tx_hold_1"]);
-  // A generated 18:00 slot has three places, so the same single booking fits.
-  const generated = { ...extraFull, extraSlots: [] };
-  assert.deepEqual(settleOwned(generated, incoming, owners, "client", RULE, NOW).rejected, []);
+  // Without the extra slot the id is not a real slot, so it is refused too.
+  const noExtra = { ...extraFull, extraSlots: [] };
+  assert.deepEqual(settleOwned(noExtra, incoming, owners, "client", RULE, NOW).rejected, ["tx_hold_1"]);
+  // A generated 19:00 slot has three places, so the same single booking fits.
+  const gen = booking({ id: "bk_new", slotId: "2026-10-12_19:00", time: "19:00", date: SLOT_DAY, holdId: "tx_hold_1" });
+  const generated = snap([client({ ledger: [hold({ bookingId: "bk_new" })] })], [gen]);
+  assert.deepEqual(settleOwned(snap([client()], [other("bk_x", "c2", { slotId: "2026-10-12_19:00", time: "19:00" })]), generated, owners, "client", RULE, NOW).rejected, []);
+});
+
+/* ---- a slot must be real; a move is checked like a hold ---- */
+
+test("invented slot: a hold on a time the schedule does not generate is refused", () => {
+  const fake = booking({ id: "bk_fake", slotId: "2026-10-12_12:00", time: "12:00", date: SLOT_DAY, holdId: "tx_hold_1" });
+  const r = settleOwned(snap([client()]), snap([client({ ledger: [hold({ bookingId: "bk_fake" })] })], [fake]), owners, "client", RULE, NOW);
+  assert.deepEqual(r.rejected, ["tx_hold_1"]);
+  assert.equal(r.bookings.length, 0);
+});
+
+test("invented slot: a slot id that does not match its date and time is refused", () => {
+  const mismatch = booking({ id: "bk_mm", slotId: "2026-10-12_08:00", time: "19:00", date: SLOT_DAY, holdId: "tx_hold_1" });
+  const r = settleOwned(snap([client()]), snap([client({ ledger: [hold({ bookingId: "bk_mm" })] })], [mismatch]), owners, "client", RULE, NOW);
+  assert.deepEqual(r.rejected, ["tx_hold_1"]);
+});
+
+test("Sunday has no generated slots: a hold there is refused", () => {
+  const sun = "2026-10-11";
+  const row = booking({ id: "bk_sun", slotId: `${sun}_19:00`, date: sun, time: "19:00", holdId: "tx_hold_1" });
+  const r = settleOwned(snap([client()]), snap([client({ ledger: [hold({ bookingId: "bk_sun" })] })], [row]), owners, "client", RULE, NOW);
+  assert.deepEqual(r.rejected, ["tx_hold_1"]);
+});
+
+test("move into a full slot is refused and the booking stays where it was", () => {
+  const current = snap([client()], [booking(), other("bk_x1", "c2"), other("bk_x2", "c3")]);
+  // S8 (08:00) has capacity 2 and is full with two other clients
+  const moveIn = booking({ slotId: S8, date: SLOT_DAY, time: "08:00", holdId: "tx_hold_1" });
+  const r = settleOwned(current, snap([client()], [moveIn]), owners, "client", RULE, NOW);
+  const mine = r.bookings.find((b) => b.id === "bk_s1_c1");
+  assert.equal(mine?.slotId, "2026-10-12_19:00");
+  assert.equal(r.bookings.filter((b) => b.slotId === S8).length, 2);
+});
+
+test("move into a free slot succeeds and the old place is freed", () => {
+  const current = snap([client()], [booking(), other("bk_x1", "c2")]);
+  const moveIn = booking({ slotId: S8, date: SLOT_DAY, time: "08:00", holdId: "tx_hold_1" });
+  const r = settleOwned(current, snap([client()], [moveIn]), owners, "client", RULE, NOW);
+  const mine = r.bookings.find((b) => b.id === "bk_s1_c1");
+  assert.equal(mine?.slotId, S8);
+  assert.equal(mine?.time, "08:00");
+});
+
+test("move into a past slot is refused", () => {
+  const past = booking({ slotId: "2026-10-10_09:00", date: "2026-10-10", time: "09:00", holdId: "tx_hold_1" });
+  const r = settleOwned(snap([client()], [booking()]), snap([client()], [past]), owners, "client", RULE, NOW);
+  assert.equal(r.bookings.find((b) => b.id === "bk_s1_c1")?.slotId, "2026-10-12_19:00");
 });

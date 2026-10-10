@@ -16,7 +16,7 @@
  */
 import type { Booking, Client, SessionTxn } from "@/data/studio";
 import { isLateCancelAt, slotStartMs } from "./minsk-time.ts";
-import { capacityFor } from "./slot-rules.ts";
+import { capacityFor, generatedTimesFor } from "./slot-rules.ts";
 
 export const LEDGER_KEEP = 40;
 export const TXN_ID_KEEP = 300;
@@ -27,7 +27,7 @@ export type LateRule = { flagLate: boolean; windowHours: number };
 export type Snapshot = {
   clients: Client[];
   bookings: Booking[];
-  extraSlots?: { id: string; capacity: number }[];
+  extraSlots?: { id: string; capacity: number; date?: string; time?: string }[];
   closedSlotIds?: string[];
 };
 export type Balance = { sessionsLeft: number; ledger: SessionTxn[]; lateCancels: number; txnIds: string[] };
@@ -62,11 +62,19 @@ export function settleOwned(
   const at = new Date(now).toISOString();
   // Schedule rules come from the server's copy only.
   const extraCap = new Map((current.extraSlots ?? []).map((s) => [s.id, s.capacity]));
+  const extraAt = new Map((current.extraSlots ?? []).map((s) => [s.id, s]));
   const closed = new Set(current.closedSlotIds ?? []);
   const occupancy = new Map<string, number>();
   for (const b of current.bookings) occupancy.set(b.slotId, (occupancy.get(b.slotId) ?? 0) + 1);
+  // A slot is real when the schedule generates it for that date and time, or it is a trainer's extra slot
+  // at exactly that date and time. An id the client made up is not a slot.
+  const exists = (row: Booking) => {
+    const extra = extraAt.get(row.slotId);
+    if (extra) return extra.date === row.date && extra.time === row.time;
+    return row.slotId === `${row.date}_${row.time}` && generatedTimesFor(row.date).includes(row.time);
+  };
   const bookable = (row: Booking) => {
-    if (closed.has(row.slotId) || !(now < slotStartMs(row.date, row.time))) return false;
+    if (!exists(row) || closed.has(row.slotId) || !(now < slotStartMs(row.date, row.time))) return false;
     const capacity = extraCap.get(row.slotId) ?? capacityFor(row.time);
     return (occupancy.get(row.slotId) ?? 0) < capacity;
   };
@@ -153,7 +161,17 @@ export function settleOwned(
     for (const b of ownPrev) {
       if (!live.has(b.id)) continue;
       const row = incRows.get(b.id);
-      rows.push(row ? mergeRow(b, row) : b);
+      if (!row || (row.slotId === b.slotId && row.date === b.date && row.time === b.time)) {
+        rows.push(row ? mergeRow(b, row) : b);
+        continue;
+      }
+      // A move is checked like a hold: the new slot must be real, open, in the future and not full.
+      // Refused, the booking stays where it was.
+      if (bookable(row)) {
+        occupancy.set(b.slotId, Math.max(0, (occupancy.get(b.slotId) ?? 0) - 1));
+        occupancy.set(row.slotId, (occupancy.get(row.slotId) ?? 0) + 1);
+        rows.push(mergeRow(b, row));
+      } else rows.push(b);
     }
     for (const [bid, b] of admitted) if (live.has(bid)) rows.push(b);
     ownerRows.set(id, rows);
