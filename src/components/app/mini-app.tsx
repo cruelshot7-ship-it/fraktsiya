@@ -291,7 +291,7 @@ export function MiniApp() {
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-foreground" : "text-muted-foreground",
                     )} aria-current={active ? "page" : undefined}>
-                    {active ? <span className="absolute -bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" /> : null}
+                    {active ? <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" /> : null}
                     <span className="relative">
                       <Icon className="size-5" />
                       {badge > 0 ? (

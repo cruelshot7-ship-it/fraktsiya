@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { confirmAction } from "@/lib/confirm";
 import { useMemo } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
@@ -84,22 +85,18 @@ export function TodayView() {
           <SyncStatusChip />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <button type="button" className="pressable text-left" onClick={() => setTab("bookings")}>
-            <Surface glow={upcomingToday.length ? "ok" : undefined} className="h-full">
-              <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Ещё сегодня</p>
-              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{upcomingToday.length}</p>
-            </Surface>
+        <div className="apple-block grid grid-cols-3 divide-x divide-border">
+          <button type="button" className="pressable p-4 text-left" onClick={() => setTab("bookings")}>
+            <p className="min-h-9 text-2xs text-muted-foreground">Ещё сегодня</p>
+            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", upcomingToday.length > 0 && "text-ok")}>{upcomingToday.length}</p>
           </button>
-          <Surface glow={needMark.length ? "alert" : undefined} className="h-full">
-            <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Без явки</p>
-            <p className="mt-1 font-display text-2xl tabular-nums leading-none">{needMark.length}</p>
-          </Surface>
-          <button type="button" className="pressable text-left" onClick={() => setTab("signals")}>
-            <Surface glow={pendingJoins.length ? "alert" : undefined} className="h-full">
-              <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Заявки</p>
-              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{pendingJoins.length}</p>
-            </Surface>
+          <div className="p-4">
+            <p className="min-h-9 text-2xs text-muted-foreground">Без явки</p>
+            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", needMark.length > 0 && "text-primary")}>{needMark.length}</p>
+          </div>
+          <button type="button" className="pressable p-4 text-left" onClick={() => setTab("signals")}>
+            <p className="min-h-9 text-2xs text-muted-foreground">Заявки</p>
+            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", pendingJoins.length > 0 && "text-primary")}>{pendingJoins.length}</p>
           </button>
         </div>
 
