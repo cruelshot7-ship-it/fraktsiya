@@ -7,19 +7,29 @@
  *  - cancel (booking removed)       id is `cancel:<holdId>`; the server decides refund (+1)
  *                                   or late burn (0, lateCancels+1) from its own clock
  *  - credit / adjust                trainer only, applied once
+ * A hold is also refused when its slot is closed, already started, or full. Occupancy is
+ * counted across every owner in the same settlement, and a cancel frees its place for the
+ * events after it.
  * Each event id is applied at most once (`txnIds`), so a stale copy of a client or a
  * trainer that re-sends old events cannot double-charge, double-refund or resurrect a
  * cancelled booking. The sender's `sessionsLeft` is ignored; the server recomputes it.
  */
 import type { Booking, Client, SessionTxn } from "@/data/studio";
-import { isLateCancelAt } from "./minsk-time.ts";
+import { isLateCancelAt, slotStartMs } from "./minsk-time.ts";
+import { capacityFor } from "./slot-rules.ts";
 
 export const LEDGER_KEEP = 40;
 export const TXN_ID_KEEP = 300;
 
 export type BalanceActor = "client" | "trainer";
 export type LateRule = { flagLate: boolean; windowHours: number };
-export type Snapshot = { clients: Client[]; bookings: Booking[] };
+/** The server's copy of the schedule. Only `current` is used for rules; incoming values are never trusted. */
+export type Snapshot = {
+  clients: Client[];
+  bookings: Booking[];
+  extraSlots?: { id: string; capacity: number }[];
+  closedSlotIds?: string[];
+};
 export type Balance = { sessionsLeft: number; ledger: SessionTxn[]; lateCancels: number; txnIds: string[] };
 export type SettleResult = {
   /** settled balance per owned client id */
@@ -50,6 +60,16 @@ export function settleOwned(
   const rejected: string[] = [];
   const ownerRows = new Map<string, Booking[]>();
   const at = new Date(now).toISOString();
+  // Schedule rules come from the server's copy only.
+  const extraCap = new Map((current.extraSlots ?? []).map((s) => [s.id, s.capacity]));
+  const closed = new Set(current.closedSlotIds ?? []);
+  const occupancy = new Map<string, number>();
+  for (const b of current.bookings) occupancy.set(b.slotId, (occupancy.get(b.slotId) ?? 0) + 1);
+  const bookable = (row: Booking) => {
+    if (closed.has(row.slotId) || !(now < slotStartMs(row.date, row.time))) return false;
+    const capacity = extraCap.get(row.slotId) ?? capacityFor(row.time);
+    return (occupancy.get(row.slotId) ?? 0) < capacity;
+  };
 
   for (const id of owners) {
     const prev = curClients.get(id);
@@ -79,11 +99,12 @@ export function settleOwned(
 
       if (t.kind === "hold") {
         const row = t.bookingId ? incRows.get(t.bookingId) : undefined;
-        if (!row || live.has(row.id) || row.holdId !== t.id || balance < 1) {
+        if (!row || live.has(row.id) || row.holdId !== t.id || balance < 1 || !bookable(row)) {
           rejected.push(t.id);
           continue;
         }
         balance -= 1;
+        occupancy.set(row.slotId, (occupancy.get(row.slotId) ?? 0) + 1);
         live.set(row.id, row);
         admitted.set(row.id, row);
         applied.push({ ...t, delta: -1 });
@@ -100,6 +121,7 @@ export function settleOwned(
         const cur = incRows.get(b.id) ?? b;
         const late = actor === "client" && rule.flagLate && isLateCancelAt(cur.date, cur.time, now, rule.windowHours);
         live.delete(b.id);
+        occupancy.set(b.slotId, Math.max(0, (occupancy.get(b.slotId) ?? 0) - 1));
         if (late) {
           lateCancels += 1;
           applied.push({ ...t, kind: "burn", delta: 0, at });
