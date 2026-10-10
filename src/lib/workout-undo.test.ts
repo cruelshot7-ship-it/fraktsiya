@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activeLogFor, canUndoWorkout, UNDO_WINDOW_MS } from "./workout-undo.ts";
+import { activeLogFor, canUndoWorkout, cleanFacts, UNDO_WINDOW_MS } from "./workout-undo.ts";
 import type { WorkoutLog } from "@/data/studio";
 
 // fixtures only need the fields the helpers read
@@ -26,6 +26,12 @@ test("undo: refused when already cancelled, without a snapshot, or for a broken 
 
 test("undo: a timestamp in the future is not undone", () => {
   assert.equal(canUndoWorkout({ at, undo }, t0 - 5_000), false);
+});
+
+test("facts: empty values are dropped, nothing left means no field at all", () => {
+  assert.deepEqual(cleanFacts({ a: " 82,5 ", b: "  ", c: "" }), { a: "82,5" });
+  assert.equal(cleanFacts({ a: "" }), undefined);
+  assert.equal(cleanFacts(undefined), undefined);
 });
 
 test("active log: cancelled ones are skipped, the latest live one wins", () => {

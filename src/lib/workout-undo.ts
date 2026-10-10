@@ -24,6 +24,16 @@ export function canUndoWorkout(log: LogLike | null | undefined, now: number): bo
   return age >= 0 && age <= UNDO_WINDOW_MS;
 }
 
+/** Facts with empty values dropped; undefined when nothing is left, so the log stays small. */
+export function cleanFacts(facts: Record<string, string> | undefined): Record<string, string> | undefined {
+  const kept = Object.fromEntries(
+    Object.entries(facts ?? {})
+      .map(([id, value]) => [id, value.trim()] as const)
+      .filter(([, value]) => value !== ""),
+  );
+  return Object.keys(kept).length ? kept : undefined;
+}
+
 /**
  * The workout that counts for a day: the latest one that was not cancelled. A cancelled log is
  * kept (not deleted) so a sync merge cannot bring it back as a live workout.

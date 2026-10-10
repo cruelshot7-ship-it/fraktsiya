@@ -289,6 +289,8 @@ export type WorkoutLog = {
   cancelledAt?: string;
   /** values finishing changed, put back on undo (see lib/workout-undo) */
   undo?: { lastReportAt: string | null; streak: number; bookingId: string | null };
+  /** the client's facts (actual load per block id), kept after finishing so the trainer sees them */
+  facts?: Record<string, string>;
 };
 
 export type ScanProduct = {

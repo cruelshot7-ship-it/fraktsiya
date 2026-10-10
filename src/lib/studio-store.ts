@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
-import { activeLogFor, canUndoWorkout } from "@/lib/workout-undo";
+import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import {
@@ -168,7 +168,7 @@ type State = {
   addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
   /** rewrite maps legacy "index:line" marks to block ids before toggling */
   toggleCheck: (item: string, rewrite?: Record<string, string>) => void;
-  completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number) => void;
+  completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number, facts?: Record<string, string>) => void;
   /** Reopens today's finished workout within the undo window. Returns false when refused. */
   undoWorkout: () => boolean;
   setWeight: (kg: number) => void;
@@ -1613,7 +1613,7 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
 
-  completeWorkout: (totalItems, minutes, startedAt, extraVolume = 0) => {
+  completeWorkout: (totalItems, minutes, startedAt, extraVolume = 0, facts) => {
     const { activeClientId, clients, bookings, checks, workoutLogs, lifts } = get();
     const client = clients.find((c) => c.id === activeClientId);
     if (!client) return;
@@ -1647,6 +1647,7 @@ export const useStudio = create<State>((set, get) => ({
         streak: client.streak,
         bookingId: booking && !booking.checkedIn ? booking.id : null,
       },
+      ...(cleanFacts(facts) ? { facts: cleanFacts(facts) } : {}),
     };
     const nextLogs = [log, ...workoutLogs.filter((w) => !(w.clientId === client.id && w.date === today))].slice(0, 60);
     const nextClients = clients.map((c) =>
