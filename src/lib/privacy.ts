@@ -4,7 +4,8 @@
  * must accept the current version before their data is used.
  */
 
-export const PRIVACY_VERSION = "2026-10-10";
+// Bump on every change of the policy text: consent given to an older text does not cover the new one.
+export const PRIVACY_VERSION = "2026-10-10.2";
 
 /** declinedAt is set only while the client has refused the current version; an acceptance clears it. */
 export type Consent = { version: string; acceptedAt: string | null; declinedAt?: string | null };
@@ -32,6 +33,19 @@ export function erasureNotice(clientId: string, at: string) {
 /** True when the client has not accepted the current policy version. */
 export function needsConsent(consent: Consent | null | undefined): boolean {
   return !consent || consent.version !== PRIVACY_VERSION || !consent.acceptedAt;
+}
+
+/** True while the client has neither accepted nor refused the current version. A refusal is a decision too. */
+export function needsDecision(consent: Consent | null | undefined): boolean {
+  return !consent || consent.version !== PRIVACY_VERSION || (!consent.acceptedAt && !consent.declinedAt);
+}
+
+/**
+ * Special data (wellbeing, pain, body measures) is taken only with an accepted current version.
+ * A refusal does not block the rest: bookings, the program and the balance keep working.
+ */
+export function specialDataAllowed(consent: Consent | null | undefined): boolean {
+  return Boolean(consent && consent.version === PRIVACY_VERSION && consent.acceptedAt);
 }
 
 /**

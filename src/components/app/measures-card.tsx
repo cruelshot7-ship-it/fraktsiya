@@ -1,3 +1,4 @@
+import { specialDataAllowed } from "@/lib/privacy";
 import { useState } from "react";
 import { isoDate } from "@/data/studio";
 import { changeSinceFirst, latestValue, MEASURE_FIELDS, type MeasureInput } from "@/lib/body-measures";
@@ -13,6 +14,17 @@ export function MeasuresCard({ client }: { client: Client }) {
   const measures = client.measures ?? [];
   const today = isoDate(new Date());
   const todayRow = measures.find((m) => m.date === today);
+
+  if (!specialDataAllowed(client.consent)) {
+    return (
+      <Surface>
+        <SectionLabel>Замеры, см</SectionLabel>
+        <p className="mt-2 text-tiny text-muted-foreground">
+          Замеры тела ведём только с согласия. Дать или отозвать его можно в «Ещё» → «Мои данные».
+        </p>
+      </Surface>
+    );
+  }
 
   return (
     <Surface>

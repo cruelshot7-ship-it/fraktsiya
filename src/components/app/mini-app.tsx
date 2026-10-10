@@ -1,5 +1,5 @@
 import { PrivacyGate } from "@/components/app/privacy-panel";
-import { needsConsent } from "@/lib/privacy";
+import { needsDecision } from "@/lib/privacy";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, CalendarDays, ClipboardList, LayoutGrid, MessageCircle, Sparkles, Users, Utensils } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
@@ -246,7 +246,7 @@ export function MiniApp() {
           <div key={`${role}-${tab}`} className="pt-4">
             {inviteBlocked && role === "client" ? (
               <JoinGate />
-            ) : role === "client" && client && needsConsent(client.consent) ? (
+            ) : role === "client" && client && needsDecision(client.consent) ? (
               <PrivacyGate />
             ) : (
               <>

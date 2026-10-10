@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { FormView } from "@/components/app/form-view";
 import { HallView } from "@/components/app/hall-view";
-import { MyDataPanel } from "@/components/app/privacy-panel";
+import { MyDataPanel, PolicyText } from "@/components/app/privacy-panel";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { sessionsRu } from "@/data/studio";
 
-type Sub = "menu" | "form" | "hall" | "privacy";
+type Sub = "menu" | "form" | "hall" | "privacy" | "policy";
 
 /**
  * Ещё (клиент): короткое меню, без лишних переключателей на первом экране.
@@ -23,6 +23,23 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
   useEffect(() => {
     if (initial) setSub(initial);
   }, [initial]);
+
+  if (sub === "policy") {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setSub("menu")}
+          className="pressable self-start min-h-11 text-sm text-muted-foreground"
+        >
+          ← Ещё
+        </button>
+        <Surface>
+          <PolicyText />
+        </Surface>
+      </div>
+    );
+  }
 
   if (sub === "privacy") {
     return (
@@ -93,6 +110,16 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Форма</p>
             <p className="mt-0.5 text-tiny text-muted-foreground">Шаги, сон, вода, лёгкое движение</p>
+          </div>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Surface>
+      </button>
+
+      <button type="button" className="pressable w-full text-left" onClick={() => setSub("policy")}>
+        <Surface className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Политика конфиденциальности</p>
+            <p className="mt-0.5 text-tiny text-muted-foreground">Какие данные, зачем и кому передаются</p>
           </div>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </Surface>
