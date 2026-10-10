@@ -55,6 +55,7 @@ import {
 import { hapticNotify } from "@/lib/haptics";
 import { withArrival } from "@/lib/studio-visits";
 import { repeatWeekSlots } from "@/lib/studio-repeat";
+import { cancelTxnId } from "@/lib/balance";
 import { applyTelegramIdentity, flushCloudPush, hasUnsyncedChanges, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { mergeBookingFlags, unionIds } from "@/lib/studio-merge";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
@@ -255,6 +256,13 @@ function snap(s: State): PersistShape {
   };
 }
 
+/** With nothing waiting to sync, the server is the only truth for this client's bookings (a refused hold must disappear). */
+function clientBookingsOnPull(local: Booking[], incoming: Booking[], clientIds: string[]) {
+  if (hasUnsyncedChanges()) return ownBookings(local, incoming, clientIds);
+  const ids = new Set(clientIds);
+  return incoming.filter((booking) => ids.has(booking.clientId));
+}
+
 function ownBookings(local: Booking[], incoming: Booking[], clientIds: string[]) {
   const ids = new Set(clientIds);
   return mergeByIdLocal(
@@ -326,9 +334,10 @@ function makeTxn(
   delta: number,
   note: string,
   bookingId?: string,
+  id?: string,
 ): SessionTxn {
   return {
-    id: `tx_${Date.now()}_${kind}_${clientId}`,
+    id: id ?? `tx_${Date.now()}_${kind}_${clientId}`,
     clientId,
     kind,
     delta,
@@ -605,7 +614,7 @@ export const useStudio = create<State>((set, get) => ({
           cloud.role === "client" && next.clients[0]
             ? next.clients[0].id
             : get().activeClientId,
-        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : ownBookings(get().bookings, payload.bookings ?? [], next.clients.map((client) => client.id)),
+        bookings: cloud.role === "trainer" ? payload.bookings ?? [] : clientBookingsOnPull(get().bookings, payload.bookings ?? [], next.clients.map((client) => client.id)),
         food: payload.food,
         dayChecks: payload.dayChecks ?? [],
         lifts: payload.lifts,
@@ -789,7 +798,7 @@ export const useStudio = create<State>((set, get) => ({
     const today = todayIso();
     const starter = buildProgram({ weight: 0, trainDays: [0, 2, 4] }, "shape", "beginner");
     const packTxn = {
-      id: `txn_join_${req.telegramId}`,
+      id: `txn_join_${req.telegramId}_${Date.now()}`,
       clientId: existing?.id ?? `tg_${req.telegramId}`,
       kind: "credit" as const,
       at: new Date().toISOString(),
@@ -1008,16 +1017,18 @@ export const useStudio = create<State>((set, get) => ({
       get().showToast(`У ${client.firstName} нет занятий на балансе.`);
       return false;
     }
+    const bookingId = `bk_${slot.id}_${client.id}`;
+    const hold = makeTxn(client.id, "hold", -1, `Запись ${formatLongDate(slot.date)} ${slot.time}`, bookingId);
     const booking: Booking = {
-      id: `bk_${slot.id}_${client.id}`,
+      id: bookingId,
       slotId: slot.id,
       clientId: client.id,
       date: slot.date,
       time: slot.time,
       duration: slot.duration,
       held: true,
+      holdId: hold.id,
     };
-    const hold = makeTxn(client.id, "hold", -1, `Запись ${formatLongDate(slot.date)} ${slot.time}`, booking.id);
     const left = Math.max(0, (client.sessionsLeft ?? 0) - 1);
     let nextNotices = pushNotice(notices, {
       id: `nt_book_${booking.id}`,
@@ -1289,7 +1300,7 @@ export const useStudio = create<State>((set, get) => ({
 
     if (who && booking.held !== false) {
       if (burn) {
-        const txn = makeTxn(who.id, "burn", 0, `Списание: отмена меньше чем за ${notifyPrefs.windowHours} ч`, booking.id);
+        const txn = makeTxn(who.id, "burn", 0, `Списание: отмена меньше чем за ${notifyPrefs.windowHours} ч`, booking.id, cancelTxnId(booking));
         nextClients = nextClients.map((c) =>
           c.id === who.id
             ? { ...c, lateCancels: (c.lateCancels ?? 0) + 1, ledger: [txn, ...(c.ledger ?? [])].slice(0, 40) }
@@ -1302,6 +1313,7 @@ export const useStudio = create<State>((set, get) => ({
           1,
           actor === "trainer" ? "Возврат: отмена тренером" : "Возврат: отмена заранее",
           booking.id,
+          cancelTxnId(booking),
         );
         nextClients = withTxn(nextClients, txn);
       }
@@ -1347,16 +1359,18 @@ export const useStudio = create<State>((set, get) => ({
       if (pick) {
         const guest = nextClients.find((c) => c.id === pick.clientId);
         if (guest) {
+          const autoId = `bk_${slot.id}_${guest.id}`;
+          const hold = makeTxn(guest.id, "hold", -1, `Автозапись из листа · ${slot.time}`, autoId);
           const auto: Booking = {
-            id: `bk_${slot.id}_${guest.id}`,
+            id: autoId,
             slotId: slot.id,
             clientId: guest.id,
             date: slot.date,
             time: slot.time,
             duration: slot.duration,
             held: true,
+            holdId: hold.id,
           };
-          const hold = makeTxn(guest.id, "hold", -1, `Автозапись из листа · ${slot.time}`, auto.id);
           nextClients = withTxn(nextClients, hold);
           next.push(auto);
           nextWait = waitlist.filter((w) => w.id !== pick.id);

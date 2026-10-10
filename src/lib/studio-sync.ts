@@ -5,6 +5,7 @@ import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { anonymizedIdentity, stampConsent } from "@/lib/privacy";
+import { settleOwned, type Balance } from "@/lib/balance";
 import {
   clientCoach,
   coachKey,
@@ -378,15 +379,31 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     const fresh = myClients.filter((c) => !oldIds.has(c.id));
     myClients = [...kept, ...fresh.slice(0, Math.max(0, COACH_TRIAL_CAP - kept.length))];
   }
-  const others = current.clients.filter((c) => clientCoach(c) !== mine);
-  const clients = [...others, ...myClients];
-  const myIds = new Set(myClients.map((c) => c.id));
   const oldIds = new Set(myOld.map((c) => c.id));
   const oldBookingIds = new Set(current.bookings.filter((b) => oldIds.has(b.clientId)).map((b) => b.id));
   const incomingBookings =
     phase === "paused" || phase === "expired"
       ? (incoming.bookings ?? []).filter((b) => oldBookingIds.has(b.id))
       : incoming.bookings ?? [];
+  const myIds = new Set(myClients.map((c) => c.id));
+  // Balances and bookings of this coach's clients are settled by the server from ledger events.
+  const settled = settleOwned(
+    current,
+    { clients: allowedIncoming, bookings: incomingBookings },
+    new Set([...oldIds, ...myIds]),
+    "trainer",
+    notifyRule(current),
+    Date.now(),
+    (prev, row) => mergeBookingFlags(row, prev),
+  );
+  myClients = myClients.map((c) => {
+    const balance: Balance | undefined = settled.balances.get(c.id);
+    if (!balance) return c;
+    const packExpiresAt = c.packExpiresAt ?? (myOld.find((o) => o.id === c.id)?.packExpiresAt ?? null);
+    return { ...c, ...balance, packExpiresAt };
+  });
+  const others = current.clients.filter((c) => clientCoach(c) !== mine);
+  const clients = [...others, ...myClients];
   const takeMine = <T extends { clientId: string }>(rows: T[], incomingRows: T[]) => [
     ...rows.filter((row) => !oldIds.has(row.clientId)),
     ...incomingRows.filter((row) => myIds.has(row.clientId)),
@@ -405,7 +422,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
   return ensureApprovedClients({
     ...current,
     clients,
-    bookings: takeMine(current.bookings, incomingBookings),
+    bookings: settled.bookings.filter((row) => !oldIds.has(row.clientId) || myIds.has(row.clientId)),
     food: takeMine(current.food, incoming.food ?? []),
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
@@ -526,29 +543,12 @@ function mergeById<T extends { id: string }>(base: T[], incoming: T[]): T[] {
   return [...map.values()];
 }
 
-function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): StudioPayload {
-  const removedClientIds = [...new Set([...(current.removedClientIds ?? []), ...(incoming.removedClientIds ?? [])])];
-  const aliveIncoming = new Set(incoming.clients.flatMap((c) => tombstonesFor(c)));
-  const removed = removedClientIds.filter((id) => !aliveIncoming.has(id));
-  const clients = mergeClients(current.clients, incoming.clients).filter((c) => !isRemovedClient(c, removed));
-  const live = new Set(clients.map((c) => c.id));
-  const merged: StudioPayload = {
-    ...incoming,
-    removedClientIds: removed,
-    clients,
-    bookings: mergeById(current.bookings, incoming.bookings).filter((b) => live.has(b.clientId)),
-    food: mergeById(current.food, incoming.food).filter((f) => live.has(f.clientId)),
-    lifts: mergeById(current.lifts, incoming.lifts).filter((l) => live.has(l.clientId)),
-    notices: mergeById(current.notices, incoming.notices).filter((n) => !n.clientId || live.has(n.clientId) || n.audience === "trainer").slice(0, 40),
-    waitlist: mergeById(current.waitlist, incoming.waitlist).filter((w) => live.has(w.clientId)),
-    workoutLogs: mergeById(current.workoutLogs, incoming.workoutLogs).filter((w) => live.has(w.clientId)),
-    extraSlots: mergeById(current.extraSlots, incoming.extraSlots),
-    closedSlotIds: [...new Set([...current.closedSlotIds, ...incoming.closedSlotIds])],
-    trainerUsername: incoming.trainerUsername || current.trainerUsername,
-    joinRequests: mergeById(current.joinRequests ?? [], incoming.joinRequests ?? []),
-    visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], live),
+/** Late-cancel rule as the trainer configured it. Read from the stored payload, never from a sender. */
+function notifyRule(current: StudioPayload) {
+  return {
+    flagLate: current.notifyPrefs?.flagLate ?? true,
+    windowHours: current.notifyPrefs?.windowHours ?? 2,
   };
-  return ensureApprovedClients(merged);
 }
 
 /** Erasure by the client: identity replaced, personal logs removed, financial rows kept without the name. */
@@ -577,6 +577,21 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
   if (!mine || !incomingSelf) return current;
   if (incomingSelf.erasedAt && !mine.erasedAt) return eraseClientRows(current, mine.id);
   const id = mine.id;
+  // Balance and bookings are settled by the server from ledger events (see lib/balance.ts).
+  const settled = settleOwned(
+    current,
+    incoming,
+    new Set([id]),
+    "client",
+    notifyRule(current),
+    Date.now(),
+    (prev, row) =>
+      mergeBookingFlags(
+        { ...row, reminded24: row.reminded24 || prev.reminded24, reminded2: row.reminded2 || prev.reminded2 },
+        prev,
+      ),
+  );
+  const balance = settled.balances.get(id);
   const nextSelf: Client = {
     ...mine,
     weight: incomingSelf.weight ?? mine.weight,
@@ -585,26 +600,13 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     consent: stampConsent(mine.consent, incomingSelf.consent, new Date().toISOString()),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
-    // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them
     healthToken: incomingSelf.healthToken || mine.healthToken || null,
+    ...(balance ?? {}),
   };
   return {
     ...current,
     clients: current.clients.map((c) => (c.id === id ? nextSelf : c)),
-    bookings: [
-      ...current.bookings.filter((b) => b.clientId !== id),
-      ...incoming.bookings.filter((b) => b.clientId === id).map((row) => {
-        const prev = current.bookings.find((item) => item.id === row.id);
-        return mergeBookingFlags(
-          {
-            ...row,
-            reminded24: row.reminded24 || prev?.reminded24,
-            reminded2: row.reminded2 || prev?.reminded2,
-          },
-          prev,
-        );
-      }),
-    ],
+    bookings: settled.bookings,
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
