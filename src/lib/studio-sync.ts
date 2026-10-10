@@ -4,6 +4,8 @@ import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
 import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
+import { keepClientOwned } from "@/lib/client-owned";
+import { mergeMeasures } from "@/lib/body-measures";
 import { anonymizedIdentity, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
 import {
@@ -397,10 +399,12 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     (prev, row) => mergeBookingFlags(row, prev),
   );
   myClients = myClients.map((c) => {
+    // Client-authored fields (measures, consent, streak...) are never taken from a trainer's copy.
+    const owned = keepClientOwned(myOld.find((o) => o.id === c.id), c);
     const balance: Balance | undefined = settled.balances.get(c.id);
-    if (!balance) return c;
+    if (!balance) return owned;
     const packExpiresAt = c.packExpiresAt ?? (myOld.find((o) => o.id === c.id)?.packExpiresAt ?? null);
-    return { ...c, ...balance, packExpiresAt };
+    return { ...owned, ...balance, packExpiresAt };
   });
   const others = current.clients.filter((c) => clientCoach(c) !== mine);
   const clients = [...others, ...myClients];
@@ -596,7 +600,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     ...mine,
     weight: incomingSelf.weight ?? mine.weight,
     weightHistory: incomingSelf.weightHistory?.length ? incomingSelf.weightHistory : mine.weightHistory,
-    measures: incomingSelf.measures?.length ? incomingSelf.measures : mine.measures ?? [],
+    measures: mergeMeasures(mine.measures, incomingSelf.measures),
     consent: stampConsent(mine.consent, incomingSelf.consent, new Date().toISOString()),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
