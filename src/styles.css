@@ -143,6 +143,42 @@
   }
 }
 
+@keyframes bar-fill {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bar-fill {
+  animation: bar-fill 900ms var(--ease-apple) both;
+}
+
+.sheet-up {
+  animation: sheet-up 320ms var(--ease-apple) both;
+}
+
+.sheet-backdrop {
+  animation: fade-in 220ms ease-out both;
+}
+
 @keyframes glow-breathe {
   0%,
   100% {
@@ -336,6 +372,9 @@
 @media (prefers-reduced-motion: reduce) {
   .stagger-in > *,
   .sheet-in,
+  .sheet-up,
+  .sheet-backdrop,
+  .bar-fill,
   .glow-dot,
   .title-in,
   .scroll-hint {
