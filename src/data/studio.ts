@@ -627,6 +627,8 @@ export type Client = {
   ledger: SessionTxn[];
   /** ids of every balance event already applied on the server (dedupe for sync) */
   txnIds?: string[];
+  /** server-stamped history of consent acceptances and erasures */
+  consentLog?: import("@/lib/privacy").ConsentEvent[];
   frozenUntil?: string | null;
   packExpiresAt?: string | null;
   telegramId?: string | null;

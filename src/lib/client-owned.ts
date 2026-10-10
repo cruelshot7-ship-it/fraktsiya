@@ -14,5 +14,6 @@ export function keepClientOwned(server: Client | undefined, incoming: Client): C
     erasedAt: server.erasedAt ?? null,
     lastReportAt: server.lastReportAt,
     streak: server.streak,
+    consentLog: server.consentLog ?? [],
   };
 }
