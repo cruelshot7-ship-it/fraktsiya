@@ -1,6 +1,7 @@
 import type { BodyMeasure } from "@/lib/body-measures";
 import type { Consent } from "@/lib/privacy";
 import { hoursUntilSlotAt, isLateCancelAt, slotStartMs } from "@/lib/minsk-time";
+import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 export const TRAINER_TG_ID = "8144320404";
 
 export type Coach = {
@@ -80,8 +81,7 @@ export const MONTHS = [
   "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ] as const;
 
-export const WEEKDAY_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
-export const SATURDAY_TIMES: string[] = [];
+export { WEEKDAY_TIMES, SATURDAY_TIMES } from "@/lib/slot-rules";
 
 export const SAMPLE_KBJU_TRAIN: Kbju = { calories: 1750, protein: 135, fat: 55, carbs: 180 };
 export const SAMPLE_KBJU_REST: Kbju = { calories: 1600, protein: 135, fat: 55, carbs: 140 };
@@ -1083,10 +1083,6 @@ export function firstBookableDate() {
   const from = startOfWeek(new Date());
   const next = generateWindow(from, 14).find((s) => !isSlotPast(s.date, s.time));
   return next?.date ?? isoDate(new Date());
-}
-
-function capacityFor(time: string) {
-  return time >= "16:00" ? 3 : 2;
 }
 
 export function generateWindow(from: Date, days = 21): Slot[] {
