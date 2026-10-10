@@ -26,6 +26,11 @@ export function markReminder(bookings: Booking[], id: string, kind: "24" | "2") 
   });
 }
 
+/** Marks every due reminder as sent in one pass. The result is what gets committed before any message goes out. */
+export function claimReminders(bookings: Booking[], due: { id: string; kind: "24" | "2" }[]) {
+  return due.reduce((rows, item) => markReminder(rows, item.id, item.kind), bookings);
+}
+
 export function remindToken(id: string) {
   return id.slice(-16);
 }
