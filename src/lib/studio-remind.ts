@@ -1,10 +1,9 @@
 import type { Booking } from "../data/studio.ts";
+import { slotStartMs } from "./minsk-time.ts";
 
+/** Hours from `now` to the slot in club time (Grodno). Independent of the server's timezone. */
 export function slotHours(date: string, time: string, now: number) {
-  const [hour, minute] = time.split(":").map(Number);
-  const stamp = new Date(`${date}T00:00:00`);
-  stamp.setHours(hour || 0, minute || 0, 0, 0);
-  return (stamp.getTime() - now) / 3_600_000;
+  return (slotStartMs(date, time) - now) / 3_600_000;
 }
 
 export function dueReminders(bookings: Booking[], now: number) {
