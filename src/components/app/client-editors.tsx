@@ -16,6 +16,7 @@ import {
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
+import { addExerciseName } from "@/lib/exercises";
 
 export function Kpi({
   value,
@@ -89,6 +90,8 @@ export function ProgramEditor({
   onSave: (patch: Partial<Client>) => void;
 }) {
   const [draft, setDraft] = useState(client);
+  const [newExercise, setNewExercise] = useState("");
+  const [exerciseError, setExerciseError] = useState<string | null>(null);
   const [goal, setGoal] = useState<BuildGoal>("shape");
   const [preset, setPreset] = useState<ProgramPreset>("beginner");
   return (
@@ -137,6 +140,50 @@ export function ProgramEditor({
         })}
       </div>
       <p className="text-tiny text-muted-foreground">Порядок блоков сверху вниз — это порядок визитов. Буквы в названии дня ни на что не влияют.</p>
+      <SectionLabel>Свои упражнения для рекордов</SectionLabel>
+      <p className="text-tiny text-muted-foreground">Базовые пять есть всегда. Добавьте свои, например «ягодичный мост» — клиент сможет записывать по ним подходы.</p>
+      <div className="flex flex-wrap gap-1">
+        {(draft.exerciseNames ?? []).map((name) => (
+          <span key={name} className="flex h-9 items-center gap-1 rounded-full bg-secondary pl-3 pr-1 text-sm">
+            {name}
+            <button
+              type="button"
+              aria-label={`Убрать ${name}`}
+              className="pressable grid size-7 place-items-center rounded-full text-muted-foreground"
+              onClick={() => setDraft({ ...draft, exerciseNames: (draft.exerciseNames ?? []).filter((x) => x !== name) })}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          className={inputClass}
+          placeholder="Например, ягодичный мост"
+          value={newExercise}
+          onChange={(e) => {
+            setNewExercise(e.target.value);
+            setExerciseError(null);
+          }}
+        />
+        <button
+          type="button"
+          className="pressable h-11 shrink-0 rounded-lg bg-secondary px-4 text-sm"
+          onClick={() => {
+            const res = addExerciseName(draft.exerciseNames ?? [], newExercise);
+            if (!res.ok) {
+              setExerciseError(res.reason);
+              return;
+            }
+            setDraft({ ...draft, exerciseNames: res.list });
+            setNewExercise("");
+          }}
+        >
+          Добавить
+        </button>
+      </div>
+      {exerciseError ? <p className="text-tiny text-destructive">{exerciseError}</p> : null}
       <SectionLabel>Сплит · шаблон</SectionLabel>
       <div className="grid grid-cols-1 gap-1.5">
         {PROGRAM_PRESETS.map((row) => (
@@ -271,6 +318,7 @@ export function ProgramEditor({
             trainDays: draft.trainDays,
             trainTimes: draft.trainTimes,
             sessions: draft.sessions,
+            exerciseNames: draft.exerciseNames ?? [],
           })
         }
       >

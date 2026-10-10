@@ -7,7 +7,6 @@ import {
   dayKbju,
   DOW,
   dowIndex,
-  EXERCISES,
   formatDayMonth,
   hoursUntilSlot,
   isoDate,
@@ -26,6 +25,7 @@ import {
   workoutKcal,
 } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
+import { exerciseOptions, sameExercise } from "@/lib/exercises";
 import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ export function ProgramView() {
   const checks = useStudio((s) => s.checks);
   const workoutLogs = useStudio((s) => s.workoutLogs);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
-  const [exercise, setExercise] = useState("жим");
+  const [exercise, setExercise] = useState<string | null>(null);
   const [kg, setKg] = useState("60");
   const [reps, setReps] = useState("6");
   const [sets, setSets] = useState("4");
@@ -60,15 +60,24 @@ export function ProgramView() {
   const showToast = useStudio((s) => s.showToast);
   const setTab = useStudio((s) => s.setTab);
   const client = activeClient({ clients, activeClientId });
+  const options = useMemo(
+    () =>
+      exerciseOptions({
+        custom: client?.exerciseNames ?? [],
+        historyNames: lifts.filter((l) => l.clientId === client?.id).map((l) => l.exercise),
+      }),
+    [client, lifts],
+  );
+  const current = exercise && options.includes(exercise) ? exercise : (options[0] ?? "жим");
   const myLifts = useMemo(
     () =>
       client
         ? lifts
-            .filter((l) => l.exercise === exercise && l.clientId === client.id)
+            .filter((l) => sameExercise(l.exercise, current) && l.clientId === client.id)
             .sort((a, b) => a.date.localeCompare(b.date))
             .map((l) => ({ date: l.date, exercise: l.exercise, weight: l.weight, reps: l.reps, rir: l.rir }))
         : [],
-    [lifts, exercise, client],
+    [lifts, current, client],
   );
   const series = useMemo(() => {
     const byDay = new Map<string, number>();
@@ -80,7 +89,7 @@ export function ProgramView() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, rm]) => ({ date, label: formatDayMonth(date), rm }));
   }, [myLifts]);
-  const trend = useMemo(() => e1rmTrend(myLifts, exercise), [myLifts, exercise]);
+  const trend = useMemo(() => e1rmTrend(myLifts, current), [myLifts, current]);
   const lastPr = useMemo(() => detectPRs(myLifts).at(-1) ?? null, [myLifts]);
   const unreliableOnly = myLifts.length > 0 && series.length === 0;
   const today = isoDate(new Date());
@@ -461,14 +470,14 @@ export function ProgramView() {
         <SectionLabel>Повторный максимум</SectionLabel>
         <p className="mt-1 text-tiny text-muted-foreground">Считается по весу, повторам и запасу (сколько повторов осталось в баке). Подходы дальше 10 повторов до отказа не учитываются: там формула врёт.</p>
         <div className="mt-3 flex flex-wrap gap-1">
-          {EXERCISES.map((item) => (
+          {options.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setExercise(item)}
               className={cn(
                 "pressable h-9 rounded-full px-3 text-sm",
-                exercise === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                current === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
               {item}
@@ -553,7 +562,7 @@ export function ProgramView() {
                 showToast("Введите вес, повторы и подходы.");
                 return;
               }
-              addLift(exercise, w, r, st, rir ?? undefined);
+              addLift(current, w, r, st, rir ?? undefined);
               setRir(null);
             }}
           >

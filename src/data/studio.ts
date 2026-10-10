@@ -160,8 +160,6 @@ export const DEMO_BARCODES: { code: string; label: string }[] = [
   { code: "2000000000012", label: "Шейк зала" },
 ];
 
-export const EXERCISES = ["жим", "присед", "тяга", "подтягивания", "армейский"] as const;
-
 export const MET: Record<string, number> = {
   бег: 9.8,
   ходьба: 3.5,
@@ -623,6 +621,8 @@ export type Client = {
   consent?: Consent | null;
   erasedAt?: string | null;
   lateCancels?: number;
+  /** trainer-owned: custom exercise names for this client's record block (normalized keys) */
+  exerciseNames?: string[];
   sessionsLeft: number;
   ledger: SessionTxn[];
   /** ids of every balance event already applied on the server (dedupe for sync) */
