@@ -17,7 +17,7 @@ import {
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
-import { newBlockId, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
+import { newBlockId, SIDES, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
 
 export function Kpi({
   value,
@@ -334,7 +334,7 @@ export function ProgramEditor({
 }
 
 function newBlock(): ProgramBlock {
-  return { id: newBlockId(), exercise: "Упражнение", sets: 3, reps: "8-10", load: "", rest: 90, perSide: false, group: null };
+  return { id: newBlockId(), exercise: "Упражнение", sets: 3, reps: "8-10", load: "", rest: 90, side: null, group: null };
 }
 
 function SessionEditor({
@@ -432,9 +432,12 @@ function SessionEditor({
                 </Field>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <ChipToggle on={b.perSide} onClick={() => patch(i, { perSide: !b.perSide })}>
-                  на каждую руку
-                </ChipToggle>
+                <span className="self-center text-tiny text-muted-foreground">на каждую:</span>
+                {[null, ...SIDES].map((side) => (
+                  <ChipToggle key={side ?? "none"} on={b.side === side} onClick={() => patch(i, { side })}>
+                    {side ?? "нет"}
+                  </ChipToggle>
+                ))}
                 {i > 0 ? (
                   <ChipToggle on={sameAsPrev} onClick={() => toggleSuperset(i)}>
                     в суперсет с предыдущим
@@ -453,7 +456,7 @@ function SessionEditor({
         Добавить блок
       </button>
       <p className="mt-2 text-tiny leading-relaxed text-muted-foreground">
-        Блок — это упражнение с подходами и повторами. Вес и отдых необязательны. «на каждую руку» считает обе стороны. Суперсет — блоки подряд с отметкой.
+        Блок — это упражнение с подходами и повторами. Вес и отдых необязательны. «на каждую руку / ногу / сторону» считает обе стороны. Суперсет — блоки подряд с отметкой.
       </p>
     </div>
   );
