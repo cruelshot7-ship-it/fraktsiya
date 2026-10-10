@@ -17,7 +17,7 @@ test("buildMeasure needs at least one field and reports bad values by name", () 
   const bad = buildMeasure("2026-10-10", { waist: "3" });
   assert.equal(bad.ok, false);
   if (!bad.ok) assert.match(bad.reason, /талия/);
-  const good = buildMeasure("2026-10-10", { chest: "100", waist: "82,4", arm: "" });
+  const good = buildMeasure("2026-10-10", { chest: "100", waist: "82,4", armLeft: "" });
   assert.deepEqual(good, { ok: true, measure: { date: "2026-10-10", chest: 100, waist: 82.4 } });
 });
 
@@ -30,13 +30,21 @@ test("upsertMeasure replaces the same day and keeps date order", () => {
   assert.equal(again[1].waist, 83);
 });
 
+test("left and right limbs are separate fields", () => {
+  const row = buildMeasure("2026-10-10", { armLeft: "34", armRight: "35,5", thighLeft: "58", thighRight: "59" });
+  assert.deepEqual(row, { ok: true, measure: { date: "2026-10-10", armLeft: 34, armRight: 35.5, thighLeft: 58, thighRight: 59 } });
+  const bad = buildMeasure("2026-10-10", { thighLeft: "10" });
+  assert.equal(bad.ok, false);
+  if (!bad.ok) assert.match(bad.reason, /левое бедро/);
+});
+
 test("latestValue skips days where the field was not measured", () => {
   const list: BodyMeasure[] = [
-    { date: "2026-10-01", hip: 100, waist: 86 },
-    { date: "2026-10-08", hip: 99 },
+    { date: "2026-10-01", hips: 100, waist: 86 },
+    { date: "2026-10-08", hips: 99 },
   ];
   assert.deepEqual(latestValue(list, "waist"), { value: 86, date: "2026-10-01" });
-  assert.deepEqual(latestValue(list, "hip"), { value: 99, date: "2026-10-08" });
+  assert.deepEqual(latestValue(list, "hips"), { value: 99, date: "2026-10-08" });
   assert.equal(latestValue(list, "chest"), null);
 });
 
