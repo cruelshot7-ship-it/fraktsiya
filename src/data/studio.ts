@@ -1048,14 +1048,10 @@ export function dayRitual(opts: {
 }
 
 export function bookingIcs(booking: { date: string; time: string; duration: number }, title = "Тренировка · Ruksha") {
-  const [h, m] = booking.time.split(":").map(Number);
-  const start = parseISODate(booking.date);
-  start.setHours(h || 0, m || 0, 0, 0);
+  const start = new Date(slotStartMs(booking.date, booking.time));
   const end = new Date(start.getTime() + booking.duration * 60000);
-  const stamp = (d: Date) => {
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
-  };
+  // UTC with Z: the calendar app converts to the phone's zone itself
+  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

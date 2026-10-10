@@ -8,19 +8,19 @@ function booking(id: string, date: string, time: string, extra: Partial<Booking>
 }
 
 test("24h reminder fires once, then the 2h one", () => {
-  const now = Date.parse("2026-09-29T19:00:00");
+  const now = Date.parse("2026-09-29T19:00:00+03:00");
   const row = booking("bk_long_id_abc123xyz890", "2026-09-30", "19:00");
   const first = dueReminders([row], now);
   assert.deepEqual(first, [{ id: row.id, kind: "24" }]);
   const after24 = markReminder([row], row.id, "24");
   assert.equal(dueReminders(after24, now).length, 0);
-  const twoHours = Date.parse("2026-09-30T17:00:00");
+  const twoHours = Date.parse("2026-09-30T17:00:00+03:00");
   const second = dueReminders(after24, twoHours);
   assert.deepEqual(second, [{ id: row.id, kind: "2" }]);
 });
 
 test("past or checked-in bookings stay quiet", () => {
-  const now = Date.parse("2026-09-30T20:00:00");
+  const now = Date.parse("2026-09-30T20:00:00+03:00");
   assert.equal(dueReminders([booking("a", "2026-09-30", "19:00")], now).length, 0);
   assert.equal(dueReminders([booking("b", "2026-09-30", "21:00", { checkedIn: true })], now).length, 0);
 });
@@ -30,4 +30,10 @@ test("callback token finds the booking", () => {
   const token = remindToken(row.id);
   assert.ok(token.length <= 16);
   assert.equal(findByToken([row], token)?.id, row.id);
+});
+
+test("reminder timing is the same in any server timezone (club time is UTC+3)", async () => {
+  const { slotHours } = await import("./studio-remind.ts");
+  // 19:00 club time is 16:00 UTC, whatever zone the code runs in
+  assert.equal(slotHours("2026-09-30", "19:00", Date.parse("2026-09-30T14:00:00Z")), 2);
 });
