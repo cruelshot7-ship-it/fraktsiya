@@ -35,6 +35,8 @@ import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from 
 import { cn } from "@/lib/utils";
 import { detectPRs, e1rm, e1rmTrend, isReliable } from "@/lib/athlete-metrics";
 import { activeLogFor, canUndoWorkout } from "@/lib/workout-undo";
+import { formatMmSs, liftLabel, previousLift, restSecondsLeft } from "@/lib/client-program";
+import { hapticNotify } from "@/lib/haptics";
 import { Check, Flame } from "lucide-react";
 
 export function ProgramView() {
@@ -53,9 +55,10 @@ export function ProgramView() {
   const workoutLogs = useStudio((s) => s.workoutLogs);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
   const [exercise, setExercise] = useState<string | null>(null);
-  const [kg, setKg] = useState("60");
-  const [reps, setReps] = useState("6");
-  const [sets, setSets] = useState("4");
+  // empty on purpose: a default would be saved as a real lift if the client taps without typing
+  const [kg, setKg] = useState("");
+  const [reps, setReps] = useState("");
+  const [sets, setSets] = useState("");
   const [rir, setRir] = useState<number | null>(null);
   const [chartReady, setChartReady] = useState(false);
   const [facts, setFacts] = useState<Record<string, string>>({});
@@ -63,6 +66,8 @@ export function ProgramView() {
   const [showDone, setShowDone] = useState(false);
   // the block ticked last stays in the list until the next tick, so its fact can be typed right away
   const [justDone, setJustDone] = useState<string | null>(null);
+  // rest countdown after a ticked block (client only); the timestamp runs in memory, not saved
+  const [restUntil, setRestUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => setChartReady(true), []);
   const showToast = useStudio((s) => s.showToast);
@@ -120,10 +125,16 @@ export function ProgramView() {
     setStartedAt(raw ? Number(raw) : null);
   }, [startKey]);
   useEffect(() => {
-    if (!startedAt) return;
+    if (!startedAt && !restUntil) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [startedAt]);
+  }, [startedAt, restUntil]);
+  useEffect(() => {
+    if (restUntil && now >= restUntil) {
+      hapticNotify("success");
+      setRestUntil(null);
+    }
+  }, [now, restUntil]);
   if (!client) {
     return <EmptyHint>Программа появится после того, как тренер добавит вас и назначит дни.</EmptyHint>;
   }
@@ -159,6 +170,11 @@ export function ProgramView() {
     ? plan.blocks
     : plan.blocks.filter((b) => !checked.includes(b.id) || b.id === justDone);
   const itemCount = plan.blocks.length;
+  const restLeft = restSecondsLeft(restUntil, now);
+  const lastResult = (exercise: string) => {
+    const prev = previousLift(lifts, client.id, exercise, today);
+    return prev ? liftLabel(prev) : null;
+  };
   const elapsedSec = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const elapsedMin = startedAt ? Math.max(1, Math.round(elapsedSec / 60)) : 0;
   const totals = planTotalsFromBlocks(plan.blocks, checked, factsById);
@@ -200,7 +216,7 @@ export function ProgramView() {
         <div className="mt-3 grid grid-cols-3 gap-1.5">
           <RitualTick on={ritual.hall} label={ritual.restDay ? "отдых" : "зал"} />
           <RitualTick on={ritual.food} label="еда" />
-          <RitualTick on={ritual.report} label="явка" />
+          <RitualTick on={ritual.report} label="визит" />
         </div>
       </Surface>
 
@@ -300,6 +316,20 @@ export function ProgramView() {
               </button>
             ) : null}
           </div>
+          {restLeft > 0 ? (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ok-dim px-3 py-2.5">
+              <p className="text-sm">
+                Отдых <span className="font-display text-lg tabular-nums">{formatMmSs(restLeft)}</span>
+              </p>
+              <button
+                type="button"
+                className="pressable h-9 rounded-lg px-3 text-sm text-muted-foreground"
+                onClick={() => setRestUntil(null)}
+              >
+                Пропустить
+              </button>
+            </div>
+          ) : null}
           {!showDone && plan.blocks.length > 0 && doneCount === plan.blocks.length ? (
             <p className="mt-2 text-sm text-ok">Всё выполнено</p>
           ) : null}
@@ -321,9 +351,13 @@ export function ProgramView() {
                     block={b}
                     on={checked.includes(b.id)}
                     fact={factsById[b.id] ?? ""}
+                    last={lastResult(b.exercise)}
                     readOnly={isTrainer}
                     onToggle={() => {
-                      if (!checked.includes(b.id)) setJustDone(b.id);
+                      if (!checked.includes(b.id)) {
+                        setJustDone(b.id);
+                        if (b.rest) setRestUntil(Date.now() + b.rest * 1000);
+                      }
                       toggleCheck(b.id, legacy);
                     }}
                     onFact={(value) => {
@@ -440,7 +474,7 @@ export function ProgramView() {
 
       {client.sessions.length > 1 ? (
         <div className="flex flex-col gap-2">
-          <SectionLabel>Цикл · строго по порядку визитов</SectionLabel>
+          <SectionLabel>Цикл · по порядку занятий</SectionLabel>
           {client.sessions.map((day, i) => {
             const active = shown?.id === day.id;
             return (
@@ -492,7 +526,7 @@ export function ProgramView() {
         </div>
         <p className="font-display mt-3 text-3xl tabular-nums">
           {series.at(-1)?.rm ?? 0}
-          <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг ПМ</span>
+          <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг · максимум</span>
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {trend.status === "ok"
@@ -517,7 +551,7 @@ export function ProgramView() {
                     fontSize: 12,
                     color: "var(--color-foreground)",
                   }}
-                  formatter={(value) => [`${value} кг`, "ПМ"]}
+                  formatter={(value) => [`${value} кг`, "максимум"]}
                 />
                 <Line type="monotone" dataKey="rm" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
@@ -530,16 +564,16 @@ export function ProgramView() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Field label="Вес, кг">
-            <input className={inputClass} inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />
+            <input className={inputClass} inputMode="decimal" placeholder="60" value={kg} onChange={(e) => setKg(e.target.value)} />
           </Field>
           <Field label="Повторы">
-            <input className={inputClass} inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} />
+            <input className={inputClass} inputMode="numeric" placeholder="8" value={reps} onChange={(e) => setReps(e.target.value)} />
           </Field>
           <Field label="Подходы">
-            <input className={inputClass} inputMode="numeric" value={sets} onChange={(e) => setSets(e.target.value)} />
+            <input className={inputClass} inputMode="numeric" placeholder="3" value={sets} onChange={(e) => setSets(e.target.value)} />
           </Field>
           <div className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
-            <span id="rir-label">Запас (RIR)</span>
+            <span id="rir-label">Повторов в запасе</span>
             <div className="flex gap-1" role="group" aria-labelledby="rir-label">
               {[0, 1, 2, 3].map((v) => (
                 <button
@@ -610,6 +644,7 @@ function BlockRow({
   on,
   fact,
   readOnly,
+  last,
   onToggle,
   onFact,
 }: {
@@ -617,6 +652,8 @@ function BlockRow({
   on: boolean;
   fact: string;
   readOnly: boolean;
+  /** the client's latest result for this exercise, before today */
+  last: string | null;
   onToggle: () => void;
   onFact: (value: string) => void;
 }) {
@@ -633,6 +670,7 @@ function BlockRow({
         <span className="min-w-0 flex-1">
           <span className={cn("block font-medium", on && "line-through opacity-70")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
+          {last ? <span className="mt-0.5 block text-tiny text-primary">в прошлый раз {last}</span> : null}
         </span>
         {readOnly ? (
           <span
