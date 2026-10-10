@@ -3,7 +3,7 @@ import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { getTelegramUser } from "@/lib/telegram";
-import { joinConfirmText } from "@/lib/join-confirm";
+import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
   daysSince,
@@ -182,7 +182,9 @@ export function TodayView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-secondary text-sm"
-                    onClick={() => rejectJoin(req.id)}
+                    onClick={() => {
+                      if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                    }}
                   >
                     Отклонить
                   </button>

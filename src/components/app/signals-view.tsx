@@ -9,7 +9,7 @@ import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
-import { joinConfirmText } from "@/lib/join-confirm";
+import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 
 type Pane = "tasks" | "settings" | "tools";
 
@@ -27,6 +27,7 @@ export function SignalsView() {
   const setTab = useStudio((s) => s.setTab);
   const selectDay = useStudio((s) => s.selectDay);
   const bookings = useStudio((s) => s.bookings);
+  const slots = useStudio((s) => s.slots);
   const joinRequests = useStudio((s) => s.joinRequests);
   const approveJoin = useStudio((s) => s.approveJoin);
   const rejectJoin = useStudio((s) => s.rejectJoin);
@@ -36,6 +37,13 @@ export function SignalsView() {
     .filter((n) => n.audience === "trainer" && n.kind !== "join" && !dismissed.includes(n.id))
     .sort((a, b) => b.at.localeCompare(a.at));
   const openCount = pending.length + items.length;
+
+  // the day a signal is about: its own slot when it names one, else the client's nearest booking
+  const dayOf = (item: (typeof items)[number]) => {
+    const slot = item.slotId ? slots.find((x) => x.id === item.slotId) : undefined;
+    if (slot) return slot.date;
+    return bookings.find((b) => b.clientId === item.clientId && !b.noShow)?.date;
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -91,7 +99,9 @@ export function SignalsView() {
                 <button
                   type="button"
                   className="pressable h-11 rounded-xl bg-secondary text-sm"
-                  onClick={() => rejectJoin(req.id)}
+                  onClick={() => {
+                    if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                  }}
                 >
                   Отклонить
                 </button>
@@ -116,16 +126,16 @@ export function SignalsView() {
                   onOpen={() => {
                     if (item.clientId) openClientSheet(item.clientId);
                     if (item.kind === "book" || item.kind === "cancel" || item.kind === "checkin") {
-                      const row = bookings.find((b) => b.clientId === item.clientId && !b.noShow);
-                      if (row) selectDay(row.date);
+                      const day = dayOf(item);
+                      if (day) selectDay(day);
                     }
                   }}
                   onDismiss={() => dismissSignal(item.id)}
                   onOffer={
                     item.kind === "cancel" || item.kind === "book"
                       ? () => {
-                          const next = bookings.find((b) => b.clientId === item.clientId);
-                          if (next) selectDay(next.date);
+                          const day = dayOf(item);
+                          if (day) selectDay(day);
                           setTab("slots");
                         }
                       : undefined

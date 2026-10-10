@@ -35,7 +35,7 @@ import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } 
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
-import { joinConfirmText } from "@/lib/join-confirm";
+import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { coachTierLine } from "@/lib/coach-tier";
 
 export function ClientsView() {
@@ -169,7 +169,13 @@ export function ClientsView() {
                   >
                     Принять
                   </button>
-                  <button type="button" className="pressable h-11 rounded-xl bg-secondary text-sm" onClick={() => rejectJoin(req.id)}>
+                  <button
+                    type="button"
+                    className="pressable h-11 rounded-xl bg-secondary text-sm"
+                    onClick={() => {
+                      if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                    }}
+                  >
                     Отклонить
                   </button>
                 </div>
