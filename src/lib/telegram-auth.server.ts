@@ -19,6 +19,9 @@ function trainerId() {
   return env("TRAINER_TG_ID") || TRAINER_TG_ID;
 }
 
+/** initData живёт, пока открыто приложение. Сутки — компромисс между удобством и повтором старой подписи. */
+export const INIT_DATA_MAX_AGE_SEC = 60 * 60 * 24;
+
 export function verifyTelegramInitData(initData: string | undefined): TelegramSession | null {
   const botToken = env("BOT_TOKEN");
   const raw = (initData ?? "").trim();
@@ -41,7 +44,7 @@ export function verifyTelegramInitData(initData: string | undefined): TelegramSe
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
   const authDate = Number(params.get("auth_date") || 0);
-  if (!authDate || Math.abs(Date.now() / 1000 - authDate) > 86400 * 2) return null;
+  if (!authDate || Math.abs(Date.now() / 1000 - authDate) > INIT_DATA_MAX_AGE_SEC) return null;
 
   let parsed: { id?: number; first_name?: string; last_name?: string; username?: string };
   try {

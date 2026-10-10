@@ -55,7 +55,6 @@ export function coachKey(id: string | null | undefined) {
 export function clientCoach(client: { coachId?: string | null }) {
   return coachKey(client.coachId);
 }
-export const INVITE_CODE = "erjoin";
 export const BOT_USERNAME = "ruksha_discipline_bot";
 
 export const STUDIO = {

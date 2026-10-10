@@ -3,11 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/telegram")({
   server: {
     handlers: {
-      GET: async () => {
-  const { ensureBotHook } = await import("@/lib/telegram-bot.server");
-  const ok = await ensureBotHook();
-  return Response.json({ ok, hook: "set" });
-},
       POST: async ({ request }) => {
         const { env } = await import("@/lib/env.server");
         const { handleTelegramUpdate, webhookSecret } = await import("@/lib/telegram-bot.server");
