@@ -26,8 +26,28 @@ async function tg(tok: string, method: string, body?: FormData | Record<string, 
 
 async function readFileId(tok: string): Promise<string | null> {
   const res = await tg(tok, "getMyCommands", { language_code: CMD_LANG });
+  // a refused call is not "no copy": the caller must see the failure, not an empty state
+  if (!res.ok) throw new Error(`telegram getMyCommands: ${res.description ?? "failed"}`);
   const desc = res.result?.[0]?.description as string | undefined;
   return desc?.trim() || null;
+}
+
+/**
+ * The Telegram copy, read strictly: null only when no copy was ever written.
+ * Any failure throws, so a missing copy cannot be mistaken for an empty studio.
+ */
+export async function loadRemoteStrict(): Promise<StudioPayload | null> {
+  const tok = await token();
+  if (!tok) return null;
+  const fileId = await readFileId(tok);
+  if (!fileId) return null;
+  const file = await tg(tok, "getFile", { file_id: fileId });
+  if (!file.ok) throw new Error(`telegram getFile: ${file.description ?? "failed"}`);
+  const path = file.result?.file_path as string | undefined;
+  if (!path) throw new Error("telegram getFile: no file_path");
+  const raw = await fetch(`https://api.telegram.org/file/bot${tok}/${path}`);
+  if (!raw.ok) throw new Error(`telegram file download: ${raw.status}`);
+  return (await raw.json()) as StudioPayload;
 }
 
 export async function loadRemote(): Promise<StudioPayload | null> {

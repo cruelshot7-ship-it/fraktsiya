@@ -102,15 +102,10 @@ export async function registerJoin(
     lastName: string;
     username: string | null;
   },
-  offer?: { message: string; slotId?: string; goal?: string; pack?: string; coachId?: string },
+  offer?: { message: string; slotId?: string; goal?: string; pack?: string; coachId?: string; consent?: { version: string; at: string } },
 ) {
   const message = (offer?.message ?? "").trim().slice(0, 500);
-  let payload = emptyPayload();
-  try {
-    payload = await loadStudioState();
-  } catch {
-    payload = emptyPayload();
-  }
+  let payload = await loadStudioState();
   const uname = (user.username ?? "").replace(/^@/, "").trim().toLowerCase();
   const inHall = payload.clients.some(
     (c) =>
@@ -143,6 +138,7 @@ export async function registerJoin(
     goal: offer?.goal,
     pack: offer?.pack,
     coachId,
+    consent: offer?.consent,
     at: hoursAgoIso(0),
     status: "pending",
   };
@@ -169,12 +165,7 @@ export async function registerJoin(
 }
 
 export async function decideJoin(telegramId: string, approve: boolean) {
-  let payload = emptyPayload();
-  try {
-    payload = await loadStudioState();
-  } catch {
-    payload = emptyPayload();
-  }
+  let payload = await loadStudioState();
   const req = (payload.joinRequests ?? []).find((r) => r.telegramId === telegramId);
   if (approve) {
     const uname = (req?.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase();
@@ -296,12 +287,7 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       return;
     }
     if ((action === "y" || action === "m") && id) {
-      let payload = emptyPayload();
-      try {
-        payload = await loadStudioState();
-      } catch {
-        payload = emptyPayload();
-      }
+      let payload = await loadStudioState();
       const booking = findByToken(payload.bookings, id);
       const fromId = String(cb.from.id);
       const client = booking ? payload.clients.find((row) => row.id === booking.clientId) : undefined;
@@ -339,12 +325,7 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       return;
     }
     if ((action === "ok" || action === "no") && id) {
-      let payload = emptyPayload();
-      try {
-        payload = await loadStudioState();
-      } catch {
-        payload = emptyPayload();
-      }
+      let payload = await loadStudioState();
       const req = (payload.joinRequests ?? []).find((r) => r.telegramId === id);
       const fromId = String(cb.from.id);
       if (!req?.coachId || fromId !== req.coachId) {
