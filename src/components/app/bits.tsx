@@ -47,6 +47,23 @@ export function Surface({
   );
 }
 
+/** Bottom sheet: dims the screen, closes on a tap outside, slides up from the bottom edge. */
+export function BottomSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <button type="button" tabIndex={-1} aria-label="Закрыть" onClick={onClose} className="sheet-backdrop absolute inset-0 bg-black/60" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="sheet-up relative mx-auto flex h-[92dvh] w-full max-w-app flex-col overflow-hidden rounded-t-[1.375rem] border border-b-0 border-border bg-background pb-[var(--inset-bottom)]"
+      >
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden="true" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function Field({
   label,
   children,
@@ -129,10 +146,8 @@ export function ProgressRail({
     <div className="h-1.5 overflow-hidden rounded-full bg-secondary/80">
       <span
         className={cn(
-          "block h-full rounded-full transition-[width] duration-700 ease-out",
-          tone === "alert"
-            ? "bg-primary shadow-[0_0_12px_rgb(221_51_42_/0.35)]"
-            : "bg-ok shadow-[0_0_12px_rgb(69_212_228_/0.35)]",
+          "bar-fill block h-full rounded-full",
+          tone === "alert" ? "bg-primary" : "bg-ok",
         )}
         style={{ width: `${pct}%` }}
       />
@@ -186,11 +201,11 @@ export function KbjuMacroRing({
       ? "var(--color-ok)"
       : "var(--color-primary)";
   const glow = over
-    ? "0 0 14px rgb(221 51 42 / 0.4)"
+    ? "0 0 14px rgb(232 56 47 / 0.4)"
     : complete
-      ? "0 0 14px rgb(139 207 163 / 0.4)"
+      ? "0 0 14px rgb(69 212 228 / 0.4)"
       : ratio > 0
-        ? "0 0 10px rgb(221 51 42 / 0.22)"
+        ? "0 0 10px rgb(232 56 47 / 0.22)"
         : "none";
 
   return (

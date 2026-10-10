@@ -135,8 +135,8 @@ export function initTelegram() {
   try {
     tg.ready();
     tg.expand();
-    tg.setHeaderColor?.("#131211");
-    tg.setBackgroundColor?.("#131211");
+    tg.setHeaderColor?.("#15171b");
+    tg.setBackgroundColor?.("#15171b");
     const apply = () => {
       const h = tg.viewportStableHeight || tg.viewportHeight;
       if (h) document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);

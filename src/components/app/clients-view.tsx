@@ -32,7 +32,7 @@ import {
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { openPhone, openTelegramUrl, openTrainerChat, inviteUrl, getTelegramUser } from "@/lib/telegram";
-import { Avatar, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
+import { Avatar, BottomSheet, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
@@ -628,11 +628,9 @@ export function ClientSheet() {
   const client = clients.find((c) => c.id === sheetClientId);
   if (!client) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <div className="ambient-glow flex min-h-0 flex-1 flex-col">
-        <ClientSheetBody client={client} onClose={() => openClientSheet(null)} />
-      </div>
-    </div>
+    <BottomSheet onClose={() => openClientSheet(null)}>
+      <ClientSheetBody client={client} onClose={() => openClientSheet(null)} />
+    </BottomSheet>
   );
 }
 

@@ -194,7 +194,7 @@ export function MiniApp() {
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div>
-                  <h1 key={title} className="title-in font-display text-4xl leading-none tracking-wide">{title}</h1>
+                  <h1 key={title} className="title-in title-grad font-display text-4xl leading-none tracking-wide">{title}</h1>
                   <SyncStatusChip className="mt-1" />
                 </div>
               </div>
@@ -205,10 +205,10 @@ export function MiniApp() {
                 <BrandLockup />
                 <div className="flex items-center gap-1.5">
                   {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
-                  <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-full bg-ok-dim text-ok" aria-label="Написать тренеру">
+                  <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-ok-dim text-ok" aria-label="Написать тренеру">
                     <MessageCircle className="size-4" />
                   </button>
-                  <button type="button" onClick={() => setInboxOpen(true)} className="pressable relative grid size-11 place-items-center rounded-full bg-secondary text-muted-foreground" aria-label="Уведомления">
+                  <button type="button" onClick={() => setInboxOpen(true)} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-secondary text-muted-foreground" aria-label="Уведомления">
                     <Bell className="size-4" />
                     {clientInbox.length > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
                   </button>
@@ -216,7 +216,7 @@ export function MiniApp() {
               </div>
               {inviteBlocked ? null : (
               <>
-              <h1 key={title} className="title-in font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
+              <h1 key={title} className="title-in title-grad font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
               <SyncStatusChip className="mt-1" quietWhenOk />
               <p className="mt-1.5 text-tiny text-muted-foreground">
                 {!client
@@ -291,7 +291,7 @@ export function MiniApp() {
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-foreground" : "text-muted-foreground",
                     )} aria-current={active ? "page" : undefined}>
-                    {active ? <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" /> : null}
+                    {active ? <span className="absolute top-0 h-[3px] w-7 rounded-b-[3px] bg-primary" /> : null}
                     <span className="relative">
                       <Icon className="size-5" />
                       {badge > 0 ? (
