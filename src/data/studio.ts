@@ -621,6 +621,8 @@ export type Client = {
   programWeeks: number;
   programStart: string;
   sessions: ProgramSession[];
+  /** trainer-owned: when the program was last imported from the bot; an older copy never overwrites it */
+  programAt?: string | null;
   trainDays: number[];
   trainTimes: string[];
   lastReportAt: string | null;
