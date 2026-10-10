@@ -131,7 +131,7 @@ export function HallView() {
             onClick={() => setMachine(item)}
             className="pressable rounded-xl bg-card px-3 py-3 text-left shadow-border"
           >
-            <span className="text-2xs tracking-wide text-muted-foreground uppercase">{item.zone}</span>
+            <span className="text-2xs tracking-wide text-muted-foreground ">{item.zone}</span>
             <span className="font-display mt-1 block text-sm">{item.name}</span>
           </button>
         ))}
@@ -168,7 +168,7 @@ function Drill({
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-2xs tracking-wide text-muted-foreground uppercase">Частые ошибки</p>
+        <p className="mt-3 text-2xs tracking-wide text-muted-foreground ">Частые ошибки</p>
         <ul className="mt-1.5 space-y-1 text-sm text-muted-foreground">
           {exercise.mistakes.map((m) => (
             <li key={m}>— {m}</li>

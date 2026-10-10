@@ -87,17 +87,17 @@ export function TodayView() {
         <div className="grid grid-cols-3 gap-2">
           <button type="button" className="pressable text-left" onClick={() => setTab("bookings")}>
             <Surface glow={upcomingToday.length ? "ok" : undefined} className="h-full">
-              <p className="text-2xs tracking-wide text-muted-foreground uppercase">Ещё сегодня</p>
+              <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Ещё сегодня</p>
               <p className="mt-1 font-display text-2xl tabular-nums leading-none">{upcomingToday.length}</p>
             </Surface>
           </button>
           <Surface glow={needMark.length ? "alert" : undefined} className="h-full">
-            <p className="text-2xs tracking-wide text-muted-foreground uppercase">Без явки</p>
+            <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Без явки</p>
             <p className="mt-1 font-display text-2xl tabular-nums leading-none">{needMark.length}</p>
           </Surface>
           <button type="button" className="pressable text-left" onClick={() => setTab("signals")}>
             <Surface glow={pendingJoins.length ? "alert" : undefined} className="h-full">
-              <p className="text-2xs tracking-wide text-muted-foreground uppercase">Заявки</p>
+              <p className="min-h-9 text-2xs tracking-wide text-muted-foreground ">Заявки</p>
               <p className="mt-1 font-display text-2xl tabular-nums leading-none">{pendingJoins.length}</p>
             </Surface>
           </button>
@@ -105,7 +105,7 @@ export function TodayView() {
 
         {needMark.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+            <p className="text-2xs font-medium tracking-wide text-muted-foreground ">
               Отметить явку · {needMark.length}
             </p>
             {needMark.map((b) => {
@@ -159,7 +159,7 @@ export function TodayView() {
 
         {pendingJoins.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+            <p className="text-2xs font-medium tracking-wide text-muted-foreground ">
               Заявки в зал · {pendingJoins.length}
             </p>
             {pendingJoins.slice(0, 5).map((req) => (
@@ -198,7 +198,7 @@ export function TodayView() {
 
         {attention.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+            <p className="text-2xs font-medium tracking-wide text-muted-foreground ">
               Внимание · {attention.length}
             </p>
             {attention.slice(0, 5).map((c) => {
@@ -273,8 +273,8 @@ export function TodayView() {
 
       {me ? (
         <Surface glow={lowPack ? "alert" : "ok"}>
-          <p className="text-2xs tracking-wide text-muted-foreground uppercase">Баланс</p>
-          <p className="mt-1 font-display text-2xl tabular-nums leading-none">
+          <p className="text-2xs tracking-wide text-muted-foreground ">Баланс</p>
+          <p className="display-num mt-2">
             {me.sessionsLeft ?? 0}
             <span className="ml-2 text-sm font-sans font-normal text-muted-foreground">
               {sessionsRu(me.sessionsLeft ?? 0)}
@@ -291,7 +291,7 @@ export function TodayView() {
       )}
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">1 · Запись</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">1 · Запись</p>
         {next && isToday ? (
           <Surface glow="ok">
             <p className="font-display text-xl leading-tight">Сегодня · {next.time}</p>
@@ -342,11 +342,11 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">2 · Тренировка</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">2 · Тренировка</p>
         {isToday || afterSession ? (
           <button type="button" className="pressable w-full text-left" onClick={() => setTab("program")}>
             <Surface glow="ok" className="border border-ok/30">
-              <p className="text-2xs tracking-wide text-ok uppercase">
+              <p className="text-2xs tracking-wide text-ok ">
                 {afterSession ? "После слота" : "Сейчас"}
               </p>
               <p className="mt-1 font-display text-lg leading-tight">
@@ -377,7 +377,7 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">3 · Еда</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">3 · Еда</p>
         {visit?.eatenToday ? (
           <Surface>
             <p className="text-sm">Сегодня уже есть запись по еде</p>

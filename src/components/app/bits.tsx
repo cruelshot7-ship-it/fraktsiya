@@ -17,7 +17,7 @@ export function Toast({ message }: { message: string | null }) {
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="font-display text-xs tracking-[0.1em] text-muted-foreground uppercase">
+    <p className="font-display text-lg leading-tight font-medium text-foreground">
       {children}
     </p>
   );
@@ -188,7 +188,7 @@ export function KbjuMacroRing({
   const glow = over
     ? "0 0 14px rgb(221 51 42 / 0.4)"
     : complete
-      ? "0 0 14px rgb(69 212 228 / 0.4)"
+      ? "0 0 14px rgb(139 207 163 / 0.4)"
       : ratio > 0
         ? "0 0 10px rgb(221 51 42 / 0.22)"
         : "none";
@@ -234,7 +234,7 @@ export function KbjuMacroRing({
       ) : (
         <span className="text-3xs text-muted-foreground">факт</span>
       )}
-      <span className="text-2xs tracking-wide text-muted-foreground uppercase">{label}</span>
+      <span className="text-2xs tracking-wide text-muted-foreground ">{label}</span>
     </button>
   );
 }

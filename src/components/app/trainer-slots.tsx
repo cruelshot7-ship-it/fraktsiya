@@ -69,7 +69,7 @@ export function TrainerSlots() {
         <button type="button" disabled={!canPrev} onClick={() => shiftWeek(-1)} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border disabled:opacity-30">
           ‹
         </button>
-        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground uppercase">Слоты · неделя</p>
+        <p className="font-display text-sm tracking-[0.06em] text-muted-foreground ">Слоты · неделя</p>
         <button type="button" onClick={() => shiftWeek(1)} className="grid size-8 place-items-center rounded-lg bg-card text-base shadow-border">
           ›
         </button>
@@ -104,7 +104,7 @@ export function TrainerSlots() {
       </div>
 
       <div className="mb-3 rounded-xl bg-card px-4 py-3 shadow-border">
-        <p className="text-tiny tracking-[0.08em] text-muted-foreground uppercase">Записи на неделю</p>
+        <p className="text-tiny tracking-[0.08em] text-muted-foreground ">Записи на неделю</p>
         <div className="mt-2 flex flex-col gap-1.5">
           {days.map((day) => {
             const rows = bookings
@@ -239,7 +239,7 @@ export function TrainerSlots() {
 
       {adding ? (
         <div className="mt-3 rounded-xl bg-card p-4 shadow-border">
-          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground uppercase">Новый слот</p>
+          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground ">Новый слот</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {SLOT_TIMES.map((t) => (
               <button

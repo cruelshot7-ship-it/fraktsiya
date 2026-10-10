@@ -437,7 +437,7 @@ export function ClientsView() {
 
       {adding ? (
         <div className="rounded-xl bg-card p-4 shadow-border">
-          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground uppercase">Новый клиент</p>
+          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground ">Новый клиент</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Field label="Имя">
               <input className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Анна" />

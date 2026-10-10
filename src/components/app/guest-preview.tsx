@@ -137,7 +137,7 @@ export function OfferLanding({ live }: { live: boolean }) {
                     offer.id === pack.id ? "glow-ok bg-ok-dim" : "bg-card",
                   )}
                 >
-                  <p className="text-3xs tracking-wide text-muted-foreground uppercase">{offer.title}</p>
+                  <p className="text-3xs tracking-wide text-muted-foreground ">{offer.title}</p>
                   <p className="font-display mt-1 text-2xl leading-none">
                     {offer.price}
                     <span className="ml-0.5 text-xs">{offer.unit}</span>

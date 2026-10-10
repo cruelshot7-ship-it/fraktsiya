@@ -343,7 +343,7 @@ export function ProgramView() {
                 )}
               >
                 {card.length > 1 ? (
-                  <p className="px-2 pt-1 text-2xs uppercase tracking-wide text-primary">Суперсет</p>
+                  <p className="px-2 pt-1 text-2xs  tracking-wide text-primary">Суперсет</p>
                 ) : null}
                 {card.map((b) => (
                   <BlockRow

@@ -78,7 +78,7 @@ export function ClientSlots() {
         }}
       />
 
-      <p className="font-display mb-2.5 text-xs tracking-[0.08em] text-muted-foreground uppercase">
+      <p className="font-display mb-2.5 text-xs tracking-[0.08em] text-muted-foreground ">
         {formatDayMonth(selectedDate)}
         {me.trainDays.includes((parseISODate(selectedDate).getDay() + 6) % 7) ? ` · день ${me.firstName}` : ""}
       </p>

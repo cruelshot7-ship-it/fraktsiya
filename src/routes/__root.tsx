@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         name: "description",
         content: "Ruksha Discipline — запись на тренировки, программа, КБЖУ и дисциплина зала.",
       },
-      { name: "theme-color", content: "#15171b" },
+      { name: "theme-color", content: "#131211" },
       { name: "color-scheme", content: "dark" },
       { name: "application-name", content: APP_NAME },
       { name: "apple-mobile-web-app-capable", content: "yes" },

@@ -10,6 +10,9 @@ export type TelegramUser = {
   username?: string;
 };
 
+/** Bot API 8.0: insets in CSS px. safeAreaInset is the device (notch), contentSafeAreaInset Telegram's own bars. */
+export type SafeInset = { top?: number; bottom?: number; left?: number; right?: number };
+
 export type TelegramWebApp = {
   ready: () => void;
   expand: () => void;
@@ -34,6 +37,8 @@ export type TelegramWebApp = {
   showScanQrPopup?: (params: { text?: string }, cb: (text: string) => void) => void;
   /** Bot API 6.2+: Telegram's own yes/no dialog. */
   showConfirm?: (message: string, cb: (ok: boolean) => void) => void;
+  safeAreaInset?: SafeInset;
+  contentSafeAreaInset?: SafeInset;
   closeScanQrPopup?: () => void;
 };
 
@@ -130,14 +135,27 @@ export function initTelegram() {
   try {
     tg.ready();
     tg.expand();
-    tg.setHeaderColor?.("#141310");
-    tg.setBackgroundColor?.("#141310");
+    tg.setHeaderColor?.("#131211");
+    tg.setBackgroundColor?.("#131211");
     const apply = () => {
       const h = tg.viewportStableHeight || tg.viewportHeight;
       if (h) document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);
     };
     apply();
     tg.onEvent?.("viewportChanged", apply);
+    // notch and Telegram's bars: the layout reads them as --inset-* (see styles.css)
+    const applyInsets = () => {
+      const s = tg.safeAreaInset ?? {};
+      const c = tg.contentSafeAreaInset ?? {};
+      const style = document.documentElement.style;
+      style.setProperty("--tg-inset-top", `${(s.top ?? 0) + (c.top ?? 0)}px`);
+      style.setProperty("--tg-inset-bottom", `${(s.bottom ?? 0) + (c.bottom ?? 0)}px`);
+      style.setProperty("--tg-inset-left", `${(s.left ?? 0) + (c.left ?? 0)}px`);
+      style.setProperty("--tg-inset-right", `${(s.right ?? 0) + (c.right ?? 0)}px`);
+    };
+    applyInsets();
+    tg.onEvent?.("safeAreaChanged", applyInsets);
+    tg.onEvent?.("contentSafeAreaChanged", applyInsets);
   } catch {
     /* older Telegram WebViews omit some methods */
   }
