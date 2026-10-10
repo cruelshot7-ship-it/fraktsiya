@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { applyOfferBooking, BOT_USERNAME, clientCoach, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
+import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { dueReminders, findByToken, markReminder, remindToken } from "@/lib/studio-remind";
 import { dropTombstones, emptyPayload, loadStudioState, saveStudioState } from "@/lib/studio-sync";
+import { buildSessions, findClients, parseImportCommand, splitDays, type ImportCommand } from "@/lib/program-import";
 
 const APP_URL = "https://ruksha.vercel.app";
 
@@ -332,9 +333,14 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       await ensureBotHook();
       await tg("sendMessage", {
         chat_id: from.id,
-        text: "Кабинет тренера.",
+        text: "Кабинет тренера.\nПрограмму клиенту пришлите так: /program Имя, с новой строки упражнения. День A, День B — отдельные дни.",
         reply_markup: webAppKeyboard("Открыть кабинет"),
       });
+      return;
+    }
+    const cmd = parseImportCommand(text);
+    if (cmd) {
+      await tg("sendMessage", { chat_id: from.id, text: await importProgramFromChat(id, cmd) });
     }
     return;
   }
@@ -346,6 +352,57 @@ export async function handleTelegramUpdate(update: TgUpdate) {
       reply_markup: webAppKeyboard("Выбрать время"),
     });
   }
+}
+
+/** Writes a program the trainer sent in chat to one of their clients. Replaces the client's days. */
+async function importProgramFromChat(coachId: string, cmd: ImportCommand): Promise<string> {
+  if (!cmd.ok) return cmd.error;
+  let payload = emptyPayload();
+  try {
+    payload = await loadStudioState();
+  } catch {
+    return "Не удалось открыть данные. Программа не записана, попробуйте ещё раз.";
+  }
+  const mine = coachKey(coachId);
+  const row = (payload.coaches ?? []).find((c) => c.telegramId === mine);
+  const phase = mine === String(TRAINER_TG_ID) ? "paid" : row ? coachPhase(row) : "expired";
+  if (phase !== "trial" && phase !== "paid") return "Пробный доступ закончился. Программы сейчас не записываются.";
+
+  const found = findClients(
+    payload.clients.filter((c) => clientCoach(c) === mine),
+    cmd.query,
+  );
+  if (found.length === 0) return `Клиент «${cmd.query}» не найден среди ваших. Укажите имя или @ник как в карточке.`;
+  if (found.length > 1) {
+    const names = found.slice(0, 5).map((c) => `${c.firstName} ${c.lastName}`.trim()).join(", ");
+    return `Под «${cmd.query}» подходят: ${names}. Уточните имя или напишите @ник.`;
+  }
+  const target = found[0];
+
+  const split = splitDays(cmd.body);
+  if (!split.ok) return split.error;
+  const { sessions, warnings } = buildSessions(split.days);
+  const now = new Date().toISOString();
+  const next = {
+    ...payload,
+    clients: payload.clients.map((c) => (c.id === target.id ? { ...c, sessions, programAt: now } : c)),
+  };
+  try {
+    await saveStudioState(next);
+  } catch (err) {
+    console.error("[program-import]", err);
+    return "Не сохранилось, программа не записана. Попробуйте ещё раз.";
+  }
+  const exercises = sessions.reduce((n, s) => n + s.blocks.length, 0);
+  const lines = sessions.map((s) => `${s.name}: ${s.blocks.length} упр.`);
+  const who = `${target.firstName} ${target.lastName}`.trim();
+  return [
+    `Программа «${who}» записана: ${sessions.length} дн., ${exercises} упр.`,
+    ...lines,
+    ...(warnings.length ? ["", ...warnings.map((w) => `⚠ ${w}`)] : []),
+    "",
+    "Прежняя программа заменена. Проверьте в кабинете.",
+  ].join("\n");
 }
 
 export async function sendTrainerNote(

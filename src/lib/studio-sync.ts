@@ -5,6 +5,7 @@ import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
+import { programFor } from "@/lib/program-import";
 import { mergeMeasures } from "@/lib/body-measures";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
@@ -399,11 +400,14 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     (prev, row) => mergeBookingFlags(row, prev),
   );
   myClients = myClients.map((c) => {
+    const prev = myOld.find((o) => o.id === c.id);
+    // A program imported from the bot after the trainer's copy was read is not overwritten by it.
+    const program = programFor(prev, { sessions: c.sessions, programAt: c.programAt });
     // Client-authored fields (measures, consent, streak...) are never taken from a trainer's copy.
-    const owned = keepClientOwned(myOld.find((o) => o.id === c.id), c);
+    const owned = keepClientOwned(prev, { ...c, ...program });
     const balance: Balance | undefined = settled.balances.get(c.id);
     if (!balance) return owned;
-    const packExpiresAt = c.packExpiresAt ?? (myOld.find((o) => o.id === c.id)?.packExpiresAt ?? null);
+    const packExpiresAt = c.packExpiresAt ?? (prev?.packExpiresAt ?? null);
     return { ...owned, ...balance, packExpiresAt };
   });
   const others = current.clients.filter((c) => clientCoach(c) !== mine);
