@@ -1,6 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildSessions, findClients, parseImportCommand, programFor, splitDays, type DayText } from "./program-import.ts";
+import {
+  buildSessions,
+  findClients,
+  parseImportCommand,
+  PROGRAM_EXAMPLE,
+  programCommandFromReply,
+  programFor,
+  splitDays,
+  trainerCabinetText,
+  type DayText,
+} from "./program-import.ts";
 
 function daysOf(body: string): DayText[] {
   const r = splitDays(body);
@@ -113,4 +123,26 @@ test("stamp: a copy read after the import passes, and so does a client with no s
   assert.deepEqual(programFor(old, fresh).sessions, ["edited"]);
   assert.deepEqual(programFor({ sessions: ["x"] }, { sessions: ["y"] }).sessions, ["y"]);
   assert.deepEqual(programFor(undefined, { sessions: ["new"] }), { sessions: ["new"], programAt: null });
+});
+
+test("cabinet text: the example in the explanation parses to two days and three exercises", () => {
+  const cmd = parseImportCommand(PROGRAM_EXAMPLE);
+  assert.ok(cmd && cmd.ok);
+  if (!cmd || !cmd.ok) return;
+  assert.equal(cmd.query, "Елена");
+  const split = splitDays(cmd.body);
+  assert.ok(split.ok);
+  if (!split.ok) return;
+  const { sessions, warnings } = buildSessions(split.days);
+  assert.equal(sessions.length, 2);
+  assert.equal(sessions.reduce((n, s) => n + s.blocks.length, 0), 3);
+  assert.deepEqual(warnings, []);
+  assert.ok(trainerCabinetText().includes(PROGRAM_EXAMPLE));
+});
+
+test("reply to the prompt: name first line becomes a /program command; a typed command is kept", () => {
+  assert.equal(programCommandFromReply("Елена\nДень A\nЖим лежа\n4×8"), "/program Елена\nДень A\nЖим лежа\n4×8");
+  assert.equal(programCommandFromReply("/program! Елена\nЖим лежа\n4×8"), "/program! Елена\nЖим лежа\n4×8");
+  const cmd = parseImportCommand(programCommandFromReply("Елена\nЖим лежа\n4×8\n80 кг"));
+  assert.ok(cmd && cmd.ok && cmd.query === "Елена");
 });
