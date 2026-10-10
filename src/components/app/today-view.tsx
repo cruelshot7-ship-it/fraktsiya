@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { useMemo } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
@@ -131,8 +132,8 @@ export function TodayView() {
                     <button
                       type="button"
                       className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
-                      onClick={() => {
-                        if (!window.confirm(`Отметить неявку${name ? ` · ${name}` : ""}?`)) return;
+                      onClick={async () => {
+                        if (!await confirmAction(`Отметить неявку${name ? ` · ${name}` : ""}?`)) return;
                         markNoShow(b.id);
                         showToast(name ? `Неявка · ${name}` : "Неявка отмечена");
                       }}
@@ -174,8 +175,8 @@ export function TodayView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={() => {
-                      if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                    onClick={async () => {
+                      if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
                     }}
                   >
                     Принять
@@ -183,8 +184,8 @@ export function TodayView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-secondary text-sm"
-                    onClick={() => {
-                      if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                    onClick={async () => {
+                      if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
                     }}
                   >
                     Отклонить
@@ -267,7 +268,7 @@ export function TodayView() {
           <SectionLabel>Мой день</SectionLabel>
           <p className="mt-1 text-tiny text-muted-foreground">Запись · тренировка · еда</p>
         </div>
-        <SyncStatusChip />
+        <SyncStatusChip quietWhenOk />
       </div>
 
       {me ? (

@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { useMemo, useState } from "react";
 import { TRAINER_TG_ID } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
@@ -46,13 +47,13 @@ export function TemplatesPanel() {
 
   if (role !== "trainer" || !client) return null;
 
-  function assign() {
+  async function assign() {
     if (client!.sessions.some((s) => s.name === tpl.title)) {
       showToast("Этот шаблон уже есть в программе клиента.");
       return;
     }
     // the template's loads are fixed numbers, not this client's: the trainer checks them first
-    const ok = window.confirm(
+    const ok = await confirmAction(
       `Добавить клиенту день «${tpl.title}»?\n\n${preview.join("\n")}\n\nСуществующие дни не меняются. Веса в шаблоне общие — проверьте под клиента.`,
     );
     if (!ok) return;
@@ -80,8 +81,8 @@ export function TemplatesPanel() {
     showToast("Шаблон назначен клиенту (копия).");
   }
 
-  function remove() {
-    if (!window.confirm(`Удалить шаблон «${tpl.title}»? Дни, уже назначенные клиентам, не меняются.`)) return;
+  async function remove() {
+    if (!await confirmAction(`Удалить шаблон «${tpl.title}»? Дни, уже назначенные клиентам, не меняются.`)) return;
     removeTemplate(tpl.id);
     setSelectedId(SEED.id);
     showToast("Шаблон удалён.");

@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -123,14 +124,6 @@ export function ClientsView() {
           </p>
         </Surface>
       ) : null}
-      <button
-        type="button"
-        onClick={() => openGuestPreview()}
-        className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
-      >
-        <p className="text-sm font-medium">Как видит новичок</p>
-        <p className="mt-1 text-tiny text-muted-foreground">Так новичок выбирает пакет и время. Заявка придёт вам.</p>
-      </button>
       <Surface>
         <SectionLabel>Ваши клиенты</SectionLabel>
         <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
@@ -163,8 +156,8 @@ export function ClientsView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={() => {
-                      if (window.confirm(joinConfirmText(req))) approveJoin(req.id);
+                    onClick={async () => {
+                      if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
                     }}
                   >
                     Принять
@@ -172,8 +165,8 @@ export function ClientsView() {
                   <button
                     type="button"
                     className="pressable h-11 rounded-xl bg-secondary text-sm"
-                    onClick={() => {
-                      if (window.confirm(joinRejectText(req))) rejectJoin(req.id);
+                    onClick={async () => {
+                      if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
                     }}
                   >
                     Отклонить
@@ -616,7 +609,14 @@ export function ClientsView() {
         </div>
       </details>
 
-
+      <button
+        type="button"
+        onClick={() => openGuestPreview()}
+        className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
+      >
+        <p className="text-sm font-medium">Как видит новичок</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Так новичок выбирает пакет и время. Заявка придёт вам.</p>
+      </button>
     </div>
   );
 }

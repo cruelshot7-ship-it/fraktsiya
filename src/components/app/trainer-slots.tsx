@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { useState } from "react";
 import {
   addDays,
@@ -167,8 +168,8 @@ export function TrainerSlots() {
                               <button
                                 type="button"
                                 className="text-tiny text-primary"
-                                onClick={() => {
-                                  if (!window.confirm(`Снять ${client ? shortName(client) : "клиента"} из слота ${slot.time}? Занятие вернётся ему.`)) return;
+                                onClick={async () => {
+                                  if (!await confirmAction(`Снять ${client ? shortName(client) : "клиента"} из слота ${slot.time}? Занятие вернётся ему.`)) return;
                                   cancelBooking(booking.id, "trainer");
                                 }}
                               >
@@ -215,11 +216,11 @@ export function TrainerSlots() {
                     ) : null}
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const msg = people.length
                           ? `Закрыть слот ${slot.time}? ${people.length} клиент(ов) получат отмену, занятия вернутся им.`
                           : `Закрыть слот ${slot.time}?`;
-                        if (!window.confirm(msg)) return;
+                        if (!await confirmAction(msg)) return;
                         cancelSlotBookings(slot.id);
                         closeSlot(slot.id);
                         setOpenId(null);
