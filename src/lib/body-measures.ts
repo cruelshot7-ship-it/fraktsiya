@@ -7,8 +7,11 @@ export const MEASURE_FIELDS = [
   { key: "chest", label: "Грудь", min: 40, max: 200 },
   { key: "waist", label: "Талия", min: 40, max: 200 },
   { key: "belly", label: "Живот", min: 40, max: 200 },
-  { key: "arm", label: "Руки", min: 15, max: 80 },
-  { key: "hip", label: "Бёдра", min: 50, max: 200 },
+  { key: "armLeft", label: "Левая рука", min: 15, max: 80 },
+  { key: "armRight", label: "Правая рука", min: 15, max: 80 },
+  { key: "thighLeft", label: "Левое бедро", min: 25, max: 120 },
+  { key: "thighRight", label: "Правое бедро", min: 25, max: 120 },
+  { key: "hips", label: "Обхват бёдер", min: 50, max: 200 },
 ] as const;
 
 export type MeasureKey = (typeof MEASURE_FIELDS)[number]["key"];
