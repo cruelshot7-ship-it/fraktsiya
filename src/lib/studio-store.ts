@@ -57,6 +57,7 @@ import { repeatWeekSlots } from "@/lib/studio-repeat";
 import { cancelTxnId } from "@/lib/balance";
 import { applyTelegramIdentity, flushCloudPush, hasUnsyncedChanges, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { mergeBookingFlags, unionIds } from "@/lib/studio-merge";
+import { COACH_TIERS_TEXT } from "@/lib/coach-tier";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
@@ -789,7 +790,7 @@ export const useStudio = create<State>((set, get) => ({
     if (!req) return;
     const gate = coachGate(get().coaches);
     if (gate === "pause") {
-      get().showToast("Пробный доступ на паузе. Подписка $10 в месяц.");
+      get().showToast(`Пробный доступ на паузе. Подписка по ступеням: ${COACH_TIERS_TEXT}.`);
       return;
     }
     if (gate === "cap" && get().clients.length >= COACH_TRIAL_CAP) {
@@ -951,7 +952,7 @@ export const useStudio = create<State>((set, get) => ({
     }
     if (res.coaches) set({ coaches: res.coaches });
     persist(snap({ ...get(), coaches: res.coaches ?? get().coaches }));
-    get().showToast("Оплата принята. Доступ ещё на 30 дней.");
+    get().showToast(res.tierLine ? `Оплата принята · ${res.tierLine}. Доступ ещё на 30 дней.` : "Оплата принята. Доступ ещё на 30 дней.");
   },
 
   setTab: (tab) => set({ tab, selectedSlotId: null }),
@@ -1847,7 +1848,7 @@ export const useStudio = create<State>((set, get) => ({
       return "";
     }
     if (gate === "cap" && get().clients.length >= COACH_TRIAL_CAP) {
-      get().showToast("На пробе не больше 15 клиентов. Дальше подписка $10.");
+      get().showToast(`На пробе не больше 15 клиентов. Дальше подписка по ступеням: ${COACH_TIERS_TEXT}.`);
       return "";
     }
     const handle = draft.telegramUsername?.replace(/^@/, "").trim().toLowerCase() || "";

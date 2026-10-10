@@ -8,6 +8,7 @@ import { keepClientOwned } from "@/lib/client-owned";
 import { programFor } from "@/lib/program-import";
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
+import { coachTierLine } from "@/lib/coach-tier";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, stampConsent } from "@/lib/privacy";
 import { settleOwned, type Balance } from "@/lib/balance";
 import {
@@ -1036,7 +1037,7 @@ export const removeCoachFn = createServerFn({ method: "POST" })
 
 export const payCoachFn = createServerFn({ method: "POST" })
   .validator(z.object({ initData: z.string().optional(), username: z.string().optional(), code: z.string().optional(), telegramId: z.string().optional() }))
-  .handler(async ({ data }): Promise<{ ok: boolean; coaches?: Coach[] }> => {
+  .handler(async ({ data }): Promise<{ ok: boolean; coaches?: Coach[]; tierLine?: string }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
     if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
@@ -1053,7 +1054,9 @@ export const payCoachFn = createServerFn({ method: "POST" })
     const coaches = current.coaches.slice();
     coaches[idx] = { ...row, paidUntil: new Date(base + COACH_PAID_DAYS * 86_400_000).toISOString() };
     await saveStudioState({ ...current, coaches });
-    return { ok: true, coaches };
+    // the amount follows the coach's own client count, which only the server sees in full
+    const load = row.telegramId ? current.clients.filter((c) => clientCoach(c) === String(row.telegramId)).length : 0;
+    return { ok: true, coaches, tierLine: coachTierLine(load) };
   });
 
 export const studioHealth = createServerFn({ method: "GET" }).handler(async (): Promise<{ bot: boolean; db: "neon" | "pglite" }> => {

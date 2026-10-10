@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
+import { coachTierLine } from "@/lib/coach-tier";
 
 export function ClientsView() {
   const clients = useStudio((s) => s.clients);
@@ -117,7 +118,9 @@ export function ClientsView() {
         <Surface>
           <SectionLabel>Доступ</SectionLabel>
           <p className="mt-2 text-sm">{coachStatusLine(myCoach)}</p>
-          <p className="mt-1 text-tiny text-muted-foreground">Оплата $10 лично Евгению. После отметки кабинет снова открыт на 30 дней.</p>
+          <p className="mt-1 text-tiny text-muted-foreground">
+            Оплата лично Евгению по ступени: {coachTierLine(clients.filter((c) => clientCoach(c) === myCoachKey).length)}. После отметки кабинет открыт на 30 дней.
+          </p>
         </Surface>
       ) : null}
       <button
@@ -568,7 +571,7 @@ export function ClientsView() {
                           className="pressable mt-2 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
                           onClick={() => void payCoach(coach)}
                         >
-                          Оплачено · $10
+                          Оплачено · по ступени
                         </button>
                         <button
                           type="button"
