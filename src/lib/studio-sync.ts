@@ -4,6 +4,7 @@ import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
 import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
+import { anonymizedIdentity, stampConsent } from "@/lib/privacy";
 import {
   clientCoach,
   coachKey,
@@ -550,16 +551,38 @@ function mergeTrainerPayload(current: StudioPayload, incoming: StudioPayload): S
   return ensureApprovedClients(merged);
 }
 
+/** Erasure by the client: identity replaced, personal logs removed, financial rows kept without the name. */
+function eraseClientRows(current: StudioPayload, id: string): StudioPayload {
+  const now = new Date().toISOString();
+  const keep = <T extends { clientId?: string }>(rows: T[]) => rows.filter((r) => r.clientId !== id);
+  return {
+    ...current,
+    clients: current.clients.map((c) =>
+      c.id !== id ? c : { ...c, ...anonymizedIdentity(), weight: 0, weightHistory: [], measures: [], erasedAt: now },
+    ),
+    food: keep(current.food),
+    dayChecks: keep(current.dayChecks ?? []),
+    lifts: keep(current.lifts),
+    workoutLogs: keep(current.workoutLogs),
+    waitlist: keep(current.waitlist),
+    visits: keep(current.visits ?? []),
+    notices: keep(current.notices),
+    checks: Object.fromEntries(Object.entries(current.checks).filter(([k]) => !k.startsWith(`${id}:`))),
+  };
+}
+
 function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, telegramId: string): StudioPayload {
   const mine = current.clients.find((c) => c.telegramId === telegramId);
   const incomingSelf = incoming.clients.find((c) => c.telegramId === telegramId) ?? incoming.clients[0];
   if (!mine || !incomingSelf) return current;
+  if (incomingSelf.erasedAt && !mine.erasedAt) return eraseClientRows(current, mine.id);
   const id = mine.id;
   const nextSelf: Client = {
     ...mine,
     weight: incomingSelf.weight ?? mine.weight,
     weightHistory: incomingSelf.weightHistory?.length ? incomingSelf.weightHistory : mine.weightHistory,
     measures: incomingSelf.measures?.length ? incomingSelf.measures : mine.measures ?? [],
+    consent: stampConsent(mine.consent, incomingSelf.consent, new Date().toISOString()),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
     // sessionsLeft, ledger, packExpiresAt are server-owned: a client push never changes them
