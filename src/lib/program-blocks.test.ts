@@ -13,7 +13,6 @@ import {
   rewriteMarks,
   sessionPlan,
   withBlocks,
-  withBlocks,
 } from "./program-blocks.ts";
 
 const PRESET_LIKE = [
