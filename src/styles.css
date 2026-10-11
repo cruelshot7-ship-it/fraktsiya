@@ -224,12 +224,13 @@
   animation: rise-in 560ms var(--ease-apple) both;
 }
 
+/* Свечение: кольцо + мягкий ореол. Циан — подтверждение, красный — тревога. */
 .glow-ok {
-  box-shadow: var(--shadow-glow-ok);
+  box-shadow: var(--shadow-glow-ok), 0 0 28px rgb(69 212 228 / 0.14);
 }
 
 .glow-alert {
-  box-shadow: var(--shadow-glow-alert);
+  box-shadow: var(--shadow-glow-alert), 0 0 28px rgb(232 56 47 / 0.16);
 }
 
 .glow-soft {
@@ -238,6 +239,48 @@
 
 .glow-dot {
   animation: glow-breathe 2.8s ease-in-out infinite;
+}
+
+/* Главный элемент экрана (следующее занятие): ореол медленно дышит. Один на экран. */
+@keyframes halo-breathe {
+  0%,
+  100% {
+    box-shadow: var(--shadow-glow-ok), 0 0 20px rgb(69 212 228 / 0.1);
+  }
+  50% {
+    box-shadow: var(--shadow-glow-ok), 0 0 44px rgb(69 212 228 / 0.26);
+  }
+}
+
+.glow-hero {
+  animation: halo-breathe 3.2s ease-in-out infinite;
+}
+
+/* Фоновые световые пятна медленно дрейфуют: фон живёт, контент стоит на месте. */
+@keyframes ambient-drift-red {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-6%, 4%, 0) scale(1.06);
+  }
+}
+
+@keyframes ambient-drift-cyan {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6%, -4%, 0) scale(1.05);
+  }
+}
+
+.ambient-glow::before {
+  animation: ambient-drift-red 26s ease-in-out infinite alternate;
+}
+
+.ambient-glow::after {
+  animation: ambient-drift-cyan 32s ease-in-out infinite alternate;
 }
 
 .apple-block {
@@ -383,6 +426,9 @@
   .sheet-backdrop,
   .bar-fill,
   .glow-dot,
+  .glow-hero,
+  .ambient-glow::before,
+  .ambient-glow::after,
   .title-in,
   .tools-body,
   .scroll-hint {
