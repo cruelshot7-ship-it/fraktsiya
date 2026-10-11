@@ -10,7 +10,7 @@ import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/progr
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { coachTierLine } from "@/lib/coach-tier";
-import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
+import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, specialDataAllowed, stampConsent } from "@/lib/privacy";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
 import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
@@ -654,7 +654,10 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     bookings: settled.bookings,
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
-    menus: applyClientChoices(current.menus ?? [], checkMenus(incoming.menus), id),
+    // меню дня — данные о здоровье: без согласия клиента не хранятся
+    menus: specialDataAllowed(nextSelf.consent)
+      ? applyClientChoices(current.menus ?? [], checkMenus(incoming.menus), id)
+      : (current.menus ?? []).filter((m) => m.clientId !== id),
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
     waitlist: [
       ...current.waitlist.filter((w) => w.clientId !== id),

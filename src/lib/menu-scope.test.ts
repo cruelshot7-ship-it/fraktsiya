@@ -4,21 +4,28 @@ import {
   applyClientChoices,
   checkMenuRecord,
   keepClientChoices,
+  menuChoiceLogs,
   mergeMenus,
   menusForClient,
   validChoice,
   type MenuRecord,
 } from "./menu-scope.ts";
 
+const T1 = "2026-10-11T10:00:00.000Z";
+const T2 = "2026-10-11T11:00:00.000Z";
+
 function rec(clientId: string, date: string, extra: Partial<MenuRecord> = {}): MenuRecord {
+  const confirmed = extra.confirmed ?? false;
   return {
     id: `${clientId}_${date}`,
     clientId,
     date,
     count: 3,
     offers: { breakfast: ["oats", "eggs"], lunch: ["bowl"] },
+    dishes: {},
     choice: {},
-    confirmed: false,
+    confirmed,
+    confirmedAt: confirmed ? T1 : null,
     updatedAt: "2026-10-11T12:00:00.000Z",
     ...extra,
   };
@@ -128,4 +135,59 @@ test("локальный выбор клиента не сбрасывается
   const local = [rec("c1", "2026-10-12", { confirmed: true, choice: { breakfast: "eggs" } })];
   const kept = keepClientChoices(server, local);
   assert.deepEqual(kept[0].choice, { breakfast: "eggs" });
+});
+
+test("выбор клиента не переносится на новое подтверждение тренера", () => {
+  const current = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T2 })];
+  const incoming = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T1, choice: { breakfast: "eggs" } })];
+  const out = applyClientChoices(current, incoming, "c1");
+  assert.deepEqual(out[0].choice, {}, "старое подтверждение не записывает выбор");
+});
+
+test("локальный выбор клиента не возвращается после пересборки тренера", () => {
+  const server = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T2 })];
+  const local = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T1, choice: { breakfast: "eggs" } })];
+  assert.deepEqual(keepClientChoices(server, local)[0].choice, {});
+});
+
+test("выбор сохраняется для того же подтверждения", () => {
+  const server = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T1 })];
+  const local = [rec("c1", "2026-10-12", { confirmed: true, confirmedAt: T1, choice: { breakfast: "oats" } })];
+  assert.deepEqual(keepClientChoices(server, local)[0].choice, { breakfast: "oats" });
+});
+
+test("проверка записи: снимки блюд без мусора, подтверждение с датой", () => {
+  const r = checkMenuRecord({
+    id: "a",
+    clientId: "c1",
+    date: "2026-10-12",
+    count: 3,
+    offers: { breakfast: ["oats", "bad"] },
+    dishes: {
+      oats: { name: "Овсянка", calories: 420, protein: 24, fat: 14, carbs: 48 },
+      bad: { name: "", calories: -1, protein: 1, fat: 1, carbs: 1 },
+      huge: { name: "x", calories: 99999, protein: 1, fat: 1, carbs: 1 },
+    },
+    confirmed: true,
+    confirmedAt: T1,
+  });
+  assert.ok(r);
+  assert.deepEqual(Object.keys(r.dishes), ["oats"]);
+  assert.equal(r.confirmedAt, T1);
+});
+
+test("записи журнала из меню: одна запись на приём, смена блюда заменяет, без дублей", () => {
+  const dish = { name: "Овсянка", calories: 420, protein: 24, fat: 14, carbs: 48 };
+  const r = rec("c1", "2026-10-12", { confirmed: true, offers: { breakfast: ["oats"] }, dishes: { oats: dish }, choice: { breakfast: "oats" } });
+  const logs = menuChoiceLogs(r, () => undefined);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].logId, "menu_c1_2026-10-12_breakfast");
+  assert.equal(logs[0].calories, 420);
+  assert.equal(logs[0].date, "2026-10-12");
+});
+
+test("запись журнала берёт блюдо из базы, если снимка нет", () => {
+  const r = rec("c1", "2026-10-12", { confirmed: true, offers: { lunch: ["bowl"] }, choice: { lunch: "bowl" } });
+  const logs = menuChoiceLogs(r, (id) => (id === "bowl" ? { name: "Боул", calories: 600, protein: 40, fat: 20, carbs: 60 } : undefined));
+  assert.equal(logs[0].name, "Боул");
 });

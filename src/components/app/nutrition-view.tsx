@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
-import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Meal } from "@/data/studio";
+import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Client, type Meal } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -46,16 +46,24 @@ function rankMeals(meals: Meal[], leftCal: number, leftP: number): Meal[] {
   return scored.map((x) => x.m);
 }
 
+/** Вкладка «Еда». Хуки живут во внутреннем компоненте: ранний возврат без клиента не меняет их порядок. */
 export function NutritionView() {
+  const clients = useStudio((s) => s.clients);
+  const activeClientId = useStudio((s) => s.activeClientId);
+  const client = activeClient({ clients, activeClientId });
+  if (!client) {
+    return <EmptyHint>Питание откроется, когда тренер заведёт ваш профиль и КБЖУ.</EmptyHint>;
+  }
+  return <NutritionContent client={client} />;
+}
+
+function NutritionContent({ client }: { client: Client }) {
   const food = useStudio((s) => s.food);
   const addFood = useStudio((s) => s.addFood);
   const addCustomFood = useStudio((s) => s.addCustomFood);
   const removeFood = useStudio((s) => s.removeFood);
-  const clients = useStudio((s) => s.clients);
-  const activeClientId = useStudio((s) => s.activeClientId);
   const bookings = useStudio((s) => s.bookings);
   const showToast = useStudio((s) => s.showToast);
-  const client = activeClient({ clients, activeClientId });
   const [query, setQuery] = useState("");
   const [slot, setSlot] = useState<Slot>("all");
   const [customOpen, setCustomOpen] = useState(false);
@@ -65,10 +73,6 @@ export function NutritionView() {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
-
-  if (!client) {
-    return <EmptyHint>Питание откроется, когда тренер заведёт ваш профиль и КБЖУ.</EmptyHint>;
-  }
 
   const today = isoDate(new Date());
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
