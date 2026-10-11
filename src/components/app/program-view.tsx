@@ -317,9 +317,10 @@ export function ProgramView() {
             ) : null}
           </div>
           {restLeft > 0 ? (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ok-dim px-3 py-2.5">
-              <p className="text-sm">
-                Отдых <span className="font-display text-lg tabular-nums">{formatMmSs(restLeft)}</span>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ok-dim px-4 py-3">
+              <p className="flex items-baseline gap-2 text-sm text-ok">
+                Отдых
+                <span className="font-display text-3xl leading-none tabular-nums text-ok">{formatMmSs(restLeft)}</span>
               </p>
               <button
                 type="button"
@@ -670,7 +671,7 @@ function BlockRow({
         <span className="min-w-0 flex-1">
           <span className={cn("block font-medium", on && "line-through opacity-70")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
-          {last ? <span className="mt-0.5 block text-tiny text-primary">в прошлый раз {last}</span> : null}
+          {last ? <span className="mt-0.5 block text-tiny tabular-nums text-muted-foreground">в прошлый раз {last}</span> : null}
         </span>
         {readOnly ? (
           <span
