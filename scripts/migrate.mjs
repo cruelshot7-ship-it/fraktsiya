@@ -3,7 +3,14 @@ import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
-import { pendingMigrations } from "./migration-plan.mjs";
+import { pendingMigrations, requiresApproval } from "./migration-plan.mjs";
+
+/** `--approve=0005_notify_outbox.sql` — явное одобрение миграции с маркером «DO NOT apply…». */
+const approved = new Set(
+  process.argv
+    .filter((a) => a.startsWith("--approve="))
+    .map((a) => a.slice("--approve=".length)),
+);
 
 function pickUrl() {
   const candidates = [process.env.DATABASE_URL, process.env.DATABASE_URL_UNPOOLED];
@@ -49,9 +56,21 @@ async function main() {
     const { rows } = await client.query("SELECT name FROM _migrations");
     const applied = rows.map((r) => r.name);
 
-    let count = 0;
+    const pending = [];
     for (const { name } of pendingMigrations(entries, applied)) {
-      const text = await readFile(join(migrationsDir, name), "utf8");
+      pending.push({ name, text: await readFile(join(migrationsDir, name), "utf8") });
+    }
+    // Всё или ничего: если хоть одна ожидающая миграция требует одобрения и его нет — ничего не применяем.
+    const blocked = pending.filter(({ name, text }) => requiresApproval(text) && !approved.has(name));
+    if (blocked.length) {
+      throw new Error(
+        `migrations need explicit approval: ${blocked.map((b) => b.name).join(", ")} ` +
+          "(rerun with --approve=<file name> after the owner confirms)",
+      );
+    }
+
+    let count = 0;
+    for (const { name, text } of pending) {
       try {
         await client.query("BEGIN");
         await client.query(text);

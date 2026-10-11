@@ -44,3 +44,15 @@ export function pendingMigrations(paths, applied) {
     .sort((a, b) => a.name.localeCompare(b.name))
     .filter(({ name }) => !done.has(name));
 }
+
+/** Текст, по которому миграция помечается как требующая явного одобрения владельца. */
+export const APPROVAL_MARKER = "DO NOT apply to production without explicit approval";
+
+/**
+ * Миграция с маркером не применяется в прод без `--approve=<имя файла>`.
+ * @param {string} text содержимое .sql
+ * @returns {boolean}
+ */
+export function requiresApproval(text) {
+  return text.includes(APPROVAL_MARKER);
+}
