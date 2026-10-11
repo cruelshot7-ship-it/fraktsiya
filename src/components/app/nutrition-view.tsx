@@ -136,7 +136,7 @@ export function NutritionView() {
 
   return (
     <div className="stagger-in relative flex flex-col gap-3">
-      <MenuDay client={client} date={today} bookings={bookings} />
+      <MenuDay client={client} bookings={bookings} />
       <Surface glow={low ? "alert" : "ok"}>
         <KbjuMeters
           title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`}
