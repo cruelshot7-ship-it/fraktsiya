@@ -241,20 +241,54 @@
   animation: glow-breathe 2.8s ease-in-out infinite;
 }
 
-/* Главный элемент экрана (следующее занятие): ореол медленно дышит. Один на экран. */
-@keyframes halo-breathe {
+/* Главный блок экрана: свечение переливается из циана в фирменный красный. Один такой блок на экран. */
+@keyframes halo-flow {
   0%,
   100% {
-    box-shadow: var(--shadow-glow-ok), 0 0 20px rgb(69 212 228 / 0.1);
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.35), 0 0 22px rgb(69 212 228 / 0.16);
   }
   50% {
-    box-shadow: var(--shadow-glow-ok), 0 0 44px rgb(69 212 228 / 0.26);
+    box-shadow: 0 0 0 1px rgb(232 56 47 / 0.4), 0 0 34px rgb(232 56 47 / 0.22);
   }
 }
 
 .glow-hero {
-  animation: halo-breathe 3.2s ease-in-out infinite;
+  animation: halo-flow 6s ease-in-out infinite;
 }
+
+/* Записи на неделю: по каждой строке проходит мягкий блик, строки сдвинуты по времени. */
+@keyframes row-sheen {
+  0%,
+  60% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.week-sheen > button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.week-sheen > button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 40%, rgb(69 212 228 / 0.09) 50%, rgb(232 56 47 / 0.06) 58%, transparent 66%);
+  transform: translateX(-120%);
+  animation: row-sheen 8s ease-in-out infinite;
+}
+
+.week-sheen > button:nth-child(2)::after { animation-delay: 1.1s; }
+.week-sheen > button:nth-child(3)::after { animation-delay: 2.2s; }
+.week-sheen > button:nth-child(4)::after { animation-delay: 3.3s; }
+.week-sheen > button:nth-child(5)::after { animation-delay: 4.4s; }
+.week-sheen > button:nth-child(6)::after { animation-delay: 5.5s; }
+.week-sheen > button:nth-child(7)::after { animation-delay: 6.6s; }
 
 /* Фоновые световые пятна медленно дрейфуют: фон живёт, контент стоит на месте. */
 @keyframes ambient-drift-red {
@@ -322,11 +356,23 @@
   animation: rise-in 420ms var(--ease-apple) both;
 }
 
+/* Заголовок экрана: медленно переливается (белый → циан → красный). Общий для всех экранов. */
 .title-grad {
-  background: linear-gradient(90deg, #fff 35%, #ff9c94 100%);
+  background: linear-gradient(90deg, #fff 0%, #ff9c94 30%, #fff 45%, #7fe3ee 62%, #ff9c94 80%, #fff 100%);
+  background-size: 250% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: rise-in 560ms var(--ease-apple) both, title-flow 9s ease-in-out 560ms infinite alternate;
+}
+
+@keyframes title-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
 }
 
 .scroll-progress {
@@ -430,7 +476,9 @@
   .ambient-glow::before,
   .ambient-glow::after,
   .title-in,
+  .title-grad,
   .tools-body,
+  .week-sheen > button::after,
   .scroll-hint {
     animation: none;
   }
