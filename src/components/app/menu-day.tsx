@@ -240,7 +240,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
             <RecipeList offers={rec.offers} />
             {rec.confirmed ? (
               <>
-                <p className="text-tiny text-ok">
+                <p className="text-tiny text-foreground">
                   Подтверждено. {chosen ? (Object.keys(rec.choice).length ? `Клиент выбрал: ${statusLine(chosen, target)}` : "Клиент ещё не выбрал.") : ""}
                 </p>
                 {(() => {

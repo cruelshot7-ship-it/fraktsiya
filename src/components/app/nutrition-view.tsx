@@ -217,7 +217,7 @@ function NutritionContent({ client }: { client: Client }) {
                   <span className="text-2xs tabular-nums text-muted-foreground">
                     {meal.calories} ккал · <span className="text-protein">Б{meal.protein}</span>
                   </span>
-                  <span className={cn("text-2xs font-medium", fits ? "text-ok" : "text-muted-foreground")}>
+                  <span className={cn("text-2xs font-medium", fits ? "text-foreground" : "text-muted-foreground")}>
                     {fits ? "В цель · +" : "+"}
                   </span>
                 </button>

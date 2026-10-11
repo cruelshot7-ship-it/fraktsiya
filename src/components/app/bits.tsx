@@ -241,7 +241,7 @@ export function KbjuMacroRing({
           <span
             className={cn(
               "font-display text-sm tabular-nums leading-none",
-              over ? "text-alert-text" : complete && !color ? "text-ok" : "text-foreground",
+              over ? "text-alert-text" : "text-foreground",
             )}
           >
             {shown}

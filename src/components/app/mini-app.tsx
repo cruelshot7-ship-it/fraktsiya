@@ -208,7 +208,7 @@ export function MiniApp() {
                 <BrandLockup />
                 <div className="flex items-center gap-1.5">
                   {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
-                  <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-ok-dim text-ok" aria-label="Написать тренеру">
+                  <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-secondary text-foreground" aria-label="Написать тренеру">
                     <MessageCircle className="size-4" />
                   </button>
                   <button type="button" onClick={() => setInboxOpen(true)} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-secondary text-muted-foreground" aria-label="Уведомления">
@@ -360,15 +360,15 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
                   {item.kind === "cancel" ? (
                     <p className="text-2xs font-medium tracking-wide text-alert-text ">Отмена записи</p>
                   ) : item.kind === "reschedule" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok ">Перенос</p>
+                    <p className="text-2xs font-medium tracking-wide text-muted-foreground">Перенос</p>
                   ) : item.kind === "wallet" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok ">Баланс</p>
+                    <p className="text-2xs font-medium tracking-wide text-muted-foreground">Баланс</p>
                   ) : item.kind === "waitlist" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok ">Лист ожидания</p>
+                    <p className="text-2xs font-medium tracking-wide text-muted-foreground">Лист ожидания</p>
                   ) : item.kind === "freeze" ? (
                     <p className="text-2xs font-medium tracking-wide text-alert-text ">Заморозка</p>
                   ) : item.kind === "book" ? (
-                    <p className="text-2xs font-medium tracking-wide text-ok ">Запись</p>
+                    <p className="text-2xs font-medium tracking-wide text-muted-foreground">Запись</p>
                   ) : null}
                   <p className="mt-1 text-sm font-medium">{item.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
