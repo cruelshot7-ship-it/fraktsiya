@@ -171,6 +171,8 @@ export function ProgramView() {
     : plan.blocks.filter((b) => !checked.includes(b.id) || b.id === justDone);
   const itemCount = plan.blocks.length;
   const restLeft = restSecondsLeft(restUntil, now);
+  // «Завершить подход»: первый невыполненный блок в порядке программы
+  const nextBlock = plan.blocks.find((b) => !checked.includes(b.id)) ?? null;
   const lastResult = (exercise: string) => {
     const prev = previousLift(lifts, client.id, exercise, today);
     return prev ? liftLabel(prev) : null;
@@ -371,6 +373,21 @@ export function ProgramView() {
               </li>
             ))}
           </ul>
+          {!isTrainer && nextBlock ? (
+            <button
+              type="button"
+              onClick={() => {
+                const b = nextBlock;
+                setJustDone(b.id);
+                if (b.rest) setRestUntil(Date.now() + b.rest * 1000);
+                toggleCheck(b.id, legacy);
+              }}
+              className="pressable mt-3 flex h-12 w-full items-center justify-between rounded-xl bg-primary px-4 text-left text-primary-foreground shadow-glow-alert"
+            >
+              <span className="text-sm font-medium">Завершить подход</span>
+              <span className="max-w-[55%] truncate text-tiny opacity-80">{nextBlock.exercise}</span>
+            </button>
+          ) : null}
           <p className="mt-3 text-xs text-muted-foreground">
             Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
           </p>
