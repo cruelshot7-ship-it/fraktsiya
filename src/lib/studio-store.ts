@@ -4,6 +4,7 @@ import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
+import { checkMenus, keepClientChoices, menuKey, type MenuRecord } from "@/lib/menu-scope";
 import {
   BOT_USERNAME,
   addDays,
@@ -100,6 +101,7 @@ type PersistShape = {
   removedClientIds?: string[];
   coaches?: Coach[];
   programTemplates?: ProgramTemplate[];
+  menus?: MenuRecord[];
 };
 
 type State = {
@@ -132,6 +134,7 @@ type State = {
   removedClientIds: string[];
   coaches: Coach[];
   programTemplates: ProgramTemplate[];
+  menus: MenuRecord[];
   inviteBlocked: boolean;
   noteOpen: boolean;
   guestPreview: boolean;
@@ -163,6 +166,8 @@ type State = {
   cancelBooking: (id: string, by?: Role) => void;
   cancelSlotBookings: (slotId: string) => void;
   rescheduleBooking: (id: string, newSlotId: string) => boolean;
+  saveMenu: (record: MenuRecord) => void;
+  setMenuChoice: (clientId: string, date: string, slotId: string, dishId: string) => void;
   addFood: (mealId: string) => void;
   addCustomFood: (meal: Omit<Meal, "id">) => void;
   removeFood: (logId: string) => void;
@@ -262,6 +267,7 @@ function snap(s: State): PersistShape {
     removedClientIds: s.removedClientIds,
     coaches: s.coaches,
     programTemplates: s.programTemplates,
+    menus: s.menus,
   };
 }
 
@@ -476,6 +482,7 @@ export const useStudio = create<State>((set, get) => ({
   removedClientIds: [],
   coaches: [],
   programTemplates: [],
+  menus: [],
   inviteBlocked: false,
   noteOpen: false,
   guestPreview: false,
@@ -503,6 +510,7 @@ export const useStudio = create<State>((set, get) => ({
     let removedClientIds: string[] = [];
     let coaches: Coach[] = [];
     let programTemplates: ProgramTemplate[] = [];
+    let menus: MenuRecord[] = [];
     try {
       const raw = readPersist();
       if (raw) {
@@ -539,6 +547,7 @@ export const useStudio = create<State>((set, get) => ({
         removedClientIds = parsed.removedClientIds ?? [];
         coaches = parsed.coaches ?? [];
         programTemplates = parsed.programTemplates ?? [];
+        menus = checkMenus(parsed.menus);
         const cleaned = stripDemoData({
           clients,
           bookings,
@@ -601,6 +610,7 @@ export const useStudio = create<State>((set, get) => ({
       removedClientIds,
       coaches,
       programTemplates,
+      menus,
       inviteBlocked,
       tab: role === "trainer" ? "clients" : "slots",
     });
@@ -651,6 +661,7 @@ export const useStudio = create<State>((set, get) => ({
         workoutLogs: payload.workoutLogs,
         checks: payload.checks,
         visits: payload.visits ?? [],
+        menus: cloud.role === "trainer" ? payload.menus ?? [] : keepClientChoices(payload.menus ?? [], get().menus),
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
@@ -757,6 +768,7 @@ export const useStudio = create<State>((set, get) => ({
               ? payload.waitlist
               : get().waitlist,
         visits: cloud.role === "trainer" ? payload.visits ?? [] : (payload.visits ?? []).length ? payload.visits ?? [] : get().visits,
+        menus: cloud.role === "trainer" ? payload.menus ?? [] : keepClientChoices(payload.menus ?? [], get().menus),
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
@@ -1488,6 +1500,23 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
     get().showToast("Перенос сохранён. Клиенту ушло уведомление.");
     return true;
+  },
+
+  saveMenu: (record) => {
+    const menus = [...get().menus.filter((m) => menuKey(m) !== menuKey(record)), record];
+    set({ menus });
+    persist(snap(get()));
+  },
+
+  setMenuChoice: (clientId, date, slotId, dishId) => {
+    // клиент выбирает только из предложенных вариантов подтверждённого меню
+    const menus = get().menus.map((m) => {
+      if (m.clientId !== clientId || m.date !== date || !m.confirmed) return m;
+      if (!(m.offers[slotId] ?? []).includes(dishId)) return m;
+      return { ...m, choice: { ...m.choice, [slotId]: dishId }, updatedAt: new Date().toISOString() };
+    });
+    set({ menus });
+    persist(snap(get()));
   },
 
   addFood: (mealId) => {
