@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
-import { POLICY_SECTIONS } from "@/lib/privacy-text";
+import { POLICY_CHANGE_NOTICE, POLICY_SECTIONS } from "@/lib/privacy-text";
 import { useStudio, activeClient } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
 
@@ -37,6 +37,14 @@ export function PrivacyGate() {
           «Согласен» относится к замерам, боли, самочувствию и питанию — это данные о здоровье. Без согласия приложение всё равно
           работает: записи, программа и баланс. Согласие можно дать или отозвать позже в «Ещё» → «Мои данные».
         </p>
+      </Surface>
+      <Surface glow="alert">
+        <SectionLabel>{POLICY_CHANGE_NOTICE.title}</SectionLabel>
+        <div className="mt-2 flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
+          {POLICY_CHANGE_NOTICE.body.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       </Surface>
       <PolicyText />
       <div className="grid grid-cols-2 gap-2">
