@@ -22,7 +22,11 @@ function fallbackDish(id: string): MenuDish | undefined {
 }
 
 /** Рецепты всех вариантов записи меню: один сворачиваемый блок, закрыт по умолчанию. */
+/** Пока блок рецептов скрыт в интерфейсе. Чтобы вернуть, поставьте true. */
+const SHOW_DISH_RECIPES = false;
+
 function RecipeList({ offers }: { offers: Record<string, string[]> }) {
+  if (!SHOW_DISH_RECIPES) return null;
   const ids = [...new Set(Object.values(offers).flat())].filter((id) => DISH_RECIPES[id]);
   if (ids.length === 0) return null;
   return (
