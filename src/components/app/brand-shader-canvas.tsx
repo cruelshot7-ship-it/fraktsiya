@@ -44,7 +44,7 @@ export function BrandShaderCanvas({ onError }: Props) {
           uDensity={1.1}
           uFrequency={4.2}
           color1="#d62e26"
-          color2="#45d4e4"
+          color2="#2a2e36"
           color3="#15171b"
           cDistance={4.2}
           cPolarAngle={110}

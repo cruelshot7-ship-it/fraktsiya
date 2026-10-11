@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 const FALLBACK_STYLE: CSSProperties = {
   background:
     "radial-gradient(70% 55% at 90% 15%, rgb(232 56 47 / 0.2), transparent 65%)," +
-    "radial-gradient(65% 50% at 10% 90%, rgb(69 212 228 / 0.1), transparent 65%)," +
     "linear-gradient(165deg, #1e2127 0%, #15171b 50%, #15171b 100%)",
 };
 
