@@ -1,3 +1,5 @@
+import { isValidGtin, normalizeGtin } from "@/lib/gtin";
+
 /**
  * Checks for a product added to the shared catalog. Pure, so it is tested without the server.
  * Only real barcodes (8–14 digits) are accepted: manual entries without a code stay on the device.
@@ -20,8 +22,12 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 export function checkFoodProduct(raw: unknown): FoodCheck {
   if (!raw || typeof raw !== "object") return { ok: false, reason: "shape" };
   const r = raw as Record<string, unknown>;
-  const barcode = typeof r.barcode === "string" ? r.barcode.trim() : "";
-  if (!/^\d{8,14}$/.test(barcode)) return { ok: false, reason: "barcode" };
+  const digits = typeof r.barcode === "string" ? r.barcode.trim() : "";
+  // только цифровые коды: ручные «manual_…» не уходят в общий каталог
+  if (!/^\d{8,14}$/.test(digits)) return { ok: false, reason: "barcode" };
+  const barcode = normalizeGtin(digits);
+  // контрольная цифра: код с опечаткой не совпадёт ни с одной упаковкой
+  if (!isValidGtin(barcode)) return { ok: false, reason: "barcode" };
   const name = typeof r.name === "string" ? r.name.trim() : "";
   if (name.length < 2 || name.length > 120) return { ok: false, reason: "name" };
   const brand = typeof r.brand === "string" ? r.brand.trim().slice(0, 80) : "";

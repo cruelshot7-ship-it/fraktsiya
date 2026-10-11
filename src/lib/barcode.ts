@@ -1,6 +1,10 @@
 import { BARCODE_CATALOG, type Kbju, type ScanProduct } from "@/data/studio";
 import { getTelegram, getTelegramInitData } from "@/lib/telegram";
 import { addFoodProductFn, listFoodProductsFn } from "@/lib/food-catalog";
+import { normalizeGtin } from "@/lib/gtin";
+import { kcalFromMacros, macrosSane } from "@/lib/food-sanity";
+
+export { normalizeGtin };
 
 const OFF_HOST = "https://world.openfoodfacts.org";
 const OFF_UA = "Ruksha/1.0 (telegram-miniapp; studio-fit-by)";
@@ -243,6 +247,12 @@ function fromOff(barcode: string, product: Record<string, unknown>): ScanProduct
   const protein = finiteNum(nutriments.proteins_100g);
   const fat = finiteNum(nutriments.fat_100g);
   const carbs = finiteNum(nutriments.carbohydrates_100g);
+  const hasMacros = protein !== null || fat !== null || carbs !== null;
+  const macros = { protein: protein ?? 0, fat: fat ?? 0, carbs: carbs ?? 0 };
+  // без ккал считаем по макросам и помечаем запись неполной: пользователь подтверждает до сохранения
+  const calories = kcal ?? (hasMacros ? kcalFromMacros(macros) : 0);
+  const per100 = { calories, ...macros };
+  const insane = !macrosSane(per100);
   const rawName = String(
     product.product_name_ru || product.product_name || product.generic_name || "",
   ).trim();
@@ -254,25 +264,13 @@ function fromOff(barcode: string, product: Record<string, unknown>): ScanProduct
     barcode,
     name: unnamed ? `Товар ${barcode}` : rawName,
     brand: String(product.brands || "").split(",")[0]?.trim() || undefined,
-    per100: {
-      calories: kcal ?? 0,
-      protein: protein ?? 0,
-      fat: fat ?? 0,
-      carbs: carbs ?? 0,
-    },
+    per100,
     source: "off",
     quantity: String(product.quantity || "") || undefined,
     servingGrams: servingFromOff(product),
-    incomplete: unnamed || noNutri,
+    incomplete: unnamed || noNutri || kcal === null || insane,
     image: image.startsWith("http") ? image : undefined,
   };
-}
-
-export function normalizeGtin(digits: string): string {
-  let d = digits.replace(/\D/g, "");
-  if (d.length === 12) d = d.padStart(13, "0");
-  if (d.length === 14 && d.startsWith("0")) d = d.slice(1);
-  return d;
 }
 
 export function parseScanText(raw: string): string {
@@ -546,7 +544,7 @@ async function pullShared() {
     if (!res.ok) return;
     const next: OverlayMap = {};
     for (const item of res.products) {
-      next[item.barcode] = {
+      next[normalizeGtin(item.barcode)] = {
         name: item.name,
         brand: item.brand,
         per100: item.per100,
@@ -583,7 +581,7 @@ export async function shareFoodProduct(product: ScanProduct): Promise<{ ok: bool
   if (res.ok && res.product) {
     loadOverlay();
     const winner = res.product;
-    shared[winner.barcode] = {
+    shared[normalizeGtin(winner.barcode)] = {
       name: winner.name,
       brand: winner.brand,
       per100: winner.per100,
