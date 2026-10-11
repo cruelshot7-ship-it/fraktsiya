@@ -12,12 +12,44 @@ import { isMenuStale, menuLogPrefix, pruneDishes, validChoice, type MenuDish, ty
 import { useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
+import { DISH_RECIPES } from "@/data/dish-recipes";
 import { cn } from "@/lib/utils";
 
 /** Блюдо из базы в том же виде, что снимок в записи меню. */
 function fallbackDish(id: string): MenuDish | undefined {
   const m = MEALS.find((x) => x.id === id);
   return m ? { name: m.name, calories: m.calories, protein: m.protein, fat: m.fat, carbs: m.carbs } : undefined;
+}
+
+/** Рецепты всех вариантов записи меню: раскрываются по нажатию, без лишних кнопок в списке выбора. */
+function RecipeList({ offers }: { offers: Record<string, string[]> }) {
+  const ids = [...new Set(Object.values(offers).flat())].filter((id) => DISH_RECIPES[id]);
+  if (ids.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-tiny text-muted-foreground">Рецепты</p>
+      {ids.map((id) => {
+        const r = DISH_RECIPES[id];
+        return (
+          <details key={id} className="rounded-lg bg-card px-3 py-1 text-sm">
+            <summary className="cursor-pointer py-2 font-medium">{fallbackDish(id)?.name ?? id}</summary>
+            <p className="text-tiny text-muted-foreground">Ингредиенты</p>
+            <ul className="mt-1 space-y-0.5">
+              {r.ingredients.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <p className="mt-2 text-tiny text-muted-foreground">Приготовление</p>
+            <ol className="mt-1 list-decimal space-y-1 pb-2 pl-5">
+              {r.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          </details>
+        );
+      })}
+    </div>
+  );
 }
 
 /** Снимок блюда из записи меню; если снимка нет — блюдо из базы. */
@@ -180,6 +212,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                 </ul>
               </div>
             ))}
+            <RecipeList offers={rec.offers} />
             {rec.confirmed ? (
               <>
                 <p className="text-tiny text-ok">
@@ -300,6 +333,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
             ? `Выбрано: ${Math.round(chosen.calories)} ккал из ${Math.round(target.calories)} · ${statusLine(chosen, target)}`
             : "Выберите блюдо на каждый приём."}
         </p>
+        <RecipeList offers={rec.offers} />
       </div>
     </Surface>
   );
