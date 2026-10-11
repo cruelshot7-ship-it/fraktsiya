@@ -5,6 +5,7 @@ import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
+import { balanceSummary } from "@/lib/balance-summary";
 import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
@@ -45,6 +46,9 @@ export function TodayView() {
   const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
+
+  /** занятия по клиентам тренера: остатки и пакеты, которые скоро закончатся */
+  const balance = useMemo(() => balanceSummary(clients, today), [clients, today]);
 
   const visit = useMemo(() => {
     if (!me) return null;
@@ -104,6 +108,29 @@ export function TodayView() {
             <p className="min-h-9 text-2xs text-muted-foreground">Заявки</p>
             <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", pendingJoins.length > 0 && "text-alert-text")}>{pendingJoins.length}</p>
           </button>
+        </div>
+
+        <div className="space-y-2">
+          <SectionLabel>Занятия</SectionLabel>
+          <div className="apple-block grid grid-cols-3 divide-x divide-border">
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
+              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
+                {balance.packsEndingSoon}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
+                {balance.empty}
+              </p>
+            </div>
+          </div>
+          <p className="text-tiny text-muted-foreground">Считаем занятия, не рубли: цен и оплат в приложении пока нет.</p>
         </div>
 
         {needMark.length > 0 ? (
