@@ -4,7 +4,7 @@ import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/li
 
 export { studioToday };
 import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
-import { blocksFromItems, type ProgramBlock } from "@/lib/program-blocks";
+import { blocksFromItems, type ProgramBlock, type ProgramPhase } from "@/lib/program-blocks";
 export type { ProgramBlock } from "@/lib/program-blocks";
 export const TRAINER_TG_ID = "8144320404";
 
@@ -631,6 +631,8 @@ export type Client = {
   kbjuRest?: Kbju | null;
   programTitle: string;
   programWeeks: number;
+  /** фаза периодизации по номеру недели (ключ «1», «2» …); пусто — без отметки */
+  programPhases?: Partial<Record<string, ProgramPhase>>;
   programStart: string;
   sessions: ProgramSession[];
   /** trainer-owned: when the program was last imported from the bot; an older copy never overwrites it */
