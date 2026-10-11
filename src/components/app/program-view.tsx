@@ -571,7 +571,7 @@ export function ProgramView() {
                   }}
                   formatter={(value) => [`${value} кг`, "максимум"]}
                 />
-                <Line type="monotone" dataKey="rm" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="rm" stroke="var(--color-ok)" strokeWidth={2} dot={{ r: 3, fill: "var(--color-ok)" }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
