@@ -99,13 +99,20 @@ export function ScannerSheet({
     }
   }
 
-  async function startCam() {
-    setError(null);
+  /** QR-сканер Telegram: читает только QR. Штрихкоды (EAN) он не видит — для них работает камера приложения. */
+  function scanQrInTelegram() {
     const tg = extractTelegramScan();
-    if (tg) {
-      tg((text) => void resolveCode(text));
+    if (!tg) {
+      setError("QR читается в Telegram. Откройте приложение из бота или введите код.");
       return;
     }
+    setError(null);
+    stopCam();
+    tg((text) => void resolveCode(text));
+  }
+
+  async function startCam() {
+    setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setMode("missing");
       setError("Камера недоступна в этом браузере. Введите код или выберите из каталога.");
@@ -362,7 +369,7 @@ export function ScannerSheet({
                 </div>
                 {!camOn ? (
                   <div className="absolute inset-0 grid place-items-center bg-background/70 px-6 text-center">
-                    <p className="text-sm text-muted-foreground">Наведите на штрихкод или QR на упаковке.</p>
+                    <p className="text-sm text-muted-foreground">Наведите на штрихкод на упаковке.</p>
                   </div>
                 ) : null}
               </div>
@@ -376,7 +383,7 @@ export function ScannerSheet({
                 {camOn ? "Ищем код…" : "Включить камеру"}
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <label className="pressable flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-secondary text-sm">
                   <Camera className="size-4" />
                   Фото этикетки
@@ -394,6 +401,14 @@ export function ScannerSheet({
                 </label>
                 <button
                   type="button"
+                  onClick={scanQrInTelegram}
+                  className="pressable flex h-11 items-center justify-center gap-2 rounded-xl bg-secondary text-sm"
+                >
+                  <ScanLine className="size-4" />
+                  QR
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     stopCam();
                     setMode("missing");
@@ -401,7 +416,7 @@ export function ScannerSheet({
                   className="pressable flex h-11 items-center justify-center gap-2 rounded-xl bg-secondary text-sm"
                 >
                   <Keyboard className="size-4" />
-                  Ввести код
+                  Код
                 </button>
               </div>
 
