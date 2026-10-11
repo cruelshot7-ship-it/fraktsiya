@@ -31,6 +31,20 @@ export function claimReminders(bookings: Booking[], due: { id: string; kind: "24
   return due.reduce((rows, item) => markReminder(rows, item.id, item.kind), bookings);
 }
 
+/** Снимает отметку после временной ошибки, чтобы напоминание ушло на следующем проходе. */
+export function releaseReminder(bookings: Booking[], id: string, kind: "24" | "2") {
+  return bookings.map((booking) => {
+    if (booking.id !== id) return booking;
+    if (kind === "2") return { ...booking, reminded2: false };
+    return { ...booking, reminded24: false };
+  });
+}
+
+/** Постоянная ошибка: бот заблокирован, чат не найден. Повтор не поможет, отметку оставляем. */
+export function isPermanentSendError(description: string | undefined) {
+  return /blocked|chat not found|deactivated|can't initiate|no-token/i.test(description ?? "");
+}
+
 export function remindToken(id: string) {
   return id.slice(-16);
 }

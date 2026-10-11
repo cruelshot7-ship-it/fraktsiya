@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
-import { claimReminders, dueReminders, findByToken, remindToken } from "@/lib/studio-remind";
+import { claimReminders, dueReminders, findByToken, isPermanentSendError, releaseReminder, remindToken } from "@/lib/studio-remind";
 import { commitStudioState, dropTombstones, emptyPayload, loadStudioState, saveStudioState, StateConflictError } from "@/lib/studio-sync";
 import {
   buildSessions,
@@ -526,13 +526,33 @@ export async function sendDueReminders(payload: import("@/lib/studio-sync").Stud
             ],
           },
         });
-        if (!sent.ok) console.error("[reminder] not delivered", booking.id, item.kind);
+        if (!sent.ok) {
+          console.error("[reminder] not delivered", booking.id, item.kind, sent.description);
+          if (!isPermanentSendError(sent.description)) stored = (await releaseFailed(item)) ?? stored;
+        }
       } catch (err) {
         console.error("[reminder] send failed", booking.id, item.kind, err);
+        stored = (await releaseFailed(item)) ?? stored;
       }
     }
     return stored;
   } finally {
     remindBusy = false;
   }
+}
+
+/** Снимает отметку у неотправленного напоминания. Перечитывает состояние и повторяет при конфликте. */
+async function releaseFailed(item: { id: string; kind: "24" | "2" }) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const fresh = await loadStudioState();
+    try {
+      return await commitStudioState({ ...fresh, bookings: releaseReminder(fresh.bookings, item.id, item.kind) });
+    } catch (err) {
+      if (!(err instanceof StateConflictError)) {
+        console.error("[reminder] release failed", item.id, item.kind, err);
+        return null;
+      }
+    }
+  }
+  return null;
 }
