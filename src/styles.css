@@ -285,13 +285,6 @@
   isolation: isolate;
 }
 
-/* Нажатие: элемент сам подсвечивается красным, пока палец на нём. */
-.pressable:active:not(:disabled),
-button:active:not(:disabled) {
-  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.6), 0 0 20px rgb(232 56 47 / 0.38);
-  transition: box-shadow 120ms ease-out, transform 220ms var(--ease-apple);
-}
-
 /* Точечная подсветка в месте касания: чёткий сочный красный круг, без размытого края. Обрезается краями элемента. */
 .ripple-dot {
   position: absolute;
