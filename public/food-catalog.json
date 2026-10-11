@@ -7,6 +7,11 @@
     "remoteSearch": false
   },
   "products": {
+    "4813494088838": {
+      "name": "Гречка ядрица",
+      "per100": { "calories": 334, "protein": 12.6, "fat": 3.3, "carbs": 62 },
+      "servingGrams": 100
+    },
     "4810099034642": {
       "name": "Молоко 2,5% 1,45 л",
       "brand": "Молочный Мир",
