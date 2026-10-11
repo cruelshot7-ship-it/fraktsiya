@@ -5,9 +5,9 @@
 import { getBarcodeDetector } from "@/lib/barcode";
 import { decodeEan13Row } from "@/lib/ean-decode";
 
-/** Доли высоты кадра, по которым берём строки для декодера. */
-const VIDEO_ROWS = [0.4, 0.46, 0.52, 0.58, 0.64];
-const PHOTO_ROWS = Array.from({ length: 21 }, (_, i) => 0.15 + i * 0.035);
+/** Доли высоты кадра, по которым берём строки для декодера. Штрихкод может быть в любой части кадра. */
+const VIDEO_ROWS = Array.from({ length: 20 }, (_, i) => 0.12 + i * 0.04);
+const PHOTO_ROWS = Array.from({ length: 31 }, (_, i) => 0.05 + i * 0.03);
 /** Ширина, до которой уменьшаем кадр: штрихи должны занимать несколько пикселей на модуль. */
 const MAX_WIDTH = 960;
 
