@@ -624,18 +624,27 @@ export function ClientsView() {
 
 export function ClientSheet() {
   const sheetClientId = useStudio((s) => s.sheetClientId);
+  const sheetStartMode = useStudio((s) => s.sheetStartMode);
   const clients = useStudio((s) => s.clients);
   const openClientSheet = useStudio((s) => s.openClientSheet);
   const client = clients.find((c) => c.id === sheetClientId);
   if (!client) return null;
   return (
     <BottomSheet onClose={() => openClientSheet(null)}>
-      <ClientSheetBody client={client} onClose={() => openClientSheet(null)} />
+      <ClientSheetBody client={client} startMode={sheetStartMode ?? undefined} onClose={() => openClientSheet(null)} />
     </BottomSheet>
   );
 }
 
-function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => void }) {
+function ClientSheetBody({
+  client,
+  onClose,
+  startMode,
+}: {
+  client: Client;
+  onClose: () => void;
+  startMode?: "program";
+}) {
   const food = useStudio((s) => s.food);
   const bookings = useStudio((s) => s.bookings);
   const setActiveClient = useStudio((s) => s.setActiveClient);
@@ -654,7 +663,7 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
   const delta = weightDelta(client.weightHistory);
   const frozen = isFrozen(client, today);
   const expires = packDaysLeft(client, today);
-  const [mode, setMode] = useState<"view" | "program" | "food" | "measures">("view");
+  const [mode, setMode] = useState<"view" | "program" | "food" | "measures">(startMode ?? "view");
   const [chartReady, setChartReady] = useState(false);
   const [customAmt, setCustomAmt] = useState("8");
   useEffect(() => setChartReady(true), []);

@@ -115,6 +115,8 @@ type State = {
   selectedDate: string;
   selectedSlotId: string | null;
   sheetClientId: string | null;
+  /** в каком режиме открыть карточку клиента: сразу редактор программы */
+  sheetStartMode: "program" | null;
   clientFilter: ClientFilter;
   slots: Slot[];
   extraSlots: Slot[];
@@ -153,7 +155,7 @@ type State = {
   setTab: (tab: TabId) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
-  openClientSheet: (id: string | null) => void;
+  openClientSheet: (id: string | null, startMode?: "program") => void;
   setClientFilter: (filter: ClientFilter) => void;
   shiftWeek: (dir: number) => void;
   selectDay: (iso: string) => void;
@@ -463,6 +465,7 @@ export const useStudio = create<State>((set, get) => ({
   selectedDate: firstBookableDate(),
   selectedSlotId: null,
   sheetClientId: null,
+  sheetStartMode: null,
   clientFilter: "all",
   slots: generateWindow(startOfWeek(new Date()), 42),
   extraSlots: [],
@@ -1004,7 +1007,7 @@ export const useStudio = create<State>((set, get) => ({
     set({ activeClientId: id });
     persist(snap(get()));
   },
-  openClientSheet: (id) => set({ sheetClientId: id }),
+  openClientSheet: (id, startMode) => set({ sheetClientId: id, sheetStartMode: id ? startMode ?? null : null }),
   setClientFilter: (clientFilter) => set({ clientFilter }),
   shiftWeek: (dir) => {
     const current = new Date(`${get().weekStart}T00:00:00`);
