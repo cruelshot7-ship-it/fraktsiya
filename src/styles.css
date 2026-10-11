@@ -285,23 +285,24 @@
   isolation: isolate;
 }
 
-/* Блик как у стекла: мягкий светлый ореол под пальцем, без плотной точки. Быстро появляется, медленно гаснет. */
+/* Точечная подсветка в месте касания: яркий красный центр, быстро гаснет. Живёт внутри элемента и обрезается его краями. */
 .ripple-dot {
   position: absolute;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0.07) 42%, transparent 70%);
-  transform: scale(0.4);
+  background: radial-gradient(circle, rgb(255 80 70 / 0.75) 0%, rgb(232 56 47 / 0.4) 28%, rgb(232 56 47 / 0.12) 55%, transparent 70%);
+  transform: scale(0.3);
   opacity: 0;
   pointer-events: none;
-  animation: ripple-out 560ms var(--ease-apple) forwards;
+  animation: ripple-out 480ms var(--ease-apple) forwards;
 }
 
 @keyframes ripple-out {
   0% {
-    transform: scale(0.4);
+    transform: scale(0.3);
     opacity: 0;
   }
-  22% {
+  15% {
+    transform: scale(0.85);
     opacity: 1;
   }
   100% {

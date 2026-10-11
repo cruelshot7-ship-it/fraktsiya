@@ -14,7 +14,7 @@ export function RippleLayer() {
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>(TARGET) : null;
       if (!target || target.closest("[data-no-ripple]") || (target as HTMLButtonElement).disabled) return;
       const rect = target.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height) * 1.1;
+      const size = Math.max(rect.width, rect.height) * 0.7;
       const dot = document.createElement("span");
       dot.className = "ripple-dot";
       dot.style.width = `${size}px`;
