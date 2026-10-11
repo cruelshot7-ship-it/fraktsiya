@@ -278,37 +278,11 @@
 .week-sheen > button:nth-child(6) { animation-delay: 4s; }
 .week-sheen > button:nth-child(7) { animation-delay: 4.8s; }
 
-/* Волна нажатия (RippleLayer): круг расходится от точки касания. */
-.ripple-host {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-/* Точечная подсветка в месте касания: чёткий сочный красный круг, без размытого края. Обрезается краями элемента. */
-.ripple-dot {
-  position: absolute;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgb(240 60 50 / 0.9) 0%, rgb(232 56 47 / 0.7) 46%, rgb(232 56 47 / 0) 47%);
-  transform: scale(0.3);
-  opacity: 0;
-  pointer-events: none;
-  animation: ripple-out 480ms var(--ease-apple) forwards;
-}
-
-@keyframes ripple-out {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  15% {
-    transform: scale(0.85);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
+/* Нажатие: кнопка или карточка подсвечивается красным, пока палец на ней. */
+.pressable:active:not(:disabled),
+button:active:not(:disabled) {
+  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.6), 0 0 20px rgb(232 56 47 / 0.38);
+  transition: box-shadow 120ms ease-out, transform 220ms var(--ease-apple);
 }
 
 /* Активные кнопки: мягкое свечение. Циан — выбранный фильтр, красный — выбранный вариант. */
@@ -511,7 +485,6 @@
   .title-grad,
   .tools-body,
   .week-sheen > button,
-  .ripple-dot,
   .scroll-hint {
     animation: none;
   }
