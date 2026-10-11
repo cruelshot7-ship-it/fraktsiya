@@ -13,7 +13,7 @@ import { coachTierLine } from "@/lib/coach-tier";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
-import { checkMenuRecord, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
+import { applyClientChoices, checkMenus, menusForClient, mergeMenus } from "@/lib/menu-scope";
 import {
   clientCoach,
   coachKey,
@@ -62,7 +62,7 @@ export type StudioPayload = {
   rev?: number;
   /** the trainer's program templates; clients never receive them (see scopePayload) */
   programTemplates?: ProgramTemplate[];
-  /** дни питания: тренер пишет меню своих клиентов, клиент видит только подтверждённые (см. menusForClient) */
+  /** дни питания: тренер пишет меню своих клиентов, клиент видит только подтверждённые и пишет только свой выбор */
   menus?: MenuRecord[];
 };
 
@@ -159,7 +159,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     })),
     foreignHolds: undefined,
     visits: raw.visits ?? [],
-    menus: (Array.isArray(raw.menus) ? raw.menus : []).map((m) => checkMenuRecord(m)).filter((m): m is MenuRecord => m !== null),
+    menus: checkMenus(raw.menus),
     clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
   }));
 }
@@ -653,6 +653,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     bookings: settled.bookings,
     food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
+    menus: applyClientChoices(current.menus ?? [], checkMenus(incoming.menus), id),
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
     waitlist: [
       ...current.waitlist.filter((w) => w.clientId !== id),
