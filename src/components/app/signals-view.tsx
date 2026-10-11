@@ -78,7 +78,7 @@ export function SignalsView() {
 
           {pending.map((req) => (
             <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border glow-ok">
-              <p className="text-2xs font-medium tracking-wide text-ok ">Заявка в зал</p>
+              <p className="text-2xs font-medium tracking-wide text-muted-foreground">Заявка в зал</p>
               <p className="font-display mt-1 text-base">
                 {req.firstName} {req.lastName}
               </p>
@@ -289,17 +289,17 @@ function SignalCard({
           <p className="mt-1 text-tiny text-muted-foreground">{item.body}</p>
           <div className="mt-2 flex items-center gap-2">
             {item.kind === "cancel" ? (
-              <span className={cn("text-2xs font-medium", item.late ? "text-alert-text" : "text-ok")}>
+              <span className={cn("text-2xs font-medium", item.late ? "text-alert-text" : "text-muted-foreground")}>
                 {item.late ? "списание" : "отмена"}
               </span>
             ) : item.kind === "wallet" ? (
-              <span className="text-2xs font-medium text-ok">баланс</span>
+              <span className="text-2xs font-medium text-muted-foreground">баланс</span>
             ) : item.kind === "checkin" ? (
-              <span className="text-2xs font-medium text-ok">чек-ин</span>
+              <span className="text-2xs font-medium text-muted-foreground">чек-ин</span>
             ) : item.kind === "noshow" ? (
               <span className="text-2xs font-medium text-alert-text">неявка</span>
             ) : item.kind === "waitlist" ? (
-              <span className="text-2xs font-medium text-ok">лист</span>
+              <span className="text-2xs font-medium text-muted-foreground">лист</span>
             ) : null}
             <p className="text-2xs text-muted-foreground">{relativeLabel(item.at)}</p>
           </div>
@@ -334,7 +334,7 @@ function SignalCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="pressable h-9 rounded-lg bg-ok/15 px-3 text-xs font-medium text-ok"
+          className="pressable h-9 rounded-lg bg-secondary px-3 text-xs font-medium text-foreground"
         >
           Готово
         </button>

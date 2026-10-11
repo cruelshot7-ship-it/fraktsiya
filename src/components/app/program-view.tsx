@@ -258,7 +258,7 @@ export function ProgramView() {
           {client.trainTimes.join(", ") || "время свободно"}
         </p>
         {weekLoad >= 3 ? (
-          <p className="mt-2 text-tiny text-ok">После этой — день восстановления. Сон и белок важнее ещё одного подхода.</p>
+          <p className="mt-2 text-tiny text-foreground">После этой — день восстановления. Сон и белок важнее ещё одного подхода.</p>
         ) : null}
         <div className="mt-3">
           <p className="text-tiny text-muted-foreground">
@@ -271,7 +271,7 @@ export function ProgramView() {
           </div>
         </div>
         {todayBook && hoursToToday !== null && hoursToToday > 0 && hoursToToday < 24 ? (
-          <p className="mt-2 text-tiny text-ok">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
+          <p className="mt-2 text-tiny text-foreground">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
         ) : null}
         {todayBook && mapsUrl(notifyPrefs.address || "") ? (
           <a
@@ -287,12 +287,12 @@ export function ProgramView() {
           <button
             type="button"
             onClick={() => arrive()}
-            className="pressable mt-3 h-12 w-full rounded-xl bg-ok text-sm font-medium text-ok-foreground"
+            className="pressable mt-3 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
           >
             Я на месте
           </button>
         ) : arrived && !isTrainer ? (
-          <p className="mt-3 text-sm text-ok">Вы на месте. Вода +250 мл.</p>
+          <p className="mt-3 text-sm text-foreground">Вы на месте. Вода +250 мл.</p>
         ) : null}
       </Surface>
 
@@ -339,7 +339,7 @@ export function ProgramView() {
             </div>
           ) : null}
           {!showDone && plan.blocks.length > 0 && doneCount === plan.blocks.length ? (
-            <p className="mt-2 text-sm text-ok">Всё выполнено</p>
+            <p className="mt-2 text-sm text-foreground">Всё выполнено</p>
           ) : null}
           <ul className="mt-2 space-y-2">
             {cardsOf(visibleBlocks).map((card) => (
@@ -415,7 +415,7 @@ export function ProgramView() {
           </div>
           {todayWorkout ? (
             <div className="mt-3">
-              <p className="text-sm text-ok">
+              <p className="text-sm text-foreground">
                 Тренировка закрыта · {todayWorkout.minutes} мин · {todayWorkout.kcal} ккал
               </p>
               {!isTrainer && canUndoWorkout(todayWorkout, Date.now()) ? (
@@ -690,7 +690,7 @@ function BlockRow({
     .join(" · ");
   return (
     <>
-      <div className={cn("flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm", on && "bg-ok-dim")}>
+      <div className={cn("flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm")}>
         <span className="min-w-0 flex-1">
           <span className={cn("block font-medium", on && "line-through text-muted-foreground")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}

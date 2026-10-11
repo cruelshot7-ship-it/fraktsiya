@@ -178,7 +178,7 @@ export function SessionResultForm({
       <p className="mt-1 text-tiny text-muted-foreground">
         Факт привязан к этой записи. Повтор не создаёт дубль.
       </p>
-      {savedId ? <p className="mt-3 text-sm text-ok">Сохранено · {savedId}</p> : null}
+      {savedId ? <p className="mt-3 text-sm text-foreground">Сохранено · {savedId}</p> : null}
       <div className="mt-3 space-y-3">
         {rows.map((row, i) => (
           <div key={i} className="rounded-xl bg-secondary/40 p-3 space-y-2">

@@ -101,7 +101,7 @@ export function TodayView() {
         <div className="apple-block grid grid-cols-3 divide-x divide-border">
           <button type="button" className="pressable p-4 text-left" onClick={() => setTab("bookings")}>
             <p className="min-h-9 text-2xs text-muted-foreground">Ещё сегодня</p>
-            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", upcomingToday.length > 0 && "text-ok")}>{upcomingToday.length}</p>
+            <p className={"mt-1 font-display text-2xl tabular-nums leading-none"}>{upcomingToday.length}</p>
           </button>
           <div className="p-4">
             <p className="min-h-9 text-2xs text-muted-foreground">Без явки</p>
@@ -160,7 +160,7 @@ export function TodayView() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="pressable rounded-lg bg-ok/15 px-3 py-2 text-xs font-medium text-ok"
+                      className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium text-foreground"
                       onClick={() => {
                         checkIn(b.id);
                         showToast(name ? `Явка · ${name}` : "Явка отмечена");
@@ -389,7 +389,7 @@ export function TodayView() {
         {isToday || afterSession ? (
           <button type="button" className="pressable w-full text-left" onClick={() => setTab("program")}>
             <Surface glow="ok" className="border border-ok/30">
-              <p className="text-2xs tracking-wide text-ok ">
+              <p className="text-2xs tracking-wide text-muted-foreground">
                 {afterSession ? "После слота" : "Сейчас"}
               </p>
               <p className="mt-1 font-display text-lg leading-tight">
@@ -398,7 +398,7 @@ export function TodayView() {
               <p className="mt-1 text-tiny text-muted-foreground">
                 Галочки и факты сохраняются и уходят на сервер
               </p>
-              <p className="mt-3 text-xs font-medium text-ok">К программе →</p>
+              <p className="mt-3 text-xs font-medium text-foreground">К программе →</p>
             </Surface>
           </button>
         ) : (

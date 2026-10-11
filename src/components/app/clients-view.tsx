@@ -838,7 +838,7 @@ function ClientSheetBody({
                     if (!n) return;
                     creditSessions(client.id, n);
                   }}
-                  className="pressable h-11 shrink-0 rounded-lg bg-ok px-3 text-sm font-medium text-ok-foreground"
+                  className="pressable h-11 shrink-0 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
                 >
                   Зачислить
                 </button>

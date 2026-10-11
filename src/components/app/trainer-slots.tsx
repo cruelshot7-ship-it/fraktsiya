@@ -210,7 +210,7 @@ export function TrainerSlots() {
                         </button>
                       </div>
                     ) : taken < slot.capacity && !isSlotPast(slot.date, slot.time) ? (
-                      <button type="button" onClick={() => setPickId(slot.id)} className="pressable mt-3 h-11 w-full rounded-lg bg-ok text-sm font-medium text-ok-foreground">
+                      <button type="button" onClick={() => setPickId(slot.id)} className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground">
                         Записать клиента
                       </button>
                     ) : null}

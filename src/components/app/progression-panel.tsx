@@ -220,7 +220,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
               type="button"
               disabled={busy || suggestion.status === "insufficient_data"}
               onClick={() => void decide("accept")}
-              className="pressable h-10 rounded-lg bg-ok text-xs font-medium text-ok-foreground disabled:opacity-40"
+              className="pressable h-10 rounded-lg bg-primary text-xs font-medium text-primary-foreground disabled:opacity-40"
             >
               Принять
             </button>

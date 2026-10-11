@@ -91,7 +91,7 @@ export function HallView() {
             href={mapsUrl(notifyPrefs.address)}
             target="_blank"
             rel="noreferrer"
-            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-ok text-sm font-medium text-ok-foreground"
+            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
           >
             Маршрут
           </a>

@@ -109,7 +109,6 @@ export function ClientSlots() {
                 className={cn(
                   "ds-slot bg-card p-4",
                   mine && "is-mine ring-1 ring-ok/40",
-                  !mine && !past && left > 0 && "ring-1 ring-ok/20",
                   !mine && !past && left <= 0 && "opacity-90",
                   past && "is-past",
                   confirmId === slot.id && "ring-1 ring-primary/50",
