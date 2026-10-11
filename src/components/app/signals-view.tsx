@@ -289,7 +289,7 @@ function SignalCard({
           <p className="mt-1 text-tiny text-muted-foreground">{item.body}</p>
           <div className="mt-2 flex items-center gap-2">
             {item.kind === "cancel" ? (
-              <span className={cn("text-2xs font-medium", item.late ? "text-primary" : "text-ok")}>
+              <span className={cn("text-2xs font-medium", item.late ? "text-alert-text" : "text-ok")}>
                 {item.late ? "списание" : "отмена"}
               </span>
             ) : item.kind === "wallet" ? (
@@ -297,7 +297,7 @@ function SignalCard({
             ) : item.kind === "checkin" ? (
               <span className="text-2xs font-medium text-ok">чек-ин</span>
             ) : item.kind === "noshow" ? (
-              <span className="text-2xs font-medium text-primary">неявка</span>
+              <span className="text-2xs font-medium text-alert-text">неявка</span>
             ) : item.kind === "waitlist" ? (
               <span className="text-2xs font-medium text-ok">лист</span>
             ) : null}

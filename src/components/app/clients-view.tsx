@@ -140,7 +140,7 @@ export function ClientsView() {
         </button>
       </Surface>
       {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
-        <p className="rounded-xl bg-card px-4 py-3 text-sm text-primary shadow-border">Нет свободных окон. Новичок записаться не может.</p>
+        <p className="rounded-xl bg-card px-4 py-3 text-sm text-alert-text shadow-border">Нет свободных окон. Новичок записаться не может.</p>
       ) : null}
       {joinRequests.filter((r) => r.status === "pending" && (!r.coachId || r.coachId === String(me?.id ?? TRAINER_TG_ID))).length > 0 ? (
         <div className="flex flex-col gap-2">
@@ -372,7 +372,7 @@ export function ClientsView() {
                 {!confirmRemove ? (
                   <button
                     type="button"
-                    className="pressable flex h-11 items-center justify-center rounded-lg bg-primary/15 text-sm font-medium text-primary"
+                    className="pressable flex h-11 items-center justify-center rounded-lg bg-primary/15 text-sm font-medium text-alert-text"
                     onClick={() => {
                       setConfirmRemove(true);
                       setRemoveTyped("");
@@ -569,7 +569,7 @@ export function ClientsView() {
                         </button>
                         <button
                           type="button"
-                          className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-primary"
+                          className="pressable mt-2 h-11 w-full rounded-lg bg-card text-sm text-alert-text"
                           onClick={() => void removeCoach(coach)}
                         >
                           Удалить полностью

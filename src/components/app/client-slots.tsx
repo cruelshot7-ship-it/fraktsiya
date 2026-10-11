@@ -84,7 +84,7 @@ export function ClientSlots() {
       </p>
       <p className="mb-2 text-tiny text-muted-foreground">
         Баланс:{" "}
-        <span className={(me.sessionsLeft ?? 0) <= 0 ? "font-medium text-primary" : "font-medium text-foreground"}>
+        <span className={(me.sessionsLeft ?? 0) <= 0 ? "font-medium text-alert-text" : "font-medium text-foreground"}>
           {me.sessionsLeft ?? 0}
         </span>{" "}
         {(me.sessionsLeft ?? 0) <= 0 ? "· запись недоступна без пакета" : "зан."}
@@ -214,7 +214,7 @@ export function ClientSlots() {
                   ) : waiting ? (
                     <span className="text-xs text-muted-foreground">В листе</span>
                   ) : frozen ? (
-                    <span className="text-xs text-primary">Заморозка</span>
+                    <span className="text-xs text-alert-text">Заморозка</span>
                   ) : null}
                 </div>
               </div>

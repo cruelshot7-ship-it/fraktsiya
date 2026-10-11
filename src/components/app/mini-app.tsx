@@ -358,7 +358,7 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
               {items.map((item) => (
                 <div key={item.id} className={cn("rounded-xl bg-card p-4", item.kind === "cancel" ? "shadow-glow-alert" : "shadow-border")}>
                   {item.kind === "cancel" ? (
-                    <p className="text-2xs font-medium tracking-wide text-primary ">Отмена записи</p>
+                    <p className="text-2xs font-medium tracking-wide text-alert-text ">Отмена записи</p>
                   ) : item.kind === "reschedule" ? (
                     <p className="text-2xs font-medium tracking-wide text-ok ">Перенос</p>
                   ) : item.kind === "wallet" ? (
@@ -366,7 +366,7 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
                   ) : item.kind === "waitlist" ? (
                     <p className="text-2xs font-medium tracking-wide text-ok ">Лист ожидания</p>
                   ) : item.kind === "freeze" ? (
-                    <p className="text-2xs font-medium tracking-wide text-primary ">Заморозка</p>
+                    <p className="text-2xs font-medium tracking-wide text-alert-text ">Заморозка</p>
                   ) : item.kind === "book" ? (
                     <p className="text-2xs font-medium tracking-wide text-ok ">Запись</p>
                   ) : null}

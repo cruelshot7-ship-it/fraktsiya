@@ -311,7 +311,7 @@ export function ProgramView() {
             {doneCount > 0 ? (
               <button
                 type="button"
-                className="pressable h-9 rounded-lg px-3 text-primary"
+                className="pressable h-9 rounded-lg px-3 text-alert-text"
                 onClick={() => setShowDone((v) => !v)}
               >
                 {showDone ? "Скрыть выполненные" : `Показать выполненные (${doneCount})`}
@@ -346,7 +346,7 @@ export function ProgramView() {
                 )}
               >
                 {card.length > 1 ? (
-                  <p className="px-2 pt-1 text-2xs  tracking-wide text-primary">Суперсет</p>
+                  <p className="px-2 pt-1 text-2xs  tracking-wide text-alert-text">Суперсет</p>
                 ) : null}
                 {card.map((b) => (
                   <BlockRow
@@ -396,7 +396,7 @@ export function ProgramView() {
             <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
               {todayWorkout ? todayWorkout.kcal : isTrainer ? 0 : liveKcal}
               <span className="text-base font-sans font-normal text-muted-foreground">ккал</span>
-              <Flame className="size-4 text-primary" />
+              <Flame className="size-4 text-alert-text" />
             </p>
             <p className="mt-1 text-tiny text-muted-foreground">
               {todayWorkout

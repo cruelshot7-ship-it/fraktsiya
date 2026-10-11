@@ -129,7 +129,7 @@ export function CsvImportPanel() {
       {preview ? (
         <div className="mt-3 space-y-2">
           {preview.errors.length ? (
-            <ul className="text-tiny text-primary">
+            <ul className="text-tiny text-alert-text">
               {preview.errors.slice(0, 5).map((e) => (
                 <li key={e}>{e}</li>
               ))}

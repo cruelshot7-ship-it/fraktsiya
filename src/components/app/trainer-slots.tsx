@@ -167,7 +167,7 @@ export function TrainerSlots() {
                               <p className="text-sm">{client ? shortName(client) : "Клиент"}</p>
                               <button
                                 type="button"
-                                className="text-tiny text-primary"
+                                className="text-tiny text-alert-text"
                                 onClick={async () => {
                                   if (!await confirmAction(`Снять ${client ? shortName(client) : "клиента"} из слота ${slot.time}? Занятие вернётся ему.`)) return;
                                   cancelBooking(booking.id, "trainer");
@@ -225,7 +225,7 @@ export function TrainerSlots() {
                         closeSlot(slot.id);
                         setOpenId(null);
                       }}
-                      className="pressable mt-2 h-11 w-full rounded-lg bg-primary-dim text-sm text-primary"
+                      className="pressable mt-2 h-11 w-full rounded-lg bg-primary-dim text-sm text-alert-text"
                     >
                       Закрыть слот
                     </button>
