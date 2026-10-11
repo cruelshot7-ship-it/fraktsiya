@@ -327,7 +327,7 @@ export function ProgramEditor({
             )}
           >
             <span className="block text-sm font-medium">{row.label}</span>
-            <span className={cn("mt-0.5 block text-2xs", preset === row.id ? "text-primary-foreground/80" : "text-muted-foreground")}>
+            <span className={cn("mt-0.5 block text-2xs", preset === row.id ? "text-primary-foreground" : "text-muted-foreground")}>
               {row.hint}
             </span>
           </button>
