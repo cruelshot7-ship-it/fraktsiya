@@ -3,16 +3,22 @@ import { confirmAction } from "@/lib/confirm";
 import { useMemo } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
+import { specialDataAllowed } from "@/lib/privacy";
 import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
   daysSince,
+  dayKbju,
   formatDayMonth,
   isoDate,
   isSlotPast,
   sessionsRu,
+  sumFood,
+  type Booking,
+  type Client,
+  type FoodLog,
 } from "@/data/studio";
 import { SyncStatusChip } from "@/components/app/sync-status";
 
@@ -287,6 +293,10 @@ export function TodayView() {
         </Surface>
       )}
 
+      {me && specialDataAllowed(me.consent) ? (
+        <TodayKbju client={me} food={food} bookings={bookings} today={today} />
+      ) : null}
+
       <div className="space-y-2">
         <p className="text-2xs font-medium tracking-wide text-muted-foreground ">1 · Запись</p>
         {next && isToday ? (
@@ -403,5 +413,30 @@ export function TodayView() {
 
       {visit?.gap != null && visit.gap >= 14 ? <SoftReturnPanel /> : null}
     </div>
+  );
+}
+
+/** Кольца КБЖУ на главной клиента. Показываются только при согласии на данные о здоровье (как на вкладке «Еда»). */
+function TodayKbju({
+  client,
+  food,
+  bookings,
+  today,
+}: {
+  client: Client;
+  food: FoodLog[];
+  bookings: Booking[];
+  today: string;
+}) {
+  const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
+  const goal = dayKbju(client, today, bookings);
+  return (
+    <Surface glow={goal.kbju.calories > 0 && sumFood(todayFood).calories < goal.kbju.calories * 0.72 ? "alert" : "ok"}>
+      <KbjuMeters
+        title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`}
+        eaten={sumFood(todayFood)}
+        target={goal.kbju}
+      />
+    </Surface>
   );
 }

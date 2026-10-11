@@ -34,7 +34,7 @@ export function BrandShaderCanvas({ onError }: Props) {
         pointerEvents="none"
         powerPreference="low-power"
       >
-        {/* Brand-adjacent palette: warm clay / wine / soft gold — Ruksha */}
+        {/* Палитра приложения: графит, фирменный красный, бирюза (прототип FitSync) */}
         <ShaderGradient
           control="props"
           animate="on"
@@ -43,9 +43,9 @@ export function BrandShaderCanvas({ onError }: Props) {
           uStrength={1.4}
           uDensity={1.1}
           uFrequency={4.2}
-          color1="#c4b08a"
-          color2="#b23b2e"
-          color3="#2a221c"
+          color1="#d62e26"
+          color2="#45d4e4"
+          color3="#15171b"
           cDistance={4.2}
           cPolarAngle={110}
           cAzimuthAngle={180}

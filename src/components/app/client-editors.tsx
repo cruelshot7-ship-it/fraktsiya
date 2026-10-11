@@ -1,6 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
 import { MeasuresSummary } from "@/components/app/measures-card";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   coachKey,
   DOW,
@@ -487,6 +487,36 @@ function SessionEditor({
 }) {
   const blocks = sessionPlan(session).blocks;
   const listId = `ex-${session.id}`;
+  const listRef = useRef<HTMLDivElement>(null);
+  /** блок, который только что добавлен: фокус и прокрутка к нему, имя выделено для замены */
+  const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusBlockId) return;
+    const card = listRef.current?.querySelector<HTMLElement>(`[data-block-id="${focusBlockId}"]`);
+    const name = card?.querySelector<HTMLInputElement>("input");
+    if (card && name) {
+      card.scrollIntoView({ block: "center", behavior: "smooth" });
+      name.focus();
+      name.select();
+    }
+    setFocusBlockId(null);
+  }, [focusBlockId, blocks]);
+  /** Enter в поле блока переводит фокус на следующее поле; после «отдыха» — на имя следующего блока */
+  function onBlockKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "INPUT") return;
+    e.preventDefault();
+    const card = e.currentTarget;
+    const fields = Array.from(card.querySelectorAll<HTMLInputElement>("input:not([disabled])"));
+    const next = fields[fields.indexOf(target as HTMLInputElement) + 1];
+    if (next) {
+      next.focus();
+      return;
+    }
+    const cards = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-block-id]") ?? []);
+    cards[cards.indexOf(card) + 1]?.querySelector<HTMLInputElement>("input")?.focus();
+  }
   const update = (next: ProgramBlock[]) => onChange(withBlocks(session, next));
   const patch = (i: number, change: Partial<ProgramBlock>) =>
     update(blocks.map((b, j) => (j === i ? { ...b, ...change } : b)));
@@ -527,15 +557,24 @@ function SessionEditor({
           <option key={o} value={o} />
         ))}
       </datalist>
-      <div className="mt-3 flex flex-col gap-2">
+      <div ref={listRef} className="mt-3 flex flex-col gap-2">
         {blocks.map((b, i) => {
           const sameAsPrev = i > 0 && Boolean(b.group) && b.group === blocks[i - 1].group;
           return (
-            <div key={b.id} className={cn("rounded-lg bg-background/40 p-2.5", sameAsPrev && "border border-primary/40")}>
+            <div
+              key={b.id}
+              data-block-id={b.id}
+              onKeyDown={onBlockKeyDown}
+              className={cn(
+                "rounded-lg bg-background/40 p-2.5 transition-shadow focus-within:ring-1 focus-within:ring-ok/40",
+                sameAsPrev && "border border-primary/40",
+              )}
+            >
               <div className="flex items-center gap-1.5">
                 <input
                   className={cn(inputClass, "min-w-0 flex-1")}
                   list={listId}
+                  enterKeyHint="next"
                   aria-label={`Упражнение ${i + 1}`}
                   value={b.exercise}
                   onChange={(e) => patch(i, { exercise: e.target.value })}
@@ -556,20 +595,22 @@ function SessionEditor({
                   <input
                     className={inputClass}
                     inputMode="numeric"
+                    enterKeyHint="next"
                     value={b.sets || ""}
                     onChange={(e) => patch(i, { sets: Number(e.target.value.replace(/\D/g, "")) || 0 })}
                   />
                 </Field>
                 <Field label="Повторы">
-                  <input className={inputClass} placeholder="8-10" value={b.reps} onChange={(e) => patch(i, { reps: e.target.value.trim() })} />
+                  <input className={inputClass} enterKeyHint="next" placeholder="8-10" value={b.reps} onChange={(e) => patch(i, { reps: e.target.value.trim() })} />
                 </Field>
                 <Field label="Вес, кг">
-                  <input className={inputClass} placeholder="—" value={b.load} onChange={(e) => patch(i, { load: e.target.value.trim() })} />
+                  <input className={inputClass} enterKeyHint="next" placeholder="—" value={b.load} onChange={(e) => patch(i, { load: e.target.value.trim() })} />
                 </Field>
                 <Field label="Отдых, с">
                   <input
                     className={inputClass}
                     inputMode="numeric"
+                    enterKeyHint="next"
                     value={b.rest ?? ""}
                     onChange={(e) => {
                       const n = Number(e.target.value.replace(/\D/g, ""));
@@ -598,7 +639,11 @@ function SessionEditor({
       <button
         type="button"
         className="mt-2 h-10 w-full rounded-lg border border-hairline text-xs text-muted-foreground"
-        onClick={() => update([...blocks, newBlock()])}
+        onClick={() => {
+          const created = newBlock();
+          update([...blocks, created]);
+          setFocusBlockId(created.id);
+        }}
       >
         Добавить блок
       </button>

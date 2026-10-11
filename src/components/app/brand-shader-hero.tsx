@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 
 const FALLBACK_STYLE: CSSProperties = {
   background:
-    "radial-gradient(120% 80% at 20% 0%, rgb(196 176 138 / 0.28), transparent 55%)," +
-    "radial-gradient(100% 70% at 90% 10%, rgb(178 59 46 / 0.22), transparent 50%)," +
-    "linear-gradient(165deg, #1a1512 0%, #0f0d0c 45%, #16110e 100%)",
+    "radial-gradient(70% 55% at 90% 15%, rgb(232 56 47 / 0.2), transparent 65%)," +
+    "radial-gradient(65% 50% at 10% 90%, rgb(69 212 228 / 0.1), transparent 65%)," +
+    "linear-gradient(165deg, #1e2127 0%, #15171b 50%, #15171b 100%)",
 };
 
 function StaticFallback({ className }: { className?: string }) {
@@ -91,7 +91,7 @@ export function BrandShaderHero({ className, active = true }: Props) {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgb(12 10 9 / 0.35) 0%, rgb(12 10 9 / 0.55) 55%, rgb(12 10 9 / 0.75) 100%)",
+              "linear-gradient(180deg, rgb(21 23 27 / 0.35) 0%, rgb(21 23 27 / 0.55) 55%, rgb(21 23 27 / 0.75) 100%)",
           }}
         />
       </Suspense>
