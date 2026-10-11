@@ -650,6 +650,7 @@ function ClientSheetBody({
   const setActiveClient = useStudio((s) => s.setActiveClient);
   const setTab = useStudio((s) => s.setTab);
   const updateClient = useStudio((s) => s.updateClient);
+  const logProgramChange = useStudio((s) => s.logProgramChange);
   const removeClient = useStudio((s) => s.removeClient);
   const creditSessions = useStudio((s) => s.creditSessions);
   const freezeClient = useStudio((s) => s.freezeClient);
@@ -982,8 +983,9 @@ function ClientSheetBody({
           <ProgramEditor
             client={client}
             onBack={() => setMode("view")}
-            onSave={(patch) => {
+            onSave={(patch, reason) => {
               updateClient(client.id, patch);
+              logProgramChange(client.id, reason);
               showToast("Программа обновлена. День A — первый визит недели.");
               setMode("view");
             }}

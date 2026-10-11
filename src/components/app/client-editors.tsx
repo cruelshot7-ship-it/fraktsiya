@@ -120,9 +120,11 @@ export function ProgramEditor({
 }: {
   client: Client;
   onBack: () => void;
-  onSave: (patch: Partial<Client>) => void;
+  onSave: (patch: Partial<Client>, reason?: string) => void;
 }) {
   const [draft, setDraft] = useState(client);
+  /** причина изменения: клиент увидит её в истории плана */
+  const [reason, setReason] = useState("");
   const [newExercise, setNewExercise] = useState("");
   const [exerciseError, setExerciseError] = useState<string | null>(null);
   const [goal, setGoal] = useState<BuildGoal>("shape");
@@ -445,19 +447,33 @@ export function ProgramEditor({
       >
         Добавить день программы
       </button>
+      <label className="flex flex-col gap-1">
+        <span className="text-2xs text-muted-foreground">Почему меняем · клиент увидит в истории плана</span>
+        <textarea
+          rows={2}
+          maxLength={300}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Например: добавил вес в тягу, снизил объём на третьей неделе"
+          className="rounded-lg bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </label>
       <button
         type="button"
         className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
         onClick={() =>
-          onSave({
-            programTitle: draft.programTitle,
-            programWeeks: draft.programWeeks,
-            programStart: draft.programStart,
-            trainDays: draft.trainDays,
-            trainTimes: draft.trainTimes,
-            sessions: draft.sessions,
-            exerciseNames: draft.exerciseNames ?? [],
-          })
+          onSave(
+            {
+              programTitle: draft.programTitle,
+              programWeeks: draft.programWeeks,
+              programStart: draft.programStart,
+              trainDays: draft.trainDays,
+              trainTimes: draft.trainTimes,
+              sessions: draft.sessions,
+              exerciseNames: draft.exerciseNames ?? [],
+            },
+            reason.trim(),
+          )
         }
       >
         Сохранить программу
