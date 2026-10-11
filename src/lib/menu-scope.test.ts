@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkMenuRecord, mergeMenus, menusForClient, type MenuRecord } from "./menu-scope.ts";
+import {
+  applyClientChoices,
+  checkMenuRecord,
+  keepClientChoices,
+  mergeMenus,
+  menusForClient,
+  validChoice,
+  type MenuRecord,
+} from "./menu-scope.ts";
 
 function rec(clientId: string, date: string, extra: Partial<MenuRecord> = {}): MenuRecord {
   return {
@@ -8,7 +16,8 @@ function rec(clientId: string, date: string, extra: Partial<MenuRecord> = {}): M
     clientId,
     date,
     count: 3,
-    selection: { breakfast: "oats" },
+    offers: { breakfast: ["oats", "eggs"], lunch: ["bowl"] },
+    choice: {},
     confirmed: false,
     updatedAt: "2026-10-11T12:00:00.000Z",
     ...extra,
@@ -16,27 +25,44 @@ function rec(clientId: string, date: string, extra: Partial<MenuRecord> = {}): M
 }
 
 test("проверка записи: корректная проходит, мусор отбрасывается", () => {
-  const ok = checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 4, selection: { lunch: "bowl" }, confirmed: true });
+  const ok = checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 4, offers: { lunch: ["bowl"] }, confirmed: true });
   assert.ok(ok);
   assert.equal(ok.count, 4);
   assert.equal(ok.confirmed, true);
   assert.equal(checkMenuRecord(null), null);
-  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "12.10.2026", count: 3, selection: {} }), null);
-  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 2, selection: {} }), null);
-  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 3, selection: [] }), null);
+  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "12.10.2026", count: 3, offers: {} }), null);
+  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 2, offers: {} }), null);
+  assert.equal(checkMenuRecord({ id: "a", clientId: "c1", date: "2026-10-12", count: 3, offers: [] }), null);
 });
 
-test("проверка записи: неверные блюда в выборе отбрасываются, остальное сохраняется", () => {
+test("проверка записи: вариантов не больше трёх, неверные блюда отбрасываются", () => {
   const r = checkMenuRecord({
     id: "a",
     clientId: "c1",
     date: "2026-10-12",
     count: 3,
-    selection: { breakfast: "oats", lunch: 42, dinner: "" },
+    offers: { breakfast: ["oats", "eggs", "yogurt", "omelette"], lunch: [42, ""] },
   });
   assert.ok(r);
-  assert.deepEqual(r.selection, { breakfast: "oats" });
-  assert.equal(r.confirmed, false, "без явного true запись не подтверждена");
+  assert.equal(r.offers.breakfast.length, 3);
+  assert.deepEqual(r.offers.lunch, []);
+});
+
+test("выбор клиента, которого нет среди вариантов, отбрасывается", () => {
+  const r = checkMenuRecord({
+    id: "a",
+    clientId: "c1",
+    date: "2026-10-12",
+    count: 3,
+    offers: { breakfast: ["oats"] },
+    choice: { breakfast: "oats", lunch: "bowl" },
+  });
+  assert.ok(r);
+  assert.deepEqual(r.choice, { breakfast: "oats" });
+});
+
+test("validChoice оставляет только предложенные блюда", () => {
+  assert.deepEqual(validChoice({ breakfast: "oats", lunch: "pasta" }, { breakfast: ["oats"], lunch: ["bowl"] }), { breakfast: "oats" });
 });
 
 test("клиент видит только свои подтверждённые меню", () => {
@@ -65,8 +91,7 @@ test("слияние заменяет меню своих клиентов и н
 });
 
 test("меню клиента, которого нет в пришедшем списке своих, удаляется", () => {
-  const current = [rec("gone", "2026-10-12")];
-  const merged = mergeMenus(current, [], new Set(["gone"]));
+  const merged = mergeMenus([rec("gone", "2026-10-12")], [], new Set(["gone"]));
   assert.equal(merged.length, 0);
 });
 
@@ -74,4 +99,33 @@ test("на один день одного клиента остаётся одн
   const merged = mergeMenus([], [rec("c1", "2026-10-12", { count: 3 }), rec("c1", "2026-10-12", { count: 4 })], new Set(["c1"]));
   assert.equal(merged.length, 1);
   assert.equal(merged[0].count, 4);
+});
+
+test("клиент пишет выбор только в подтверждённом меню и только из вариантов", () => {
+  const current = [rec("c1", "2026-10-12", { confirmed: true }), rec("c1", "2026-10-13", { confirmed: false })];
+  const incoming = [
+    rec("c1", "2026-10-12", { choice: { breakfast: "eggs", lunch: "bowl" }, confirmed: true }),
+    rec("c1", "2026-10-13", { choice: { breakfast: "oats" } }),
+  ];
+  const out = applyClientChoices(current, incoming, "c1");
+  assert.deepEqual(out.find((m) => m.date === "2026-10-12")?.choice, { breakfast: "eggs", lunch: "bowl" });
+  assert.deepEqual(out.find((m) => m.date === "2026-10-13")?.choice, {}, "черновик клиент не меняет");
+});
+
+test("клиент не меняет варианты тренера и меню чужих клиентов", () => {
+  const current = [rec("c1", "2026-10-12", { confirmed: true }), rec("c2", "2026-10-12", { confirmed: true })];
+  const incoming = [
+    rec("c1", "2026-10-12", { confirmed: true, offers: { breakfast: ["pasta"] }, choice: { breakfast: "pasta" } }),
+    rec("c2", "2026-10-12", { choice: { breakfast: "oats" } }),
+  ];
+  const out = applyClientChoices(current, incoming, "c1");
+  assert.deepEqual(out.find((m) => m.clientId === "c1")?.offers, { breakfast: ["oats", "eggs"], lunch: ["bowl"] });
+  assert.deepEqual(out.find((m) => m.clientId === "c2")?.choice, {});
+});
+
+test("локальный выбор клиента не сбрасывается присланным сервером состоянием", () => {
+  const server = [rec("c1", "2026-10-12", { confirmed: true, offers: { breakfast: ["oats", "eggs"] } })];
+  const local = [rec("c1", "2026-10-12", { confirmed: true, choice: { breakfast: "eggs" } })];
+  const kept = keepClientChoices(server, local);
+  assert.deepEqual(kept[0].choice, { breakfast: "eggs" });
 });
