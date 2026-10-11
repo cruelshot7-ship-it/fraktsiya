@@ -36,6 +36,7 @@ import { Avatar, BottomSheet, Pill, ProgressRail, SectionLabel, Surface, Field, 
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
+import { MenuDay } from "@/components/app/menu-day";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { coachTierLine } from "@/lib/coach-tier";
 
@@ -980,15 +981,18 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
           />
         ) : null}
         {mode === "food" ? (
-          <FoodEditor
-            client={client}
-            onBack={() => setMode("view")}
-            onSave={(patch) => {
-              updateClient(client.id, patch);
-              showToast("КБЖУ: тренировка и день отдыха.");
-              setMode("view");
-            }}
-          />
+          <>
+            <FoodEditor
+              client={client}
+              onBack={() => setMode("view")}
+              onSave={(patch) => {
+                updateClient(client.id, patch);
+                showToast("КБЖУ: тренировка и день отдыха.");
+                setMode("view");
+              }}
+            />
+            <MenuDay client={client} bookings={bookings} />
+          </>
         ) : null}
         {mode === "measures" ? (
           <MeasuresEditor
