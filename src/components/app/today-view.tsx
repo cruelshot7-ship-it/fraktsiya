@@ -98,11 +98,11 @@ export function TodayView() {
           </button>
           <div className="p-4">
             <p className="min-h-9 text-2xs text-muted-foreground">Без явки</p>
-            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", needMark.length > 0 && "text-primary")}>{needMark.length}</p>
+            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", needMark.length > 0 && "text-alert-text")}>{needMark.length}</p>
           </div>
           <button type="button" className="pressable p-4 text-left" onClick={() => setTab("signals")}>
             <p className="min-h-9 text-2xs text-muted-foreground">Заявки</p>
-            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", pendingJoins.length > 0 && "text-primary")}>{pendingJoins.length}</p>
+            <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", pendingJoins.length > 0 && "text-alert-text")}>{pendingJoins.length}</p>
           </button>
         </div>
 

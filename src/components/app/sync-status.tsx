@@ -74,7 +74,7 @@ export function SyncStatusChip({ className, quietWhenOk = false }: { className?:
     <p
       className={cn(
         "text-2xs",
-        tone === "alert" && "text-primary",
+        tone === "alert" && "text-alert-text",
         tone === "muted" && "text-muted-foreground",
         className,
       )}

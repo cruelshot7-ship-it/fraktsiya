@@ -100,7 +100,7 @@ export function Avatar({
       className={cn(
         "grid shrink-0 place-items-center rounded-full font-display tracking-wide",
         size === "sm" ? "size-9 text-tiny" : "size-11 text-sm",
-        tone === "alert" && "bg-primary-dim text-primary",
+        tone === "alert" && "bg-primary-dim text-alert-text",
         tone === "ok" && "bg-ok-dim text-ok",
         tone === "none" && "bg-secondary text-muted-foreground",
       )}
@@ -121,7 +121,7 @@ export function Pill({
     <span
       className={cn(
         "inline-flex h-6 items-center rounded-full px-2 text-2xs font-medium whitespace-nowrap",
-        tone === "alert" && "bg-primary-dim text-primary",
+        tone === "alert" && "bg-primary-dim text-alert-text",
         tone === "ok" && "bg-ok-dim text-ok",
         tone === "muted" && "bg-secondary text-muted-foreground",
         tone === "solid" && "bg-secondary text-foreground",
@@ -241,7 +241,7 @@ export function KbjuMacroRing({
           <span
             className={cn(
               "font-display text-sm tabular-nums leading-none",
-              over ? "text-primary" : complete && !color ? "text-ok" : "text-foreground",
+              over ? "text-alert-text" : complete && !color ? "text-ok" : "text-foreground",
             )}
           >
             {shown}

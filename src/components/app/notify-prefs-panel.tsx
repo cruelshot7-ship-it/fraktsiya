@@ -56,7 +56,7 @@ function Toggle({
       )}
     >
       <span>{label}</span>
-      <span className={cn("text-xs font-medium", on ? "text-primary" : "text-muted-foreground")}>
+      <span className={cn("text-xs font-medium", on ? "text-alert-text" : "text-muted-foreground")}>
         {on ? "вкл" : "выкл"}
       </span>
     </button>

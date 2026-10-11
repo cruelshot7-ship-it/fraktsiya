@@ -272,7 +272,7 @@ export function ScannerSheet({
                 {readyProduct.brand ? <p className="mt-1 text-tiny text-muted-foreground">{readyProduct.brand}</p> : null}
                 <p className="mt-1 text-2xs text-muted-foreground tabular-nums">{readyProduct.barcode}</p>
                 {product?.incomplete ? (
-                  <p className="mt-2 text-tiny text-primary">В базе нет КБЖУ или названия. Заполните на 100 г — сохраним у себя.</p>
+                  <p className="mt-2 text-tiny text-alert-text">В базе нет КБЖУ или названия. Заполните на 100 г — сохраним у себя.</p>
                 ) : (
                   <p className="mt-3 text-tiny text-muted-foreground">На 100 г: {readyProduct.per100.calories} ккал</p>
                 )}
@@ -544,7 +544,7 @@ export function ScannerSheet({
                 </div>
               </div>
 
-              {error ? <p className="text-sm text-primary">{error}</p> : null}
+              {error ? <p className="text-sm text-alert-text">{error}</p> : null}
               {busy ? <p className="text-tiny text-muted-foreground">Ищем в базе…</p> : null}
             </div>
           )}

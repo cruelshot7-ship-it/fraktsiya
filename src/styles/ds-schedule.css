@@ -12,6 +12,8 @@
   --color-primary: #d62e26;
   --color-primary-foreground: #f4f8ff;
   --color-primary-dim: rgb(232 56 47 / 0.14);
+  /* Красный для мелкого текста на тёмном фоне: контраст не ниже 4.5 (п.15 чек-листа). Кнопки остаются --color-primary. */
+  --color-alert-text: #f2665e;
   --color-secondary: #272b33;
   --color-secondary-foreground: #edeff2;
   --color-muted: #272b33;

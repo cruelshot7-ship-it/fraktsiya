@@ -106,7 +106,7 @@ export function OfferLanding({ live }: { live: boolean }) {
       <div className={cn("relative z-10 mx-auto flex w-full max-w-app flex-col", !live && "min-h-dvh px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-8")}>
         {!live ? (
           <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-tiny text-primary">Показ</p>
+            <p className="text-tiny text-alert-text">Показ</p>
             <button type="button" className="text-sm text-muted-foreground" onClick={close}>
               Закрыть
             </button>

@@ -313,19 +313,19 @@ function draw(
   const h = canvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
   const path = pathFor(kind, w, h);
-  ctx.strokeStyle = "rgba(178,59,46,0.35)";
+  ctx.strokeStyle = "rgba(214,46,38,0.35)";
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
   ctx.beginPath();
   path.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
   ctx.stroke();
   const g = path[Math.min(path.length - 1, Math.floor(t * path.length))];
-  ctx.fillStyle = "#b23b2e";
+  ctx.fillStyle = "#d62e26";
   ctx.beginPath();
   ctx.arc(g.x, g.y, 6, 0, Math.PI * 2);
   ctx.fill();
   if (stroke.length > 1) {
-    ctx.strokeStyle = "#ece7dc";
+    ctx.strokeStyle = "#edeff2";
     ctx.lineWidth = 2;
     ctx.beginPath();
     stroke.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));

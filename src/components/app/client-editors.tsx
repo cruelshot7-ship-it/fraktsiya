@@ -66,7 +66,7 @@ export function Kpi({
         className={cn(
           "font-display text-3xl leading-none tabular-nums",
           tone === "ok" && "text-ok",
-          tone === "alert" && "text-primary",
+          tone === "alert" && "text-alert-text",
         )}
       >
         {shown}
@@ -208,7 +208,7 @@ export function ProgramEditor({
             </div>
           ))}
           {parsed.warnings.map((w, i) => (
-            <p key={i} className="text-tiny text-primary">
+            <p key={i} className="text-tiny text-alert-text">
               ⚠ {w}
             </p>
           ))}
