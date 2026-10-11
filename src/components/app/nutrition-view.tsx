@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
-import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Client, type Meal } from "@/data/studio";
+import { addDays, dayKbju, isoDate, MEALS, parseISODate, studioToday, sumFood, type Client, type Meal } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -74,7 +74,7 @@ function NutritionContent({ client }: { client: Client }) {
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
 
-  const today = isoDate(new Date());
+  const today = studioToday();
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
 
   const yesterday = isoDate(addDays(parseISODate(today), -1));

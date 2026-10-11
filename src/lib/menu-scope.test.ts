@@ -4,9 +4,11 @@ import {
   applyClientChoices,
   checkMenuRecord,
   keepClientChoices,
+  isMenuStale,
   menuChoiceLogs,
   mergeMenus,
   menusForClient,
+  pruneMenus,
   validChoice,
   type MenuRecord,
 } from "./menu-scope.ts";
@@ -26,6 +28,7 @@ function rec(clientId: string, date: string, extra: Partial<MenuRecord> = {}): M
     choice: {},
     confirmed,
     confirmedAt: confirmed ? T1 : null,
+    targetKcal: 2000,
     updatedAt: "2026-10-11T12:00:00.000Z",
     ...extra,
   };
@@ -190,4 +193,16 @@ test("запись журнала берёт блюдо из базы, если 
   const r = rec("c1", "2026-10-12", { confirmed: true, offers: { lunch: ["bowl"] }, choice: { lunch: "bowl" } });
   const logs = menuChoiceLogs(r, (id) => (id === "bowl" ? { name: "Боул", calories: 600, protein: 40, fat: 20, carbs: 60 } : undefined));
   assert.equal(logs[0].name, "Боул");
+});
+
+test("меню, собранное на другую норму, устаревает", () => {
+  assert.equal(isMenuStale({ targetKcal: 2000 }, 2010), false, "в пределах 2%");
+  assert.equal(isMenuStale({ targetKcal: 2000 }, 2300), true);
+  assert.equal(isMenuStale({ targetKcal: null }, 2300), false, "старые записи без нормы не трогаем");
+});
+
+test("старые меню удаляются, свежие остаются", () => {
+  const menus = [rec("c1", "2026-10-11"), rec("c1", "2026-08-01"), rec("c1", "2026-08-20")];
+  const kept = pruneMenus(menus, "2026-10-11", 60).map((m) => m.date);
+  assert.deepEqual(kept.sort(), ["2026-08-20", "2026-10-11"]);
 });

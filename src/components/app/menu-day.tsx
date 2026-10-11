@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addDays, isoDate, MEALS, dayKbju, parseISODate, type Booking, type Client } from "@/data/studio";
+import { addDays, isoDate, MEALS, dayKbju, parseISODate, studioToday, type Booking, type Client } from "@/data/studio";
 import {
   buildDayMenu,
   dayStatus,
@@ -8,7 +8,7 @@ import {
   slotTargets,
   type Macro,
 } from "@/lib/menu-plan";
-import { pruneDishes, validChoice, type MenuDish, type MenuRecord } from "@/lib/menu-scope";
+import { isMenuStale, pruneDishes, validChoice, type MenuDish, type MenuRecord } from "@/lib/menu-scope";
 import { useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
@@ -85,6 +85,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
         choice: {},
         confirmed: false,
         confirmedAt: null,
+        targetKcal: Math.round(target.calories),
         updatedAt: new Date().toISOString(),
       });
     };
@@ -106,6 +107,10 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
 
     const confirm = () => {
       if (!rec) return;
+      if (isMenuStale(rec, target.calories)) {
+        showToast("Норма изменилась. Пересоберите меню перед подтверждением.");
+        return;
+      }
       const empty = slots.find((s) => (rec.offers[s.id] ?? []).length === 0);
       if (empty) {
         showToast(`Добавьте хотя бы один вариант: ${empty.label.toLowerCase()}.`);
@@ -121,6 +126,11 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
     return (
       <Surface glow={rec?.confirmed ? "ok" : undefined}>
         <SectionLabel>Меню дня · норма {Math.round(target.calories)} ккал</SectionLabel>
+        {rec && isMenuStale(rec, target.calories) ? (
+          <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-tiny text-muted-foreground">
+            Норма изменилась: меню собрано на {rec.targetKcal} ккал. Пересоберите меню, прежде чем подтверждать.
+          </p>
+        ) : null}
         {!rec ? (
           <div className="mt-3 space-y-3">
             <div className="flex gap-1.5">
@@ -215,6 +225,14 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
   }
 
   // клиент
+  if (rec && rec.confirmed && isMenuStale(rec, target.calories)) {
+    return (
+      <Surface>
+        <SectionLabel>Меню дня</SectionLabel>
+        <EmptyHint>Тренер обновит меню под новую норму.</EmptyHint>
+      </Surface>
+    );
+  }
   if (!rec || !rec.confirmed) {
     return (
       <Surface>
@@ -273,8 +291,8 @@ const dateLabel = (iso: string) =>
 
 /** День питания с переключением даты. Тренер и клиент смотрят одно и то же меню на выбранный день. */
 export function MenuDay({ client, bookings }: { client: Client; bookings: Booking[] }) {
-  const [date, setDate] = useState(() => isoDate(new Date()));
-  const isToday = date === isoDate(new Date());
+  const [date, setDate] = useState(() => studioToday());
+  const isToday = date === studioToday();
   return (
     <>
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -292,7 +310,7 @@ export function MenuDay({ client, bookings }: { client: Client; bookings: Bookin
         </p>
         <div className="flex gap-1.5">
           {!isToday ? (
-            <button type="button" onClick={() => setDate(isoDate(new Date()))} className="pressable h-9 rounded-lg bg-secondary px-2.5 text-tiny">
+            <button type="button" onClick={() => setDate(studioToday())} className="pressable h-9 rounded-lg bg-secondary px-2.5 text-tiny">
               Сегодня
             </button>
           ) : null}
