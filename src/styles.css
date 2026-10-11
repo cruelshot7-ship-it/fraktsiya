@@ -285,11 +285,18 @@
   isolation: isolate;
 }
 
-/* Точечная подсветка в месте касания: яркий красный центр, быстро гаснет. Живёт внутри элемента и обрезается его краями. */
+/* Нажатие: элемент сам подсвечивается красным, пока палец на нём. */
+.pressable:active:not(:disabled),
+button:active:not(:disabled) {
+  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.6), 0 0 20px rgb(232 56 47 / 0.38);
+  transition: box-shadow 120ms ease-out, transform 220ms var(--ease-apple);
+}
+
+/* Точечная подсветка в месте касания: чёткий сочный красный круг, без размытого края. Обрезается краями элемента. */
 .ripple-dot {
   position: absolute;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgb(255 80 70 / 0.75) 0%, rgb(232 56 47 / 0.4) 28%, rgb(232 56 47 / 0.12) 55%, transparent 70%);
+  background: radial-gradient(circle, rgb(240 60 50 / 0.9) 0%, rgb(232 56 47 / 0.7) 46%, rgb(232 56 47 / 0) 47%);
   transform: scale(0.3);
   opacity: 0;
   pointer-events: none;
