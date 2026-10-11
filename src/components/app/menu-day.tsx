@@ -8,7 +8,7 @@ import {
   slotTargets,
   type Macro,
 } from "@/lib/menu-plan";
-import { isMenuStale, pruneDishes, validChoice, type MenuDish, type MenuRecord } from "@/lib/menu-scope";
+import { isMenuStale, menuLogPrefix, pruneDishes, validChoice, type MenuDish, type MenuRecord } from "@/lib/menu-scope";
 import { useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
@@ -40,6 +40,7 @@ function statusLine(totals: Macro, target: Macro) {
 function MenuDayBody({ client, date, bookings }: { client: Client; date: string; bookings: Booking[] }) {
   const role = useStudio((s) => s.role);
   const menus = useStudio((s) => s.menus);
+  const food = useStudio((s) => s.food);
   const saveMenu = useStudio((s) => s.saveMenu);
   const setMenuChoice = useStudio((s) => s.setMenuChoice);
   const showToast = useStudio((s) => s.showToast);
@@ -180,9 +181,24 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
               </div>
             ))}
             {rec.confirmed ? (
-              <p className="text-tiny text-ok">
-                Подтверждено. {chosen ? (Object.keys(rec.choice).length ? `Клиент выбрал: ${statusLine(chosen, target)}` : "Клиент ещё не выбрал.") : ""}
-              </p>
+              <>
+                <p className="text-tiny text-ok">
+                  Подтверждено. {chosen ? (Object.keys(rec.choice).length ? `Клиент выбрал: ${statusLine(chosen, target)}` : "Клиент ещё не выбрал.") : ""}
+                </p>
+                {(() => {
+                  // дневник клиента за день: сколько записано из меню, сколько — вне меню
+                  const day = food.filter((f) => f.clientId === client.id && f.date === date);
+                  if (day.length === 0) return null;
+                  const fromMenu = day.filter((f) => f.logId.startsWith(menuLogPrefix(rec))).length;
+                  const outside = day.filter((f) => !f.logId.startsWith(menuLogPrefix(rec)));
+                  const outsideKcal = Math.round(outside.reduce((sum, f) => sum + f.calories, 0));
+                  return (
+                    <p className="text-tiny text-muted-foreground">
+                      В дневнике: из меню {fromMenu} из {slots.length} приёмов · вне меню {outside.length} зап., {outsideKcal} ккал
+                    </p>
+                  );
+                })()}
+              </>
             ) : (
               <>
                 <p className="text-tiny text-muted-foreground">Клиент не видит меню, пока вы не подтвердите.</p>

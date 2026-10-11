@@ -59,6 +59,7 @@ export function NutritionView() {
 
 function NutritionContent({ client }: { client: Client }) {
   const food = useStudio((s) => s.food);
+  const menus = useStudio((s) => s.menus);
   const addFood = useStudio((s) => s.addFood);
   const addCustomFood = useStudio((s) => s.addCustomFood);
   const removeFood = useStudio((s) => s.removeFood);
@@ -75,6 +76,8 @@ function NutritionContent({ client }: { client: Client }) {
   const [carbs, setCarbs] = useState("");
 
   const today = studioToday();
+  const tomorrow = isoDate(addDays(parseISODate(today), 1));
+  const tomorrowReady = menus.some((m) => m.clientId === client.id && m.date === tomorrow && m.confirmed);
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
 
   const yesterday = isoDate(addDays(parseISODate(today), -1));
@@ -166,6 +169,9 @@ function NutritionContent({ client }: { client: Client }) {
           </p>
         )}
       </Surface>
+      {tomorrowReady ? (
+        <p className="px-1 text-tiny text-muted-foreground">Меню на завтра готово: листайте дату в блоке ниже ›</p>
+      ) : null}
       <MenuDay client={client} bookings={bookings} />
 
       <Surface>

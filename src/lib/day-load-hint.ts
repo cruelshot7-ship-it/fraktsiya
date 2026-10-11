@@ -35,3 +35,11 @@ export function trainDayHints(input: DayLoadInput): LoadHint[] {
   }
   return hints;
 }
+
+/** Сигнал тренеру: короткий сон или высокая усталость в тренировочный день. null — сигнала нет. */
+export function trainerSignalText(input: { sleepHours: number; fatigue: number | null; soreness: number | null }): string | null {
+  if (input.sleepHours > 0 && input.sleepHours < 6) return `Сон ${input.sleepHours} ч в тренировочный день`;
+  if (input.fatigue !== null && input.fatigue >= 4) return `Усталость ${input.fatigue}/5 в тренировочный день`;
+  if (input.soreness !== null && input.soreness >= 4) return `Крепатура ${input.soreness}/5 в тренировочный день`;
+  return null;
+}

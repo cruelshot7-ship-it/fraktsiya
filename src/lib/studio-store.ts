@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
 import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
-import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
+import { anonymizedIdentity, PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
+import { trainerSignalText } from "@/lib/day-load-hint";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
 import { checkMenus, keepClientChoices, menuChoiceLogs, menuKey, menuLogPrefix, pruneMenus, type MenuRecord } from "@/lib/menu-scope";
@@ -52,6 +53,7 @@ import {
   type Coach,
   coachPhase,
   COACH_TRIAL_CAP,
+  isTrainDay,
 } from "@/data/studio";
 
 import { hapticNotify } from "@/lib/haptics";
@@ -1580,7 +1582,20 @@ export const useStudio = create<State>((set, get) => ({
       soreness: patch.soreness ?? prev?.soreness,
       pain: patch.pain ?? prev?.pain,
     };
-    set({ dayChecks: [...get().dayChecks.filter((row) => row.id !== id), next] });
+    // сигнал тренеру: короткий сон или усталость в тренировочный день; только при согласии клиента
+    const client = get().clients.find((c) => c.id === clientId);
+    const signal =
+      client && specialDataAllowed(client.consent) && isTrainDay(client, date, get().bookings)
+        ? trainerSignalText({ sleepHours: next.sleepHours, fatigue: next.fatigue ?? null, soreness: next.soreness ?? null })
+        : null;
+    const noticeId = `dc_${clientId}_${date}`;
+    const notices = signal
+      ? [
+          { id: noticeId, audience: "trainer" as const, clientId, kind: "alert" as const, title: "Самочувствие перед тренировкой", body: signal, at: new Date().toISOString() },
+          ...get().notices.filter((n) => n.id !== noticeId),
+        ].slice(0, 40)
+      : get().notices;
+    set({ dayChecks: [...get().dayChecks.filter((row) => row.id !== id), next], notices });
     persist(snap(get()));
     get().showToast("День записан.");
   },
