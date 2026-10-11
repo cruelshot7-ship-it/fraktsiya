@@ -132,10 +132,10 @@ export const BARCODE_CATALOG: Record<string, Omit<ScanProduct, "source" | "barco
     brand: "Coca-Cola",
     per100: { calories: 42, protein: 0, fat: 0, carbs: 10.6 },
   },
-  "4600690101081": {
-    name: "Молоко 2,5%",
-    brand: "Простоквашино",
-    per100: { calories: 53, protein: 2.8, fat: 2.5, carbs: 4.7 },
+  "4810099034642": {
+    name: "Молоко 2,5% 1,45 л",
+    brand: "Молочный Мир",
+    per100: { calories: 55, protein: 2.8, fat: 2.5, carbs: 4.7 },
   },
   "4810168030018": {
     name: "Творог 5%",
@@ -161,7 +161,7 @@ export const BARCODE_CATALOG: Record<string, Omit<ScanProduct, "source" | "barco
 
 export const DEMO_BARCODES: { code: string; label: string }[] = [
   { code: "4810168030018", label: "Творог" },
-  { code: "4600690101081", label: "Молоко" },
+  { code: "4810099034642", label: "Молоко" },
   { code: "3017620422003", label: "Nutella" },
   { code: "2000000000012", label: "Шейк зала" },
 ];
