@@ -428,7 +428,7 @@ export function ScannerSheet({
                       inputMode="numeric"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      placeholder="4600690101081"
+                      placeholder="4810099034642"
                     />
                   </Field>
                   <button
