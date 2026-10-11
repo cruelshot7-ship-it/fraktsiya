@@ -215,7 +215,7 @@ function NutritionContent({ client }: { client: Client }) {
                 >
                   <span className="line-clamp-2 text-xs font-medium leading-snug">{meal.name}</span>
                   <span className="text-2xs tabular-nums text-muted-foreground">
-                    {meal.calories} ккал · Б{meal.protein}
+                    {meal.calories} ккал · <span className="text-protein">Б{meal.protein}</span>
                   </span>
                   <span className={cn("text-2xs font-medium", fits ? "text-ok" : "text-muted-foreground")}>
                     {fits ? "В цель · +" : "+"}
@@ -253,8 +253,10 @@ function NutritionContent({ client }: { client: Client }) {
             <Surface key={entry.logId} className="flex items-center justify-between gap-3 py-3">
               <div>
                 <p className="text-sm">{entry.name}</p>
-                <p className="text-tiny text-muted-foreground">
-                  {entry.calories} ккал · Б {entry.protein} Ж {entry.fat} У {entry.carbs}
+                <p className="text-tiny text-muted-foreground tabular-nums">
+                  {entry.calories} ккал · <span className="text-protein">Б {entry.protein}</span>{" "}
+                  <span className="text-fat">Ж {entry.fat}</span>{" "}
+                  <span className="text-carb">У {entry.carbs}</span>
                 </p>
               </div>
               {entry.logId.startsWith("menu_") ? (
