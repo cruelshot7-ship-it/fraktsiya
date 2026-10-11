@@ -1,6 +1,8 @@
 import type { BodyMeasure } from "@/lib/body-measures";
 import type { Consent } from "@/lib/privacy";
-import { hoursUntilSlotAt, isLateCancelAt, slotStartMs } from "@/lib/minsk-time";
+import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/lib/minsk-time";
+
+export { studioToday };
 import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 import { blocksFromItems, type ProgramBlock } from "@/lib/program-blocks";
 export type { ProgramBlock } from "@/lib/program-blocks";
@@ -1131,10 +1133,6 @@ export function emptyKbju(): Kbju {
   return { calories: 0, protein: 0, fat: 0, carbs: 0 };
 }
 
-/** Сегодня по времени студии (Минск). Меню, журнал питания и подсказки считают день по нему. */
-export function studioToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Minsk", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
 
 export function isTrainDay(client: Client, iso: string, bookings: Booking[] = []) {
   return bookings.some((b) => b.clientId === client.id && b.date === iso) || client.trainDays.includes(dowIndex(iso));

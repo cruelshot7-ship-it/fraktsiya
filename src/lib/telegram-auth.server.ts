@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env.server";
 import { TRAINER_TG_ID } from "@/data/studio";
+import { isFreshAuthDate } from "@/lib/auth/init-freshness";
 
 export type TelegramAuthUser = {
   id: string;
@@ -41,7 +42,7 @@ export function verifyTelegramInitData(initData: string | undefined): TelegramSe
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
   const authDate = Number(params.get("auth_date") || 0);
-  if (!authDate || Math.abs(Date.now() / 1000 - authDate) > 86400 * 2) return null;
+  if (!isFreshAuthDate(authDate, Date.now() / 1000)) return null;
 
   let parsed: { id?: number; first_name?: string; last_name?: string; username?: string };
   try {

@@ -18,3 +18,8 @@ export function hoursUntilSlotAt(date: string, time: string, nowMs: number): num
 export function isLateCancelAt(date: string, time: string, nowMs: number, windowHours: number): boolean {
   return hoursUntilSlotAt(date, time, nowMs) < windowHours;
 }
+
+/** Сегодня по времени студии (Минск). Меню, журнал питания и подсказки считают день по нему. */
+export function studioToday(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Minsk", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
