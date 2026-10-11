@@ -264,9 +264,17 @@ export function MiniApp() {
             ) : null}
             {tab === "clients" ? (
               <div className="space-y-4">
-                <CsvImportPanel />
-                <TemplatesPanel />
                 <ClientsView />
+                <details className="group">
+                  <summary className="pressable flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl bg-card px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                    Инструменты: импорт и шаблоны
+                    <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-45">+</span>
+                  </summary>
+                  <div className="tools-body mt-4 space-y-4">
+                    <CsvImportPanel />
+                    <TemplatesPanel />
+                  </div>
+                </details>
               </div>
             ) : null}
             {tab === "signals" ? <SignalsView /> : null}
