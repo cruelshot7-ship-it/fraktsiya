@@ -73,3 +73,26 @@ export async function flushOutbox(
 export function pendingCount(list: OutboxEvent[]): number {
   return list.filter((e) => e.status === "pending").length;
 }
+
+/**
+ * Применить к очереди ответ сервера. Меняется только то, что сервер подтвердил.
+ * Уже `sent` не трогаем: отправленное не отправляем второй раз.
+ */
+export function applyDeliveryResults(
+  list: OutboxEvent[],
+  results: { id: string; ok: boolean; error?: string }[],
+): OutboxEvent[] {
+  const byId = new Map(results.map((r) => [r.id, r]));
+  return list.map((ev) => {
+    const r = byId.get(ev.id);
+    if (!r || ev.status === "sent") return ev;
+    if (r.ok) return { ...ev, status: "sent", attempts: ev.attempts + 1, lastError: undefined };
+    const attempts = ev.attempts + 1;
+    return {
+      ...ev,
+      attempts,
+      status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+      lastError: r.error ?? "deliver_failed",
+    };
+  });
+}
