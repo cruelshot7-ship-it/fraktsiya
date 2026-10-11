@@ -140,7 +140,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                   type="button"
                   onClick={() => setCount(n)}
                   className={cn(
-                    "pressable h-9 flex-1 rounded-lg text-xs",
+                    "pressable h-11 flex-1 rounded-lg text-xs",
                     count === n ? "bg-primary text-primary-foreground lit-red" : "bg-secondary text-muted-foreground",
                   )}
                 >
@@ -170,7 +170,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                         type="button"
                         aria-label="Убрать вариант"
                         onClick={() => removeOffer(slot.id, dishId)}
-                        className="pressable size-8 shrink-0 rounded-lg bg-secondary text-muted-foreground"
+                        className="pressable size-11 shrink-0 rounded-lg bg-secondary text-muted-foreground"
                       >
                         ×
                       </button>
@@ -184,9 +184,12 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                 Подтверждено. {chosen ? (Object.keys(rec.choice).length ? `Клиент выбрал: ${statusLine(chosen, target)}` : "Клиент ещё не выбрал.") : ""}
               </p>
             ) : (
-              <button type="button" onClick={confirm} className="pressable h-11 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
+              <>
+                <p className="text-tiny text-muted-foreground">Клиент не видит меню, пока вы не подтвердите.</p>
+                <button type="button" onClick={confirm} className="pressable h-11 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
                 Подтвердить для клиента
-              </button>
+                </button>
+              </>
             )}
             {askRebuild ? (
               <div className="space-y-2 rounded-xl bg-card p-3">
@@ -300,7 +303,7 @@ export function MenuDay({ client, bookings }: { client: Client; bookings: Bookin
           type="button"
           aria-label="Предыдущий день"
           onClick={() => setDate(isoDate(addDays(parseISODate(date), -1)))}
-          className="pressable size-9 rounded-lg bg-secondary text-muted-foreground"
+          className="pressable size-11 rounded-lg bg-secondary text-muted-foreground"
         >
           ‹
         </button>
@@ -310,7 +313,7 @@ export function MenuDay({ client, bookings }: { client: Client; bookings: Bookin
         </p>
         <div className="flex gap-1.5">
           {!isToday ? (
-            <button type="button" onClick={() => setDate(studioToday())} className="pressable h-9 rounded-lg bg-secondary px-2.5 text-tiny">
+            <button type="button" onClick={() => setDate(studioToday())} className="pressable h-11 rounded-lg bg-secondary px-2.5 text-tiny">
               Сегодня
             </button>
           ) : null}
@@ -318,7 +321,7 @@ export function MenuDay({ client, bookings }: { client: Client; bookings: Bookin
             type="button"
             aria-label="Следующий день"
             onClick={() => setDate(isoDate(addDays(parseISODate(date), 1)))}
-            className="pressable size-9 rounded-lg bg-secondary text-muted-foreground"
+            className="pressable size-11 rounded-lg bg-secondary text-muted-foreground"
           >
             ›
           </button>
