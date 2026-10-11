@@ -13,6 +13,7 @@ import { coachTierLine } from "@/lib/coach-tier";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
+import { checkMenuRecord, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
 import {
   clientCoach,
   coachKey,
@@ -61,6 +62,8 @@ export type StudioPayload = {
   rev?: number;
   /** the trainer's program templates; clients never receive them (see scopePayload) */
   programTemplates?: ProgramTemplate[];
+  /** дни питания: тренер пишет меню своих клиентов, клиент видит только подтверждённые (см. menusForClient) */
+  menus?: MenuRecord[];
 };
 
 // Re-export domain types so consumers (studio-scope, tests) can import from here
@@ -118,6 +121,7 @@ export function emptyPayload(): StudioPayload {
     removedClientIds: [],
     coaches: [],
     visits: [],
+    menus: [],
   };
 }
 
@@ -155,6 +159,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
     })),
     foreignHolds: undefined,
     visits: raw.visits ?? [],
+    menus: (Array.isArray(raw.menus) ? raw.menus : []).map((m) => checkMenuRecord(m)).filter((m): m is MenuRecord => m !== null),
     clients: (raw.clients ?? []).filter((c) => !isRemovedClient(c, removed)),
   }));
 }
@@ -215,6 +220,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
       : {},
     extraSlots: slotsForCoach(payload.extraSlots, mine ? clientCoach(mine) : String(TRAINER_TG_ID)),
     visits: id ? (payload.visits ?? []).filter((row) => row.clientId === id) : [],
+    menus: menusForClient(payload.menus ?? [], id),
     trainerUsername: payload.trainerUsername ?? null,
     joinRequests: (payload.joinRequests ?? []).filter((r) => r.telegramId === telegramId),
     coaches: [],
@@ -297,6 +303,7 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
     bookings: payload.bookings.filter((b) => ids.has(b.clientId)),
     food: payload.food.filter((f) => ids.has(f.clientId)),
     dayChecks: (payload.dayChecks ?? []).filter((d) => ids.has(d.clientId)),
+    menus: (payload.menus ?? []).filter((m) => ids.has(m.clientId)),
     lifts: payload.lifts.filter((l) => ids.has(l.clientId)),
     workoutLogs: payload.workoutLogs.filter((w) => ids.has(w.clientId)),
     waitlist: payload.waitlist.filter((w) => ids.has(w.clientId)),
@@ -446,6 +453,7 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     bookings: settled.bookings.filter((row) => !oldIds.has(row.clientId) || myIds.has(row.clientId)),
     food: takeMine(current.food, incoming.food ?? []),
     dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),
+    menus: mergeMenus(current.menus ?? [], incoming.menus ?? [], new Set([...oldIds, ...myIds])),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
     visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([...oldIds, ...myIds])),
