@@ -363,8 +363,16 @@ button:active:not(:disabled) {
 }
 
 /* Заголовок экрана: медленно переливается (белый → циан → красный). Общий для всех экранов. */
+/* Лунный свет: активный чип и заголовок. Тёмный текст на светлом фоне — читается на любом экране. */
+.chip-moon {
+  color: #0f1217;
+  background: linear-gradient(135deg, #ffffff 0%, #d8f1ff 45%, #f2f8ff 70%, #bfe6ff 100%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.7), 0 0 18px rgb(190 232 255 / 0.55), 0 0 36px rgb(190 232 255 / 0.25);
+  transition: box-shadow 280ms var(--ease-apple);
+}
+
 .title-grad {
-  background: linear-gradient(90deg, #fff 0%, #ff9c94 30%, #fff 45%, #7fe3ee 62%, #ff9c94 80%, #fff 100%);
+  background: linear-gradient(90deg, #fff 0%, #cfeeff 28%, #fff 45%, #9fd9ff 62%, #e6f5ff 80%, #fff 100%);
   background-size: 250% auto;
   -webkit-background-clip: text;
   background-clip: text;
