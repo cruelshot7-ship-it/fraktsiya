@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MEALS, dayKbju, type Booking, type Client } from "@/data/studio";
+import { addDays, isoDate, MEALS, dayKbju, parseISODate, type Booking, type Client } from "@/data/studio";
 import {
   buildDayMenu,
   dayStatus,
@@ -24,8 +24,7 @@ function statusLine(totals: Macro, target: Macro) {
   return `${kcal} · ${protein}`;
 }
 
-/** День питания: тренер собирает варианты из нормы и подтверждает; клиент выбирает по одному блюду на приём. */
-export function MenuDay({ client, date, bookings }: { client: Client; date: string; bookings: Booking[] }) {
+function MenuDayBody({ client, date, bookings }: { client: Client; date: string; bookings: Booking[] }) {
   const role = useStudio((s) => s.role);
   const menus = useStudio((s) => s.menus);
   const saveMenu = useStudio((s) => s.saveMenu);
@@ -196,5 +195,48 @@ export function MenuDay({ client, date, bookings }: { client: Client; date: stri
         </p>
       </div>
     </Surface>
+  );
+}
+
+const dateLabel = (iso: string) =>
+  parseISODate(iso).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "long" });
+
+/** День питания с переключением даты. Тренер и клиент смотрят одно и то же меню на выбранный день. */
+export function MenuDay({ client, bookings }: { client: Client; bookings: Booking[] }) {
+  const [date, setDate] = useState(() => isoDate(new Date()));
+  const isToday = date === isoDate(new Date());
+  return (
+    <>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          aria-label="Предыдущий день"
+          onClick={() => setDate(isoDate(addDays(parseISODate(date), -1)))}
+          className="pressable size-9 rounded-lg bg-secondary text-muted-foreground"
+        >
+          ‹
+        </button>
+        <p className="min-w-0 truncate text-sm">
+          {dateLabel(date)}
+          {isToday ? <span className="text-muted-foreground"> · сегодня</span> : null}
+        </p>
+        <div className="flex gap-1.5">
+          {!isToday ? (
+            <button type="button" onClick={() => setDate(isoDate(new Date()))} className="pressable h-9 rounded-lg bg-secondary px-2.5 text-tiny">
+              Сегодня
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Следующий день"
+            onClick={() => setDate(isoDate(addDays(parseISODate(date), 1)))}
+            className="pressable size-9 rounded-lg bg-secondary text-muted-foreground"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+      <MenuDayBody client={client} date={date} bookings={bookings} />
+    </>
   );
 }
