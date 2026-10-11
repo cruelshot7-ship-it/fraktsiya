@@ -1,4 +1,13 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import {
+  sqlFromPool,
+  sqlOver,
+  toSql,
+  type Sql,
+  type Transact,
+} from "./db-adapters";
+
+export type { Sql } from "./db-adapters";
 
 /** Which database backend is active. */
 export type DbSource = "neon" | "pglite";
@@ -19,6 +28,11 @@ function databaseUrlNow(): string | undefined {
   );
 }
 
+/** Production: PGLite в браузерном IndexedDB/на сервере не является хранилищем. Без базы — отказ. */
+function isProductionRuntime(): boolean {
+  return typeof process !== "undefined" && process.env.NODE_ENV === "production";
+}
+
 export function getDbSource(): DbSource {
   return databaseUrlNow() ? "neon" : "pglite";
 }
@@ -29,17 +43,6 @@ export function getDbSource(): DbSource {
  * Kept for backward compatibility; refreshed when getSql() runs.
  */
 export let dbSource: DbSource = getDbSource();
-
-export interface Sql {
-  <T = Record<string, unknown>>(
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ): Promise<T[]>;
-  query<T = Record<string, unknown>>(
-    text: string,
-    params?: unknown[],
-  ): Promise<T[]>;
-}
 
 const globalRef = globalThis as typeof globalThis & {
   __pgSqlPromise__?: Promise<Sql>;
@@ -52,22 +55,6 @@ const OID_DATE = 1082;
 const OID_INTERVAL = 1186;
 const identity = (v: string) => v;
 
-type Run = <T>(text: string, params: unknown[]) => Promise<T[]>;
-
-function toSql(run: Run): Sql {
-  const sql = (async <T = Record<string, unknown>>(
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ): Promise<T[]> => {
-    let text = strings[0];
-    for (let i = 0; i < values.length; i += 1) text += `$${i + 1}${strings[i + 1]}`;
-    return run<T>(text, values);
-  }) as unknown as Sql;
-  sql.query = <T = Record<string, unknown>>(text: string, params: unknown[] = []) =>
-    run<T>(text, params);
-  return sql;
-}
-
 function createNeonSql(connectionString: string): Promise<Sql> {
   globalRef.__pgSqlPromise__ ??= (async () => {
     const { Pool, types } = await import("pg");
@@ -75,9 +62,16 @@ function createNeonSql(connectionString: string): Promise<Sql> {
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
     const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
-    return toSql(async <T>(text: string, params: unknown[]) => {
-      const res = await pool.query(text, params);
-      return res.rows as T[];
+    return sqlFromPool({
+      query: (text, params) => pool.query(text, params).then((r) => ({ rows: r.rows })),
+      connect: async () => {
+        const client = await pool.connect();
+        return {
+          query: (text, params) =>
+            client.query(text, params).then((r) => ({ rows: r.rows })),
+          release: () => client.release(),
+        };
+      },
     });
   })().catch((err) => {
     globalRef.__pgSqlPromise__ = undefined;
@@ -126,10 +120,16 @@ async function createPgliteSql(): Promise<Sql> {
   globalRef.__pgliteMigrateChain__ = pass;
   await pass;
 
-  return toSql(async <T>(text: string, params: unknown[]) => {
-    const result = await pg.query<T>(text, params);
-    return result.rows;
-  });
+  const transact: Transact = (fn) =>
+    pg.transaction((tx) => fn(sqlOver({ query: (text, params) => tx.query(text, params) })));
+
+  return toSql(
+    async <T>(text: string, params: unknown[]) => {
+      const result = await pg.query<T>(text, params);
+      return result.rows;
+    },
+    transact,
+  );
 }
 
 let sqlPromise: Promise<Sql> | null = null;
@@ -142,7 +142,12 @@ async function createSql(): Promise<Sql> {
     );
   }
   const url = databaseUrlNow();
-  return url ? createNeonSql(url) : createPgliteSql();
+  if (url) return createNeonSql(url);
+  if (isProductionRuntime()) {
+    // Fail closed: в проде без DATABASE_URL данные не должны уходить в локальный PGLite.
+    throw new Error("DATABASE_URL is not set in production; PGLite fallback is disabled");
+  }
+  return createPgliteSql();
 }
 
 export function getSql(): Promise<Sql> {
@@ -173,7 +178,8 @@ export function ensureDbReady(): Promise<void> {
 const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
-if (typeof window === "undefined") {
+if (typeof window === "undefined" && !isProductionRuntime()) {
+  // В проде загрузку PGLite не запускаем: ошибка будет на первом getSql() с понятным текстом.
   globalBoot.__pgBootstrapPromise__ ??= Promise.resolve()
     .then(() => {
       if (getDbSource() !== "pglite") return;

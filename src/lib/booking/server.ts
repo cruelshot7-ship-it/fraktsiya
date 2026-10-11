@@ -1,11 +1,14 @@
 /**
  * Server-side booking with capacity protection.
- * Uses pg_advisory_xact_lock so the last seat cannot double-book.
+ * Each write runs in one transaction on one connection (sql.transaction) and takes
+ * pg_advisory_xact_lock, so the last seat cannot be double-booked.
+ * Логика записи — в ./core.ts (покрыта интеграционным тестом на Postgres).
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
 import { TRAINER_TG_ID } from "@/data/studio";
+import type { CreateSpec } from "@/lib/booking/core";
 
 const BookInput = z.object({
   initData: z.string().min(1),
@@ -23,38 +26,14 @@ export type BookSlotResponse =
   | { ok: true; bookingId: string }
   | { ok: false; reason: string };
 
-async function ensureSlot(
-  sql: { query: <T>(q: string, p?: unknown[]) => Promise<T[]> },
-  data: z.infer<typeof BookInput>,
-  ownerCoachId: string,
-) {
-  const existing = await sql.query<{ id: string; capacity: number; status: string }>(
-    "select id, capacity, status from training_slots where id = $1",
-    [data.slotId],
-  );
-  if (existing[0]) return existing[0];
-
-  const startsAt = data.startsAt.includes("T")
-    ? data.startsAt
-    : `${data.startsAt.replace(" ", "T")}`;
-  const tz = data.timezone || "Europe/Minsk";
-  const duration = data.durationMin ?? 60;
-  const capacity = data.capacity ?? 1;
-  const kind = data.kind ?? (capacity <= 1 ? "individual" : "group");
-
-  await sql.query(
-    `insert into training_slots
-      (id, owner_coach_id, starts_at, timezone, duration_min, capacity, kind, status)
-     values ($1, $2, $3::timestamptz, $4, $5, $6, $7, 'open')
-     on conflict (id) do nothing`,
-    [data.slotId, ownerCoachId, startsAt.replace("Z", "").slice(0, 19), tz, duration, capacity, kind],
-  );
-
-  const again = await sql.query<{ id: string; capacity: number; status: string }>(
-    "select id, capacity, status from training_slots where id = $1",
-    [data.slotId],
-  );
-  return again[0];
+/** Тренер-coach на паузе или истёк: записывать на его слоты нельзя. */
+async function coachBookingBlocked(ownerCoachId: string): Promise<boolean> {
+  const { loadStudioState } = await import("@/lib/studio-sync");
+  const { coachPhase } = await import("@/data/studio");
+  const payload = await loadStudioState();
+  const row = (payload.coaches ?? []).find((c) => c.telegramId === ownerCoachId);
+  const phase = row ? coachPhase(row) : "expired";
+  return phase !== "trial" && phase !== "paid";
 }
 
 export const bookSlotFn = createServerFn({ method: "POST" })
@@ -63,78 +42,58 @@ export const bookSlotFn = createServerFn({ method: "POST" })
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false, reason: "no-telegram" };
 
-    const selfClientId = `tg_${session.user.id}`;
-    let effectiveClientId = data.clientId;
-    if (session.role === "client") {
-      if (data.clientId !== selfClientId && data.clientId !== session.user.id) {
-        return { ok: false, reason: "forbidden" };
-      }
-      effectiveClientId = selfClientId;
-    }
+    const trainerId = String(TRAINER_TG_ID);
+    try {
+      const { getSql } = await import("@/lib/db");
+      const { bookSlotCore, slotOwnerOf, clientCreateSpec } = await import("@/lib/booking/core");
+      const sql = await getSql();
 
-    const ownerCoachId = data.ownerCoachId || String(TRAINER_TG_ID);
-    if (ownerCoachId !== String(TRAINER_TG_ID)) {
-      const { loadStudioState } = await import("@/lib/studio-sync");
-      const { coachPhase } = await import("@/data/studio");
-      const payload = await loadStudioState();
-      const row = (payload.coaches ?? []).find((c) => c.telegramId === ownerCoachId);
-      const phase = row ? coachPhase(row) : "expired";
-      if (phase !== "trial" && phase !== "paid") {
+      if (session.role === "client") {
+        // Клиент: только себя. Слот в БД, если его нет, создаём только по правилам сервера.
+        const selfClientId = `tg_${session.user.id}`;
+        if (data.clientId !== selfClientId && data.clientId !== session.user.id) {
+          return { ok: false, reason: "forbidden" };
+        }
+        let owner = await slotOwnerOf(sql, data.slotId);
+        let create: CreateSpec | null = null;
+        if (!owner) {
+          const { loadStudioState } = await import("@/lib/studio-sync");
+          const payload = await loadStudioState();
+          const extra = (payload.extraSlots ?? []).find((s) => s.id === data.slotId) ?? null;
+          create = clientCreateSpec({
+            slotId: data.slotId,
+            trainerId,
+            extra,
+            clientCapacity: data.capacity,
+          });
+          if (!create) return { ok: false, reason: "slot-missing" };
+          owner = create.ownerCoachId;
+        }
+        if (owner !== trainerId && (await coachBookingBlocked(owner))) {
+          return { ok: false, reason: "paused" };
+        }
+        return bookSlotCore(sql, { slotId: data.slotId, clientId: selfClientId, create });
+      }
+
+      // Тренер: может записывать любого клиента и создать слот.
+      const ownerCoachId = data.ownerCoachId || trainerId;
+      if (ownerCoachId !== trainerId && (await coachBookingBlocked(ownerCoachId))) {
         return { ok: false, reason: "paused" };
       }
-    }
-    const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
-
-    try {
-      await sql.query("begin");
-      await sql.query("select pg_advisory_xact_lock(hashtext($1))", [data.slotId]);
-
-      const slot = await ensureSlot(sql, data, ownerCoachId);
-      if (!slot) {
-        await sql.query("rollback");
-        return { ok: false, reason: "slot-missing" };
-      }
-      if (slot.status !== "open") {
-        await sql.query("rollback");
-        return { ok: false, reason: "slot-closed" };
-      }
-
-      const prior = await sql.query<{ id: string }>(
-        "select id from slot_bookings where slot_id = $1 and client_id = $2 and status <> 'cancelled'",
-        [data.slotId, effectiveClientId],
-      );
-      if (prior[0]) {
-        await sql.query("rollback");
-        return { ok: true, bookingId: prior[0].id };
-      }
-
-      const countRows = await sql.query<{ n: string }>(
-        "select count(*)::text as n from slot_bookings where slot_id = $1 and status <> 'cancelled'",
-        [data.slotId],
-      );
-      const taken = Number(countRows[0]?.n ?? 0);
-      if (taken >= slot.capacity) {
-        await sql.query("rollback");
-        return { ok: false, reason: "full" };
-      }
-
-      const bookingId = `bk_${data.slotId}_${effectiveClientId}`;
-      await sql.query(
-        `insert into slot_bookings (id, slot_id, client_id, status)
-         values ($1, $2, $3, 'confirmed')
-         on conflict (slot_id, client_id) do update set status = 'confirmed', updated_at = now()`,
-        [bookingId, data.slotId, effectiveClientId],
-      );
-
-      await sql.query("commit");
-      return { ok: true, bookingId };
+      const capacity = data.capacity ?? 1;
+      return bookSlotCore(sql, {
+        slotId: data.slotId,
+        clientId: data.clientId,
+        create: {
+          ownerCoachId,
+          startsAt: data.startsAt,
+          timezone: data.timezone || "Europe/Minsk",
+          durationMin: data.durationMin ?? 60,
+          capacity,
+          kind: data.kind ?? (capacity <= 1 ? "individual" : "group"),
+        },
+      });
     } catch (err) {
-      try {
-        await sql.query("rollback");
-      } catch {
-        /* ignore */
-      }
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[book] failed:", msg);
       return { ok: false, reason: "server-error" };
@@ -164,70 +123,48 @@ export const recordSessionResultFn = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
     if (session.role === "client") return { ok: false, reason: "forbidden" };
 
-    const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
     const resultId = `sr_${data.bookingId}`;
-
     try {
-      await sql.query("begin");
-      await sql.query("select pg_advisory_xact_lock(hashtext($1))", [data.bookingId]);
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      return await sql.transaction(async (tx): Promise<RecordResultResponse> => {
+        await tx.query("select pg_advisory_xact_lock(hashtext($1))", [data.bookingId]);
 
-      const booking = await sql.query<{ id: string; client_id: string; status: string }>(
-        "select id, client_id, status from slot_bookings where id = $1",
-        [data.bookingId],
-      );
-      if (!booking[0]) {
-        await sql.query("rollback");
-        return { ok: false, reason: "booking-missing" };
-      }
-      if (booking[0].client_id !== data.clientId) {
-        await sql.query("rollback");
-        return { ok: false, reason: "client-mismatch" };
-      }
-      if (booking[0].status === "cancelled") {
-        await sql.query("rollback");
-        return { ok: false, reason: "booking-cancelled" };
-      }
-      if (booking[0].status !== "attended") {
-        await sql.query("rollback");
-        return { ok: false, reason: "no-attendance" };
-      }
+        const booking = await tx.query<{ id: string; client_id: string; status: string }>(
+          "select id, client_id, status from slot_bookings where id = $1",
+          [data.bookingId],
+        );
+        if (!booking[0]) return { ok: false, reason: "booking-missing" };
+        if (booking[0].client_id !== data.clientId) return { ok: false, reason: "client-mismatch" };
+        if (booking[0].status === "cancelled") return { ok: false, reason: "booking-cancelled" };
+        if (booking[0].status !== "attended") return { ok: false, reason: "no-attendance" };
 
-      const existing = await sql.query<{ id: string }>(
-        "select id from session_results where booking_id = $1",
-        [data.bookingId],
-      );
-      if (existing[0]) {
-        await sql.query("rollback");
-        return { ok: true, resultId: existing[0].id, created: false };
-      }
+        const existing = await tx.query<{ id: string }>(
+          "select id from session_results where booking_id = $1",
+          [data.bookingId],
+        );
+        if (existing[0]) return { ok: true, resultId: existing[0].id, created: false };
 
-      await sql.query(
-        `insert into session_results
-          (id, booking_id, program_id, program_version, client_id, coach_id, sets, rpe, notes, recorded_by)
-         values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)`,
-        [
-          resultId,
-          data.bookingId,
-          data.programId ?? null,
-          data.programVersion ?? null,
-          data.clientId,
-          data.coachId,
-          JSON.stringify(data.sets),
-          data.rpe ?? null,
-          data.notes ?? null,
-          session.user.id,
-        ],
-      );
-
-      await sql.query("commit");
-      return { ok: true, resultId, created: true };
+        await tx.query(
+          `insert into session_results
+            (id, booking_id, program_id, program_version, client_id, coach_id, sets, rpe, notes, recorded_by)
+           values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)`,
+          [
+            resultId,
+            data.bookingId,
+            data.programId ?? null,
+            data.programVersion ?? null,
+            data.clientId,
+            data.coachId,
+            JSON.stringify(data.sets),
+            data.rpe ?? null,
+            data.notes ?? null,
+            session.user.id,
+          ],
+        );
+        return { ok: true, resultId, created: true };
+      });
     } catch (err) {
-      try {
-        await sql.query("rollback");
-      } catch {
-        /* ignore */
-      }
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("unique") || msg.includes("duplicate")) {
         return { ok: true, resultId, created: false };
@@ -256,58 +193,44 @@ export const markAttendanceFn = createServerFn({ method: "POST" })
     if (!session) return { ok: false, reason: "no-telegram" };
     if (session.role === "client") return { ok: false, reason: "forbidden" };
 
-    const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
     const status = data.attended ? "attended" : "no_show";
-
     try {
-      await sql.query("begin");
-      await sql.query("select pg_advisory_xact_lock(hashtext($1))", [data.bookingId]);
+      const { getSql } = await import("@/lib/db");
+      const sql = await getSql();
+      return await sql.transaction(async (tx): Promise<MarkAttendanceResponse> => {
+        await tx.query("select pg_advisory_xact_lock(hashtext($1))", [data.bookingId]);
 
-      const booking = await sql.query<{ id: string; status: string }>(
-        "select id, status from slot_bookings where id = $1",
-        [data.bookingId],
-      );
-      if (!booking[0]) {
-        await sql.query("rollback");
-        return { ok: false, reason: "booking-missing" };
-      }
-      if (booking[0].status === "cancelled") {
-        await sql.query("rollback");
-        return { ok: false, reason: "booking-cancelled" };
-      }
-      if (booking[0].status === "attended" || booking[0].status === "no_show") {
-        await sql.query("rollback");
-        return {
-          ok: true,
-          bookingId: data.bookingId,
-          status: booking[0].status as "attended" | "no_show",
-        };
-      }
+        const booking = await tx.query<{ id: string; status: string }>(
+          "select id, status from slot_bookings where id = $1",
+          [data.bookingId],
+        );
+        if (!booking[0]) return { ok: false, reason: "booking-missing" };
+        if (booking[0].status === "cancelled") return { ok: false, reason: "booking-cancelled" };
+        if (booking[0].status === "attended" || booking[0].status === "no_show") {
+          return {
+            ok: true,
+            bookingId: data.bookingId,
+            status: booking[0].status as "attended" | "no_show",
+          };
+        }
 
-      await sql.query(
-        `update slot_bookings set status = $2, updated_at = now() where id = $1`,
-        [data.bookingId, status],
-      );
-      await sql.query(
-        `insert into session_attendance (id, booking_id, marked_by, attended, note)
-         values ($1, $2, $3, $4, $5)
-         on conflict (booking_id) do update
-           set marked_by = excluded.marked_by,
-               attended = excluded.attended,
-               note = excluded.note,
-               marked_at = now()`,
-        [`att_${data.bookingId}`, data.bookingId, session.user.id, data.attended, data.note ?? null],
-      );
-
-      await sql.query("commit");
-      return { ok: true, bookingId: data.bookingId, status };
+        await tx.query(
+          `update slot_bookings set status = $2, updated_at = now() where id = $1`,
+          [data.bookingId, status],
+        );
+        await tx.query(
+          `insert into session_attendance (id, booking_id, marked_by, attended, note)
+           values ($1, $2, $3, $4, $5)
+           on conflict (booking_id) do update
+             set marked_by = excluded.marked_by,
+                 attended = excluded.attended,
+                 note = excluded.note,
+                 marked_at = now()`,
+          [`att_${data.bookingId}`, data.bookingId, session.user.id, data.attended, data.note ?? null],
+        );
+        return { ok: true, bookingId: data.bookingId, status };
+      });
     } catch (err) {
-      try {
-        await sql.query("rollback");
-      } catch {
-        /* ignore */
-      }
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[attendance] failed:", msg);
       return { ok: false, reason: "server-error" };

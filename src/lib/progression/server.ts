@@ -119,15 +119,15 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
     const status =
       data.decision === "accept" ? "accepted" : data.decision === "reject" ? "rejected" : "manual";
 
-    await sql.query("begin");
-    try {
-      await sql.query(
+    // Одна транзакция на одном соединении: BEGIN/COMMIT через пул могли попасть на разные соединения.
+    await sql.transaction(async (tx) => {
+      await tx.query(
         `update progression_suggestions
          set status = $2, resolved_at = now(), resolved_by = $3
          where id = $1`,
         [data.suggestionId, status, session.user.id],
       );
-      await sql.query(
+      await tx.query(
         `insert into trainer_decisions
           (id, suggestion_id, decision, decided_by, note, manual_change)
          values ($1, $2, $3, $4, $5, $6::jsonb)`,
@@ -140,11 +140,7 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
           data.manualChange ? JSON.stringify(data.manualChange) : null,
         ],
       );
-      await sql.query("commit");
-    } catch (e) {
-      await sql.query("rollback");
-      throw e;
-    }
+    });
 
     return { ok: true as const, status };
   });
