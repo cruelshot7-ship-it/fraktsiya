@@ -108,7 +108,7 @@ export function emptyPayload(): StudioPayload {
       notifyTrainer: true,
       flagLate: true,
       absentDays: 10,
-      address: "",
+      address: "Гродно, Лидская 1",
     },
     waitlist: [],
     workoutLogs: [],
@@ -141,7 +141,7 @@ function normalizePayload(raw: Partial<StudioPayload> | null | undefined): Studi
       ...empty.notifyPrefs,
       ...raw.notifyPrefs,
       absentDays: raw.notifyPrefs?.absentDays || empty.notifyPrefs.absentDays,
-      address: raw.notifyPrefs?.address ?? empty.notifyPrefs.address,
+      address: raw.notifyPrefs?.address || empty.notifyPrefs.address,
     },
     waitlist: raw.waitlist ?? [],
     workoutLogs: raw.workoutLogs ?? [],
@@ -473,6 +473,8 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
         ? keepCoach(current.coaches ?? [], incoming.coaches)
         : current.coaches ?? [],
     trainerUsername: mine === String(TRAINER_TG_ID) ? incoming.trainerUsername || current.trainerUsername : current.trainerUsername,
+    // настройки зала и правила отмены: их пишет тренер, сервер раньше отбрасывал их при каждом сохранении
+    notifyPrefs: incoming.notifyPrefs ?? current.notifyPrefs,
     dismissedSignalIds: unionIds(current.dismissedSignalIds, incoming.dismissedSignalIds),
   });
 }
