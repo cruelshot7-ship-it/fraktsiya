@@ -4,6 +4,7 @@ import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Meal } fr
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { MenuDay } from "@/components/app/menu-day";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +136,7 @@ export function NutritionView() {
 
   return (
     <div className="stagger-in relative flex flex-col gap-3">
+      <MenuDay client={client} date={today} bookings={bookings} />
       <Surface glow={low ? "alert" : "ok"}>
         <KbjuMeters
           title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`}
