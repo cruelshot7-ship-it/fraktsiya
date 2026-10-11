@@ -1,6 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
 import { MeasuresSummary } from "@/components/app/measures-card";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   coachKey,
   DOW,
@@ -24,6 +24,32 @@ import { parsePastedProgram, type PastedProgram } from "@/lib/program-import";
 import { templateFromSession } from "@/lib/templates/program-template";
 import { useStudio } from "@/lib/studio-store";
 
+/** Числа «набегают» от прежнего значения к новому. При «уменьшении движения» сразу показывают итог. */
+function useCountUp(target: number, ms = 700) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setShown(target);
+      from.current = target;
+      return;
+    }
+    const begin = from.current;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setShown(Math.round(begin + (target - begin) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else from.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return shown;
+}
+
 export function Kpi({
   value,
   label,
@@ -33,6 +59,7 @@ export function Kpi({
   label: string;
   tone?: "ok" | "alert";
 }) {
+  const shown = useCountUp(value);
   return (
     <div>
       <p
@@ -42,7 +69,7 @@ export function Kpi({
           tone === "alert" && "text-primary",
         )}
       >
-        {value}
+        {shown}
       </p>
       <p className="mt-1.5 whitespace-pre-line text-2xs leading-tight text-muted-foreground">{label}</p>
     </div>

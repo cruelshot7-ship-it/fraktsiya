@@ -278,6 +278,30 @@
 .week-sheen > button:nth-child(6) { animation-delay: 4s; }
 .week-sheen > button:nth-child(7) { animation-delay: 4.8s; }
 
+/* Волна нажатия (RippleLayer): круг расходится от точки касания. */
+.ripple-host {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.ripple-dot {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgb(237 239 242 / 0.2);
+  transform: scale(0);
+  opacity: 1;
+  pointer-events: none;
+  animation: ripple-out 620ms var(--ease-smooth-out) forwards;
+}
+
+@keyframes ripple-out {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
 /* Активные кнопки: мягкое свечение. Циан — выбранный фильтр, красный — выбранный вариант. */
 .lit-ok {
   box-shadow: 0 0 0 1px rgb(69 212 228 / 0.35), 0 0 16px rgb(69 212 228 / 0.2);
@@ -478,6 +502,7 @@
   .title-grad,
   .tools-body,
   .week-sheen > button,
+  .ripple-dot,
   .scroll-hint {
     animation: none;
   }

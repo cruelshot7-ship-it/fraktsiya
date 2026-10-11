@@ -7,6 +7,7 @@ import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
 import { BrandLockup } from "@/components/app/brand-mark";
 import { HapticLayer } from "@/components/app/haptic-layer";
+import { RippleLayer } from "@/components/app/ripple-layer";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { TodayView } from "@/components/app/today-view";
 import { ScheduleView } from "@/components/app/schedule-view";
@@ -179,6 +180,7 @@ export function MiniApp() {
   return (
     <div className="app-frame flex justify-center overflow-hidden bg-background">
       <HapticLayer />
+      <RippleLayer />
       <div className="ambient-glow app-frame relative flex w-full max-w-app flex-col overflow-hidden">
         <Toast message={toast} />
 
