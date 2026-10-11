@@ -131,7 +131,7 @@ export function FormView() {
               <button
                 key={item}
                 type="button"
-                className={`pressable h-11 rounded-lg px-2.5 text-xs ${kind === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                className={`pressable h-11 rounded-lg px-2.5 text-xs ${kind === item ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"}`}
                 onClick={() => setKind(item)}
               >
                 {item}
@@ -152,7 +152,7 @@ export function FormView() {
                   aria-pressed={fatigue === v}
                   onClick={() => setFatigue(fatigue === v ? null : v)}
                   className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    fatigue === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    fatigue === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
                   {v}
@@ -170,7 +170,7 @@ export function FormView() {
                   aria-pressed={soreness === v}
                   onClick={() => setSoreness(soreness === v ? null : v)}
                   className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    soreness === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    soreness === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
                   {v}
@@ -188,7 +188,7 @@ export function FormView() {
                   aria-pressed={pain === v}
                   onClick={() => setPain(pain === v ? null : v)}
                   className={`pressable h-9 flex-1 rounded-lg text-xs ${
-                    pain === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    pain === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
                   {v}

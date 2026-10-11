@@ -328,10 +328,10 @@ export function MiniApp() {
 function RoleSwitch({ role, onChange, compact }: { role: "client" | "trainer"; onChange: (role: "client" | "trainer") => void; compact?: boolean }) {
   return (
     <div className={cn("grid grid-cols-2 gap-0.5 rounded-full bg-secondary p-0.5", compact && "opacity-80")}>
-      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Клиент
       </button>
-      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Тренер
       </button>
     </div>

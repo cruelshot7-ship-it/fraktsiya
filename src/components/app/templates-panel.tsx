@@ -98,7 +98,7 @@ export function TemplatesPanel() {
             type="button"
             onClick={() => setSelectedId(t.id)}
             className={`pressable h-9 rounded-lg px-3 text-xs ${
-              t.id === tpl.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+              t.id === tpl.id ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
             }`}
           >
             {t.title}

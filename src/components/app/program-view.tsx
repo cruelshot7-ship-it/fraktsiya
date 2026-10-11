@@ -518,7 +518,7 @@ export function ProgramView() {
               onClick={() => setExercise(item)}
               className={cn(
                 "pressable h-9 rounded-full px-3 text-sm",
-                current === item ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                current === item ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
               {item}
@@ -584,7 +584,7 @@ export function ProgramView() {
                   onClick={() => setRir(rir === v ? null : v)}
                   className={cn(
                     "pressable h-11 flex-1 rounded-lg text-sm tabular-nums",
-                    rir === v ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                    rir === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                   )}
                 >
                   {v === 3 ? "3+" : v}

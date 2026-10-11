@@ -200,7 +200,7 @@ export function OfferLanding({ live }: { live: boolean }) {
                         onClick={() => setGoal(option)}
                         className={cn(
                           "pressable h-10 flex-1 rounded-lg text-xs font-medium",
-                          option === goal ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                          option === goal ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                         )}
                       >
                         {option}
