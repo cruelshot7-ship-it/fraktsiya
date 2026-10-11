@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Camera, Keyboard, ScanLine, X } from "lucide-react";
 import { DEMO_BARCODES, scaleKbju, type ScanProduct } from "@/data/studio";
+import { readCode } from "@/lib/barcode-scan";
 import {
   extractTelegramScan,
   foodDbStatus,
-  getBarcodeDetector,
   lookupBarcode,
   rememberProduct,
   searchCatalog,
@@ -106,12 +106,6 @@ export function ScannerSheet({
       tg((text) => void resolveCode(text));
       return;
     }
-    const detector = getBarcodeDetector();
-    if (!detector) {
-      setMode("missing");
-      setError("Камера этого устройства не читает штрихкод. Введите цифры с упаковки.");
-      return;
-    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setMode("missing");
       setError("Камера недоступна в этом браузере. Введите код или выберите из каталога.");
@@ -157,8 +151,7 @@ export function ScannerSheet({
       const tick = async () => {
         if (!streamRef.current || resolving.current) return;
         try {
-          const codes = await detector.detect(video);
-          const value = codes[0]?.rawValue;
+          const value = await readCode(video, video.videoWidth, video.videoHeight);
           if (value) {
             await resolveCode(value);
             return;
@@ -178,18 +171,10 @@ export function ScannerSheet({
   async function fromPhoto(file: File) {
     setBusy(true);
     setError(null);
-    const detector = getBarcodeDetector();
-    if (!detector) {
-      setBusy(false);
-      setMode("missing");
-      setError("Этот браузер не читает код с фото. Введите цифры.");
-      return;
-    }
     try {
       const bmp = await createImageBitmap(file);
-      const codes = await detector.detect(bmp);
+      const value = await readCode(bmp, bmp.width, bmp.height, true);
       bmp.close();
-      const value = codes[0]?.rawValue;
       if (!value) {
         setBusy(false);
         setError("На фото код не разобрали. Снимите ближе, без блика.");
