@@ -159,10 +159,13 @@ export function KbjuMacroRing({
   label,
   current,
   target,
+  color,
 }: {
   label: string;
   current: number;
   target: number;
+  /** CSS-значение цвета дуги (токен КБЖУ). Без него — красный прогресс и бирюзовый при 100%. */
+  color?: string;
 }) {
   const safeCurrent = Number.isFinite(current) ? Math.max(0, current) : 0;
   const safeTarget = Number.isFinite(target) ? Math.max(0, target) : 0;
@@ -195,18 +198,19 @@ export function KbjuMacroRing({
   const c = 2 * Math.PI * r;
   // In progress → primary (red); full (≥100%) → ok (cyan); over → primary alert
   const complete = safeTarget > 0 ? ratio >= 1 : safeCurrent > 0 && ratio >= 1;
+  // Макро-кольца держат свой цвет (Б/Ж/У); перебор всегда красный; ккал при 100% — бирюза.
   const stroke = over
     ? "var(--color-primary)"
-    : complete
-      ? "var(--color-ok)"
-      : "var(--color-primary)";
-  const glow = over
-    ? "0 0 14px rgb(232 56 47 / 0.4)"
-    : complete
-      ? "0 0 14px rgb(69 212 228 / 0.4)"
-      : ratio > 0
-        ? "0 0 10px rgb(232 56 47 / 0.22)"
-        : "none";
+    : color
+      ? color
+      : complete
+        ? "var(--color-ok)"
+        : "var(--color-primary)";
+  const glowColor = over ? "var(--color-primary)" : stroke;
+  const glow =
+    ratio <= 0 && !over
+      ? "none"
+      : `0 0 ${complete || over ? 14 : 10}px color-mix(in srgb, ${glowColor} ${complete || over ? 40 : 22}%, transparent)`;
 
   return (
     <button
@@ -237,7 +241,7 @@ export function KbjuMacroRing({
           <span
             className={cn(
               "font-display text-sm tabular-nums leading-none",
-              complete && !over ? "text-ok" : over ? "text-primary" : "text-foreground",
+              over ? "text-primary" : complete && !color ? "text-ok" : "text-foreground",
             )}
           >
             {shown}
@@ -278,9 +282,9 @@ export function KbjuMeters({
       </div>
       <div className="mt-4 grid grid-cols-4 gap-1">
         <KbjuMacroRing label="ккал" current={eaten.calories} target={target.calories} />
-        <KbjuMacroRing label="Б" current={eaten.protein} target={target.protein} />
-        <KbjuMacroRing label="Ж" current={eaten.fat} target={target.fat} />
-        <KbjuMacroRing label="У" current={eaten.carbs} target={target.carbs} />
+        <KbjuMacroRing label="Б" current={eaten.protein} target={target.protein} color="var(--color-protein)" />
+        <KbjuMacroRing label="Ж" current={eaten.fat} target={target.fat} color="var(--color-fat)" />
+        <KbjuMacroRing label="У" current={eaten.carbs} target={target.carbs} color="var(--color-carb)" />
       </div>
     </div>
   );
