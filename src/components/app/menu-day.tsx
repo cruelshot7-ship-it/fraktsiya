@@ -21,34 +21,39 @@ function fallbackDish(id: string): MenuDish | undefined {
   return m ? { name: m.name, calories: m.calories, protein: m.protein, fat: m.fat, carbs: m.carbs } : undefined;
 }
 
-/** Рецепты всех вариантов записи меню: раскрываются по нажатию, без лишних кнопок в списке выбора. */
+/** Рецепты всех вариантов записи меню: один сворачиваемый блок, закрыт по умолчанию. */
 function RecipeList({ offers }: { offers: Record<string, string[]> }) {
   const ids = [...new Set(Object.values(offers).flat())].filter((id) => DISH_RECIPES[id]);
   if (ids.length === 0) return null;
   return (
-    <div className="space-y-1.5">
-      <p className="text-tiny text-muted-foreground">Рецепты</p>
-      {ids.map((id) => {
-        const r = DISH_RECIPES[id];
-        return (
-          <details key={id} className="rounded-lg bg-card px-3 py-1 text-sm">
-            <summary className="cursor-pointer py-2 font-medium">{fallbackDish(id)?.name ?? id}</summary>
-            <p className="text-tiny text-muted-foreground">Ингредиенты</p>
-            <ul className="mt-1 space-y-0.5">
-              {r.ingredients.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <p className="mt-2 text-tiny text-muted-foreground">Приготовление</p>
-            <ol className="mt-1 list-decimal space-y-1 pb-2 pl-5">
-              {r.steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          </details>
-        );
-      })}
-    </div>
+    <details className="group rounded-xl bg-card">
+      <summary className="pressable flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        Рецепты блюд
+        <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-45">+</span>
+      </summary>
+      <div className="space-y-4 px-4 pb-4 pt-1">
+        {ids.map((id) => {
+          const r = DISH_RECIPES[id];
+          return (
+            <div key={id}>
+              <p className="text-sm font-medium">{fallbackDish(id)?.name ?? id}</p>
+              <p className="mt-2 text-tiny text-muted-foreground">Ингредиенты</p>
+              <ul className="mt-1 space-y-0.5 text-sm">
+                {r.ingredients.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-tiny text-muted-foreground">Приготовление</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm">
+                {r.steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 
