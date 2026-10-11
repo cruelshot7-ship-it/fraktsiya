@@ -6,6 +6,7 @@ import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
+import { withoutTrainerMoney } from "@/lib/payments";
 import { programFor } from "@/lib/program-import";
 import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/program-template";
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
@@ -205,7 +206,7 @@ function scopePayload(payload: StudioPayload, telegramId: string): StudioPayload
   const slots = clientSlotView(payload.bookings, id);
   return {
     ...payload,
-    clients: mine ? [mine] : [],
+    clients: mine ? [withoutTrainerMoney(mine)] : [],
     bookings: slots.bookings,
     foreignHolds: slots.foreignHolds,
     food: id ? payload.food.filter((f) => f.clientId === id) : [],

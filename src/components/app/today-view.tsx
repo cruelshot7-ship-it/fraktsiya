@@ -6,6 +6,7 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
 import { balanceSummary } from "@/lib/balance-summary";
+import { monthLabel, monthOf, revenueForMonth } from "@/lib/payments";
 import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
@@ -49,6 +50,8 @@ export function TodayView() {
 
   /** занятия по клиентам тренера: остатки и пакеты, которые скоро закончатся */
   const balance = useMemo(() => balanceSummary(clients, today), [clients, today]);
+  /** оплаты тренера за текущий месяц, BYN */
+  const revenue = useMemo(() => revenueForMonth(clients, monthOf(today)), [clients, today]);
 
   const visit = useMemo(() => {
     if (!me) return null;
@@ -130,7 +133,13 @@ export function TodayView() {
               </p>
             </div>
           </div>
-          <p className="text-tiny text-muted-foreground">Считаем занятия, не рубли: цен и оплат в приложении пока нет.</p>
+          <div className="apple-block p-4">
+            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
+            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
+              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
+            </p>
+            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
+          </div>
         </div>
 
         {needMark.length > 0 ? (
