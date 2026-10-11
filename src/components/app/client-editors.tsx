@@ -90,8 +90,8 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "pressable h-8 rounded-full px-3 text-tiny font-medium",
-        active ? "bg-foreground text-background lit-ok" : "bg-secondary text-muted-foreground",
+        "pressable inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3.5 text-tiny font-medium",
+        active ? "chip-moon" : "bg-secondary text-muted-foreground",
       )}
     >
       {children}

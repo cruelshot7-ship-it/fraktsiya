@@ -222,7 +222,7 @@ export function ClientsView() {
         </button>
       </Surface>
 
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <FilterChip active={clientFilter === "all"} onClick={() => setClientFilter("all")}>
           Все {mineRows.length}
         </FilterChip>
