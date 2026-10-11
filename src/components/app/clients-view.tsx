@@ -124,7 +124,7 @@ export function ClientsView() {
           </p>
         </Surface>
       ) : null}
-      <Surface>
+      <Surface className="glow-hero">
         <SectionLabel>Ваши клиенты</SectionLabel>
         <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
         <button
@@ -185,7 +185,7 @@ export function ClientsView() {
 
       <Surface>
         <SectionLabel>Записи на неделю</SectionLabel>
-        <div className="mt-2 flex flex-col gap-1.5">
+        <div className="week-sheen mt-2 flex flex-col gap-1.5">
           {Array.from({ length: 7 }, (_, i) => {
             const key = isoDate(addDays(startOfWeek(new Date()), i));
             const rows = bookings

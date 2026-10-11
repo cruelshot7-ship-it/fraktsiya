@@ -224,12 +224,13 @@
   animation: rise-in 560ms var(--ease-apple) both;
 }
 
+/* Свечение: кольцо + мягкий ореол. Циан — подтверждение, красный — тревога. */
 .glow-ok {
-  box-shadow: var(--shadow-glow-ok);
+  box-shadow: var(--shadow-glow-ok), 0 0 28px rgb(69 212 228 / 0.14);
 }
 
 .glow-alert {
-  box-shadow: var(--shadow-glow-alert);
+  box-shadow: var(--shadow-glow-alert), 0 0 28px rgb(232 56 47 / 0.16);
 }
 
 .glow-soft {
@@ -238,6 +239,88 @@
 
 .glow-dot {
   animation: glow-breathe 2.8s ease-in-out infinite;
+}
+
+/* Главный блок экрана: свечение переливается из циана в фирменный красный. Один такой блок на экран. */
+@keyframes halo-flow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.35), 0 0 22px rgb(69 212 228 / 0.16);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(232 56 47 / 0.4), 0 0 34px rgb(232 56 47 / 0.22);
+  }
+}
+
+.glow-hero {
+  animation: halo-flow 6s ease-in-out infinite;
+}
+
+/* Записи на неделю: каждый день мягко светится цианом; дни сдвинуты по времени, волной сверху вниз. */
+@keyframes row-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.06), 0 0 0 0 rgb(69 212 228 / 0);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.28), 0 0 16px 0 rgb(69 212 228 / 0.16);
+  }
+}
+
+.week-sheen > button {
+  animation: row-glow 5.6s ease-in-out infinite;
+}
+
+.week-sheen > button:nth-child(2) { animation-delay: 0.8s; }
+.week-sheen > button:nth-child(3) { animation-delay: 1.6s; }
+.week-sheen > button:nth-child(4) { animation-delay: 2.4s; }
+.week-sheen > button:nth-child(5) { animation-delay: 3.2s; }
+.week-sheen > button:nth-child(6) { animation-delay: 4s; }
+.week-sheen > button:nth-child(7) { animation-delay: 4.8s; }
+
+/* Нажатие: кнопка или карточка подсвечивается красным, пока палец на ней. */
+.pressable:active:not(:disabled),
+button:active:not(:disabled) {
+  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.6), 0 0 20px rgb(232 56 47 / 0.38);
+  transition: box-shadow 120ms ease-out, transform 220ms var(--ease-apple);
+}
+
+/* Активные кнопки: мягкое свечение. Циан — выбранный фильтр, красный — выбранный вариант. */
+.lit-ok {
+  box-shadow: 0 0 0 1px rgb(69 212 228 / 0.35), 0 0 16px rgb(69 212 228 / 0.2);
+  transition: box-shadow 280ms var(--ease-apple);
+}
+
+.lit-red {
+  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.45), 0 0 16px rgb(232 56 47 / 0.25);
+  transition: box-shadow 280ms var(--ease-apple);
+}
+
+/* Фоновые световые пятна медленно дрейфуют: фон живёт, контент стоит на месте. */
+@keyframes ambient-drift-red {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-6%, 4%, 0) scale(1.06);
+  }
+}
+
+@keyframes ambient-drift-cyan {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6%, -4%, 0) scale(1.05);
+  }
+}
+
+.ambient-glow::before {
+  animation: ambient-drift-red 26s ease-in-out infinite alternate;
+}
+
+.ambient-glow::after {
+  animation: ambient-drift-cyan 32s ease-in-out infinite alternate;
 }
 
 .apple-block {
@@ -261,22 +344,41 @@
   backdrop-filter: blur(16px) saturate(1.45);
 }
 
+/* Шапка полупрозрачная всегда; после прокрутки чуть плотнее и с тонкой линией. */
 .chrome {
+  background: rgb(21 23 27 / 0.62);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
   transition: background-color 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
 }
 
 .chrome.is-scrolled {
-  background: rgb(21 23 27 / 0.78);
-  -webkit-backdrop-filter: blur(18px) saturate(1.35);
-  backdrop-filter: blur(18px) saturate(1.35);
+  background: rgb(21 23 27 / 0.8);
   box-shadow: inset 0 -1px 0 rgb(237 239 242 / 0.08);
 }
 
+/* Открытие блока «Инструменты» — движение в ответ на действие тренера. */
+.tools-body {
+  animation: rise-in 420ms var(--ease-apple) both;
+}
+
+/* Заголовок экрана: медленно переливается (белый → циан → красный). Общий для всех экранов. */
 .title-grad {
-  background: linear-gradient(90deg, #fff 35%, #ff9c94 100%);
+  background: linear-gradient(90deg, #fff 0%, #ff9c94 30%, #fff 45%, #7fe3ee 62%, #ff9c94 80%, #fff 100%);
+  background-size: 250% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: rise-in 560ms var(--ease-apple) both, title-flow 9s ease-in-out 560ms infinite alternate;
+}
+
+@keyframes title-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
 }
 
 .scroll-progress {
@@ -376,7 +478,13 @@
   .sheet-backdrop,
   .bar-fill,
   .glow-dot,
+  .glow-hero,
+  .ambient-glow::before,
+  .ambient-glow::after,
   .title-in,
+  .title-grad,
+  .tools-body,
+  .week-sheen > button,
   .scroll-hint {
     animation: none;
   }

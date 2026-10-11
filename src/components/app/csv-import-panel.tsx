@@ -114,7 +114,7 @@ export function CsvImportPanel() {
     <Surface>
       <SectionLabel>Импорт клиентов · CSV</SectionLabel>
       <p className="mt-2 text-tiny text-muted-foreground">
-        Предпросмотр → подтверждение. Локальный список + запись в Neon (app_users).
+        Загрузите список из файла, проверьте предпросмотр и подтвердите.
       </p>
       <label className="pressable mt-3 flex h-11 cursor-pointer items-center justify-center rounded-xl bg-secondary text-sm font-medium">
         Выбрать CSV

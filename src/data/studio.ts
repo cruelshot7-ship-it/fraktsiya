@@ -615,7 +615,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   notifyTrainer: true,
   flagLate: true,
   absentDays: 10,
-  address: "",
+  address: "Гродно, Лидская 1",
 };
 
 export const CANCEL_WINDOWS = [2, 6, 12, 24] as const;

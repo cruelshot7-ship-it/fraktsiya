@@ -57,7 +57,7 @@ export function ActionCenter() {
           <Surface
             className={cn(
               item.priority <= 12 && "shadow-glow-alert",
-              item.kind === "next_session" && "glow-ok",
+              item.kind === "next_session" && "glow-ok glow-hero",
             )}
           >
             <p className="text-sm font-medium leading-snug">{item.title}</p>
