@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "updated_at": "2026-10-11T15:45:00Z",
   "note": "Горячий каталог студии. Меняйте version и products — Mini App подхватит без пересборки JS. features.offLookup=false отключает Open Food Facts, не останавливая дневник. products — объект {barcode: {name, brand, per100}} или массив {code, name, ...}. Пользовательские правки живут отдельно и не затираются.",
   "features": {
@@ -7,6 +7,11 @@
     "remoteSearch": false
   },
   "products": {
+    "4813494088852": {
+      "name": "Рис",
+      "per100": { "calories": 333, "protein": 6.7, "fat": 0.7, "carbs": 79 },
+      "servingGrams": 150
+    },
     "4813494088838": {
       "name": "Гречка ядрица",
       "per100": { "calories": 334, "protein": 12.6, "fat": 3.3, "carbs": 62 },
