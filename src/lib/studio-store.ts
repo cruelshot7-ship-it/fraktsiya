@@ -1779,6 +1779,7 @@ export const useStudio = create<State>((set, get) => ({
     set({
       clients,
       food: get().food.filter((f) => f.clientId !== id),
+      menus: get().menus.filter((m) => m.clientId !== id),
       dayChecks: get().dayChecks.filter((d) => d.clientId !== id),
       lifts: get().lifts.filter((l) => l.clientId !== id),
       workoutLogs: get().workoutLogs.filter((w) => w.clientId !== id),
