@@ -285,18 +285,26 @@
   isolation: isolate;
 }
 
+/* Блик как у стекла: мягкий светлый ореол под пальцем, без плотной точки. Быстро появляется, медленно гаснет. */
 .ripple-dot {
   position: absolute;
   border-radius: 9999px;
-  background: rgb(237 239 242 / 0.2);
-  transform: scale(0);
-  opacity: 1;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0.07) 42%, transparent 70%);
+  transform: scale(0.4);
+  opacity: 0;
   pointer-events: none;
-  animation: ripple-out 620ms var(--ease-smooth-out) forwards;
+  animation: ripple-out 560ms var(--ease-apple) forwards;
 }
 
 @keyframes ripple-out {
-  to {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
     transform: scale(1);
     opacity: 0;
   }
