@@ -8,14 +8,26 @@ import {
   slotTargets,
   type Macro,
 } from "@/lib/menu-plan";
-import { validChoice, type MenuRecord } from "@/lib/menu-scope";
+import { pruneDishes, validChoice, type MenuDish, type MenuRecord } from "@/lib/menu-scope";
 import { useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 
-const dishName = (id: string) => MEALS.find((m) => m.id === id)?.name ?? id;
-const dishKcal = (id: string) => MEALS.find((m) => m.id === id)?.calories ?? 0;
+/** Блюдо из базы в том же виде, что снимок в записи меню. */
+function fallbackDish(id: string): MenuDish | undefined {
+  const m = MEALS.find((x) => x.id === id);
+  return m ? { name: m.name, calories: m.calories, protein: m.protein, fat: m.fat, carbs: m.carbs } : undefined;
+}
+
+/** Снимок блюда из записи меню; если снимка нет — блюдо из базы. */
+const dishOf = (rec: MenuRecord, id: string): MenuDish | undefined => rec.dishes[id] ?? fallbackDish(id);
+
+/** Все блюда записи для подсчёта итогов. Снимки идут последними и перекрывают базу. */
+const dishList = (rec: MenuRecord) => [
+  ...MEALS,
+  ...Object.entries(rec.dishes).map(([id, d]) => ({ id, ...d })),
+];
 
 /** Итог выбора клиента против нормы дня. */
 function statusLine(totals: Macro, target: Macro) {
@@ -32,6 +44,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
   const setMenuChoice = useStudio((s) => s.setMenuChoice);
   const showToast = useStudio((s) => s.showToast);
   const [count, setCount] = useState<3 | 4 | 5>(3);
+  const [askRebuild, setAskRebuild] = useState(false);
 
   const rec: MenuRecord | null = menus.find((m) => m.clientId === client.id && m.date === date) ?? null;
   const target = dayKbju(client, date, bookings).kbju;
@@ -54,14 +67,24 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
         return;
       }
       const offers = Object.fromEntries(built.slots.map((s) => [s.id, s.options.map((o) => o.dish.id)]));
+      const dishes = Object.fromEntries(
+        built.slots.flatMap((s) =>
+          s.options.map((o) => [
+            o.dish.id,
+            { name: o.dish.name, calories: o.dish.calories, protein: o.dish.protein, fat: o.dish.fat, carbs: o.dish.carbs },
+          ]),
+        ),
+      );
       saveMenu({
         id: `${client.id}_${date}`,
         clientId: client.id,
         date,
         count,
         offers,
+        dishes,
         choice: {},
         confirmed: false,
+        confirmedAt: null,
         updatedAt: new Date().toISOString(),
       });
     };
@@ -70,7 +93,15 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
       if (!rec) return;
       const offers = { ...rec.offers, [slotId]: (rec.offers[slotId] ?? []).filter((d) => d !== dishId) };
       // правка сбрасывает подтверждение: клиент увидит изменённые варианты только после нового подтверждения
-      saveMenu({ ...rec, offers, choice: validChoice(rec.choice, offers), confirmed: false, updatedAt: new Date().toISOString() });
+      saveMenu({
+        ...rec,
+        offers,
+        dishes: pruneDishes(rec.dishes, offers),
+        choice: validChoice(rec.choice, offers),
+        confirmed: false,
+        confirmedAt: null,
+        updatedAt: new Date().toISOString(),
+      });
     };
 
     const confirm = () => {
@@ -80,11 +111,12 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
         showToast(`Добавьте хотя бы один вариант: ${empty.label.toLowerCase()}.`);
         return;
       }
-      saveMenu({ ...rec, confirmed: true, updatedAt: new Date().toISOString() });
+      const now = new Date().toISOString();
+      saveMenu({ ...rec, confirmed: true, confirmedAt: now, updatedAt: now });
       showToast("Меню подтверждено. Клиент видит варианты.");
     };
 
-    const chosen = rec ? dayTotals(rec.choice, slots, MEALS) : null;
+    const chosen = rec ? dayTotals(rec.choice, slots, dishList(rec)) : null;
 
     return (
       <Surface glow={rec?.confirmed ? "ok" : undefined}>
@@ -121,7 +153,8 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                   {(rec.offers[slot.id] ?? []).map((dishId) => (
                     <li key={dishId} className="flex items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-sm">
                       <span className="min-w-0 truncate">
-                        {dishName(dishId)} <span className="text-muted-foreground">· {dishKcal(dishId)}</span>
+                        {dishOf(rec, dishId)?.name ?? dishId}{" "}
+                        <span className="text-muted-foreground">· {dishOf(rec, dishId)?.calories ?? 0}</span>
                       </span>
                       <button
                         type="button"
@@ -145,9 +178,36 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                 Подтвердить для клиента
               </button>
             )}
-            <button type="button" onClick={build} className="pressable h-9 w-full text-tiny text-muted-foreground">
-              Пересобрать из нормы
-            </button>
+            {askRebuild ? (
+              <div className="space-y-2 rounded-xl bg-card p-3">
+                <p className="text-tiny text-muted-foreground">
+                  Клиент потеряет подтверждённое меню и свой выбор. Пересобрать?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAskRebuild(false);
+                      build();
+                    }}
+                    className="pressable h-11 rounded-xl bg-secondary text-sm"
+                  >
+                    Пересобрать
+                  </button>
+                  <button type="button" onClick={() => setAskRebuild(false)} className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground">
+                    Не трогать
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => (rec.confirmed ? setAskRebuild(true) : build())}
+                className="pressable h-11 w-full text-tiny text-muted-foreground"
+              >
+                Пересобрать из нормы
+              </button>
+            )}
           </div>
         )}
       </Surface>
@@ -164,7 +224,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
     );
   }
 
-  const chosen = dayTotals(rec.choice, slots, MEALS);
+  const chosen = dayTotals(rec.choice, slots, dishList(rec));
   const complete = slots.every((s) => rec.choice[s.id]);
 
   return (
@@ -190,8 +250,8 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                       active ? "bg-ok-dim text-foreground lit-ok" : "bg-card text-muted-foreground",
                     )}
                   >
-                    <span className="min-w-0 truncate">{dishName(dishId)}</span>
-                    <span className="shrink-0 text-tiny">{dishKcal(dishId)} ккал</span>
+                    <span className="min-w-0 truncate">{dishOf(rec, dishId)?.name ?? dishId}</span>
+                    <span className="shrink-0 text-tiny">{dishOf(rec, dishId)?.calories ?? 0} ккал</span>
                   </button>
                 );
               })}

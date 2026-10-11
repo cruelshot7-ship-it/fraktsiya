@@ -4,7 +4,7 @@ import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
-import { checkMenus, keepClientChoices, menuKey, type MenuRecord } from "@/lib/menu-scope";
+import { checkMenus, keepClientChoices, menuChoiceLogs, menuKey, menuLogPrefix, type MenuRecord } from "@/lib/menu-scope";
 import {
   BOT_USERNAME,
   addDays,
@@ -1510,12 +1510,17 @@ export const useStudio = create<State>((set, get) => ({
 
   setMenuChoice: (clientId, date, slotId, dishId) => {
     // клиент выбирает только из предложенных вариантов подтверждённого меню
-    const menus = get().menus.map((m) => {
-      if (m.clientId !== clientId || m.date !== date || !m.confirmed) return m;
-      if (!(m.offers[slotId] ?? []).includes(dishId)) return m;
-      return { ...m, choice: { ...m.choice, [slotId]: dishId }, updatedAt: new Date().toISOString() };
+    const current = get().menus.find((m) => m.clientId === clientId && m.date === date && m.confirmed);
+    if (!current || !(current.offers[slotId] ?? []).includes(dishId)) return;
+    const next: MenuRecord = { ...current, choice: { ...current.choice, [slotId]: dishId }, updatedAt: new Date().toISOString() };
+    const menus = get().menus.map((m) => (m === current ? next : m));
+    // выбор сразу попадает в журнал питания: одна запись на приём, без дублей
+    const fromMenu = menuChoiceLogs(next, (id) => {
+      const meal = MEALS.find((x) => x.id === id);
+      return meal ? { name: meal.name, calories: meal.calories, protein: meal.protein, fat: meal.fat, carbs: meal.carbs } : undefined;
     });
-    set({ menus });
+    const food = [...get().food.filter((f) => !f.logId.startsWith(menuLogPrefix(next))), ...fromMenu];
+    set({ menus, food });
     persist(snap(get()));
   },
 
@@ -1763,7 +1768,12 @@ export const useStudio = create<State>((set, get) => ({
     const clients = get().clients.map((c) =>
       c.id === id ? { ...c, consent: { version: PRIVACY_VERSION, acceptedAt: null, declinedAt: now } } : c,
     );
-    set({ clients });
+    set({
+      clients,
+      // отзыв согласия: питание и меню дня больше не хранятся
+      food: get().food.filter((f) => f.clientId !== id),
+      menus: get().menus.filter((m) => m.clientId !== id),
+    });
     persist(snap(get()));
   },
 
