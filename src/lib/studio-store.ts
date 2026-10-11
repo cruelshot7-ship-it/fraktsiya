@@ -199,6 +199,8 @@ type State = {
   addClient: (draft: { firstName: string; lastName: string; telegramUsername?: string; phone?: string }) => string;
   removeClient: (id: string) => void;
   updateClient: (id: string, patch: Partial<Client>) => void;
+  /** запись в историю плана: клиент видит, что изменили и почему */
+  logProgramChange: (clientId: string, reason?: string) => void;
   saveTemplate: (tpl: ProgramTemplate) => void;
   removeTemplate: (id: string) => void;
   dismissSignal: (id: string) => void;
@@ -1995,6 +1997,20 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast("Клиент удалён.");
   },
 
+  logProgramChange: (clientId, reason) => {
+    if (!get().clients.some((c) => c.id === clientId)) return;
+    const note: Notice = {
+      id: `nt_prog_${Date.now().toString(36)}`,
+      audience: "client",
+      clientId,
+      kind: "alert",
+      title: "Программа обновлена",
+      body: reason?.trim() || "Тренер обновил программу.",
+      at: new Date().toISOString(),
+    };
+    set({ notices: pushNotice(get().notices, note) });
+    persist(snap(get()));
+  },
   updateClient: (id, patch) => {
     // Any change of the days is a new program. The stamp keeps an older copy (the bot's import) from overwriting it.
     const stamped = patch.sessions ? { ...patch, programAt: patch.programAt ?? new Date().toISOString() } : patch;

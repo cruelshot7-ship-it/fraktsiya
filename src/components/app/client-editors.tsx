@@ -19,7 +19,16 @@ import {
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
-import { blockLines, newBlockId, SIDES, sessionPlan, withBlocks, type ProgramBlock } from "@/lib/program-blocks";
+import {
+  blockLines,
+  newBlockId,
+  PHASE_LABEL,
+  PHASES,
+  SIDES,
+  sessionPlan,
+  withBlocks,
+  type ProgramBlock,
+} from "@/lib/program-blocks";
 import { parsePastedProgram, type PastedProgram } from "@/lib/program-import";
 import { templateFromSession } from "@/lib/templates/program-template";
 import { useStudio } from "@/lib/studio-store";
@@ -120,9 +129,11 @@ export function ProgramEditor({
 }: {
   client: Client;
   onBack: () => void;
-  onSave: (patch: Partial<Client>) => void;
+  onSave: (patch: Partial<Client>, reason?: string) => void;
 }) {
   const [draft, setDraft] = useState(client);
+  /** причина изменения: клиент увидит её в истории плана */
+  const [reason, setReason] = useState("");
   const [newExercise, setNewExercise] = useState("");
   const [exerciseError, setExerciseError] = useState<string | null>(null);
   const [goal, setGoal] = useState<BuildGoal>("shape");
@@ -244,6 +255,34 @@ export function ProgramEditor({
         <Field label="Старт">
           <input className={inputClass} type="date" value={draft.programStart} onChange={(e) => setDraft({ ...draft, programStart: e.target.value })} />
         </Field>
+      </div>
+      <SectionLabel>Фазы по неделям</SectionLabel>
+      <p className="text-tiny text-muted-foreground">
+        Фаза видна клиенту в шапке программы. Не отмечено — обычная неделя.
+      </p>
+      <div className="flex flex-col gap-1">
+        {Array.from({ length: draft.programWeeks }, (_, k) => String(k + 1)).map((week) => {
+          const current = draft.programPhases?.[week];
+          return (
+            <div key={week} className="flex flex-wrap items-center gap-1.5">
+              <span className="w-12 text-tiny text-muted-foreground">нед. {week}</span>
+              {PHASES.map((phase) => (
+                <ChipToggle
+                  key={phase}
+                  on={current === phase}
+                  onClick={() => {
+                    const next = { ...(draft.programPhases ?? {}) };
+                    if (current === phase) delete next[week];
+                    else next[week] = phase;
+                    setDraft({ ...draft, programPhases: next });
+                  }}
+                >
+                  {PHASE_LABEL[phase]}
+                </ChipToggle>
+              ))}
+            </div>
+          );
+        })}
       </div>
       <SectionLabel>Дни визита</SectionLabel>
       <div className="flex flex-wrap gap-1">
@@ -445,19 +484,34 @@ export function ProgramEditor({
       >
         Добавить день программы
       </button>
+      <label className="flex flex-col gap-1">
+        <span className="text-2xs text-muted-foreground">Почему меняем · клиент увидит в истории плана</span>
+        <textarea
+          rows={2}
+          maxLength={300}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Например: добавил вес в тягу, снизил объём на третьей неделе"
+          className="rounded-lg bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </label>
       <button
         type="button"
         className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
         onClick={() =>
-          onSave({
-            programTitle: draft.programTitle,
-            programWeeks: draft.programWeeks,
-            programStart: draft.programStart,
-            trainDays: draft.trainDays,
-            trainTimes: draft.trainTimes,
-            sessions: draft.sessions,
-            exerciseNames: draft.exerciseNames ?? [],
-          })
+          onSave(
+            {
+              programTitle: draft.programTitle,
+              programWeeks: draft.programWeeks,
+              programStart: draft.programStart,
+              trainDays: draft.trainDays,
+              trainTimes: draft.trainTimes,
+              sessions: draft.sessions,
+              exerciseNames: draft.exerciseNames ?? [],
+              programPhases: draft.programPhases ?? {},
+            },
+            reason.trim(),
+          )
         }
       >
         Сохранить программу
@@ -631,6 +685,16 @@ function SessionEditor({
                     в суперсет с предыдущим
                   </ChipToggle>
                 ) : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="self-center text-tiny text-muted-foreground" title="Сколько повторов оставить в запасе">
+                  RIR:
+                </span>
+                {[null, 0, 1, 2, 3, 4].map((rir) => (
+                  <ChipToggle key={rir ?? "none"} on={(b.rir ?? null) === rir} onClick={() => patch(i, { rir })}>
+                    {rir ?? "нет"}
+                  </ChipToggle>
+                ))}
               </div>
             </div>
           );

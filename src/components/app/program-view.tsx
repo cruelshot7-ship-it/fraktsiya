@@ -24,6 +24,8 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { exerciseOptions, sameExercise } from "@/lib/exercises";
 import {
   legacyMarkMap,
+  PHASE_HINT,
+  PHASE_LABEL,
   planTotalsFromBlocks,
   rewriteFacts,
   rewriteMarks,
@@ -140,6 +142,7 @@ export function ProgramView() {
   }
   const session = visitSession(client, today, bookings);
   const week = programWeek(client, today);
+  const phase = client.programPhases?.[String(week)];
   const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
   const weekLoad = bookings.filter((b) => b.clientId === client.id && b.date >= isoDate(new Date(Date.now() - 6 * 86400000))).length;
@@ -226,11 +229,13 @@ export function ProgramView() {
         <div className="flex items-start justify-between gap-3">
           <SectionLabel>
             {client.programTitle} · нед. {week}/{client.programWeeks}
+            {phase ? ` · ${PHASE_LABEL[phase]}` : ""}
           </SectionLabel>
           <p className="text-tiny text-muted-foreground tabular-nums">
             {client.sessionsLeft} {sessionsRu(client.sessionsLeft)}
           </p>
         </div>
+        {phase ? <p className="mt-1 text-tiny text-muted-foreground">{PHASE_HINT[phase]}</p> : null}
         {session ? (
           <>
             <h2 className="font-display mt-2 text-xl tracking-wide">{session.name}</h2>
@@ -679,6 +684,7 @@ function BlockRow({
     block.sets > 0 && block.reps ? `${block.sets}×${block.reps}${block.side ? ` на каждую ${block.side}` : ""}` : "",
     block.load ? `${block.load} кг` : "",
     block.rest != null ? `отдых ${block.rest} с` : "",
+    block.rir != null ? `RIR ${block.rir}` : "",
   ]
     .filter(Boolean)
     .join(" · ");

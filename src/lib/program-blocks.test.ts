@@ -6,6 +6,8 @@ import {
   blocksFromItems,
   itemsFromBlocks,
   legacyMarkMap,
+  PHASE_LABEL,
+  PHASES,
   planTotalsFromBlocks,
   rewriteFacts,
   rewriteMarks,
@@ -116,4 +118,27 @@ test("blocks stored before 'side' existed keep their id and lines", () => {
   assert.equal(plan.blocks[0].id, "bl_old", "consistent legacy blocks keep their ids");
   assert.equal(plan.blocks[0].side, "руку");
   assert.deepEqual(itemsFromBlocks(plan.blocks), items);
+});
+
+test("target RIR lives in the block and survives a save, items stay unchanged", () => {
+  const blocks = blocksFromItems(["Жим лёжа", "3×8", "60 кг"]).map((b) => ({ ...b, rir: 2 }));
+  const session = withBlocks({ id: "s1", name: "День A", focus: "Грудь", items: [] as string[] }, blocks);
+  assert.deepEqual(session.items, ["Жим лёжа", "3×8", "60 кг"], "rir is not written into lines");
+  const plan = sessionPlan(session);
+  assert.equal(plan.blocks[0].rir, 2, "stored blocks keep rir");
+  assert.equal(plan.blocks[0].id, blocks[0].id);
+});
+
+test("a block without RIR reads as null, not as 0", () => {
+  const blocks = blocksFromItems(["Тяга", "4×10"]);
+  assert.equal(blocks[0].rir ?? null, null);
+  const session = withBlocks({ id: "s2", name: "День B", focus: "Спина", items: [] as string[] }, blocks);
+  assert.equal(sessionPlan(session).blocks[0].rir ?? null, null);
+});
+
+test("phases are the three fixed keys with Russian labels", () => {
+  assert.deepEqual(PHASES, ["build", "peak", "deload"]);
+  assert.equal(PHASE_LABEL.build, "набор");
+  assert.equal(PHASE_LABEL.peak, "пик");
+  assert.equal(PHASE_LABEL.deload, "разгрузка");
 });

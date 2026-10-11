@@ -29,6 +29,26 @@ export type ProgramBlock = {
   side: Side | null;
   /** blocks with the same group are one superset card; null for a single block */
   group: string | null;
+  /**
+   * Целевой запас повторов (RIR, 0–4): сколько повторов тренер хочет оставить в запасе.
+   * Только в структуре блока: строки (items) для бота и шаблонов его не хранят.
+   */
+  rir?: number | null;
+};
+
+/** Фаза периодизации недели: набор объёма, пик интенсивности или разгрузка. */
+export type ProgramPhase = "build" | "peak" | "deload";
+export const PHASES: ProgramPhase[] = ["build", "peak", "deload"];
+export const PHASE_LABEL: Record<ProgramPhase, string> = {
+  build: "набор",
+  peak: "пик",
+  deload: "разгрузка",
+};
+/** Подсказка клиенту: что меняется в фазе. Тренер сам решает, какие веса менять. */
+export const PHASE_HINT: Record<ProgramPhase, string> = {
+  build: "Набор: объём растёт, веса держим в привычном диапазоне.",
+  peak: "Пик: вес выше обычного, объём ниже. Работаем ближе к отказу.",
+  deload: "Разгрузка: объём и вес ниже обычного, запас повторов больше.",
 };
 
 export type SessionLike = { items: string[]; blocks?: ProgramBlock[] };
