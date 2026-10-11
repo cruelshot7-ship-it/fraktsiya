@@ -3,6 +3,7 @@ import { ScanLine } from "lucide-react";
 import { addDays, dayKbju, isoDate, MEALS, parseISODate, sumFood, type Meal } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
+import { specialDataAllowed } from "@/lib/privacy";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { MenuDay } from "@/components/app/menu-day";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
@@ -132,6 +133,15 @@ export function NutritionView() {
     addFood(mealId);
     const meal = MEALS.find((m) => m.id === mealId);
     showToast(meal ? `+ ${meal.name}` : "Добавлено");
+  }
+
+  if (!specialDataAllowed(client.consent)) {
+    return (
+      <Surface>
+        <SectionLabel>Питание</SectionLabel>
+        <EmptyHint>Питание ведём после согласия на данные о здоровье. Дать согласие: «Ещё» → «Мои данные».</EmptyHint>
+      </Surface>
+    );
   }
 
   return (

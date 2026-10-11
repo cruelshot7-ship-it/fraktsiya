@@ -34,7 +34,7 @@ export function PrivacyGate() {
           Перед работой в приложении прочитайте, какие данные мы собираем и зачем.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          «Согласен» относится к замерам, боли и самочувствию — это данные о здоровье. Без согласия приложение всё равно
+          «Согласен» относится к замерам, боли, самочувствию и питанию — это данные о здоровье. Без согласия приложение всё равно
           работает: записи, программа и баланс. Согласие можно дать или отозвать позже в «Ещё» → «Мои данные».
         </p>
       </Surface>
@@ -45,7 +45,7 @@ export function PrivacyGate() {
           className="pressable h-12 rounded-xl bg-secondary text-sm"
           onClick={() => {
             declinePrivacy();
-            showToast("Замеры и самочувствие не ведём. Остальное работает.");
+            showToast("Замеры, самочувствие и питание не ведём. Остальное работает.");
           }}
         >
           Не согласен
@@ -80,11 +80,11 @@ export function MyDataPanel() {
   return (
     <div className="flex flex-col gap-4">
       <Surface>
-        <SectionLabel>Замеры и самочувствие</SectionLabel>
+        <SectionLabel>Замеры, самочувствие и питание</SectionLabel>
         <p className="mt-2 text-sm text-muted-foreground">
           {allowed
-            ? `Согласие от ${new Date(acceptedAt ?? "").toLocaleDateString("ru-RU")}, версия ${PRIVACY_VERSION}. Замеры и самочувствие ведём.`
-            : "Согласия нет: замеры и самочувствие не ведём. Записи, программа и баланс работают."}
+            ? `Согласие от ${new Date(acceptedAt ?? "").toLocaleDateString("ru-RU")}, версия ${PRIVACY_VERSION}. Замеры, самочувствие и питание ведём.`
+            : "Согласия нет: замеры, самочувствие и питание не ведём. Записи, программа и баланс работают."}
         </p>
         <button
           type="button"
@@ -92,7 +92,7 @@ export function MyDataPanel() {
           onClick={() => {
             if (allowed) {
               declinePrivacy();
-              showToast("Согласие отозвано. Замеры и самочувствие больше не ведём.");
+              showToast("Согласие отозвано. Замеры, самочувствие и питание больше не ведём.");
             } else {
               acceptPrivacy();
               showToast("Спасибо, согласие сохранено.");

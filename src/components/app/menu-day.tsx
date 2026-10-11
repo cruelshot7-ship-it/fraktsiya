@@ -10,6 +10,7 @@ import {
 } from "@/lib/menu-plan";
 import { validChoice, type MenuRecord } from "@/lib/menu-scope";
 import { useStudio } from "@/lib/studio-store";
+import { specialDataAllowed } from "@/lib/privacy";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,15 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
   const rec: MenuRecord | null = menus.find((m) => m.clientId === client.id && m.date === date) ?? null;
   const target = dayKbju(client, date, bookings).kbju;
   const slots = rec ? slotTargets(target, MEAL_PATTERNS[rec.count]) : [];
+
+  if (!specialDataAllowed(client.consent)) {
+    return (
+      <Surface>
+        <SectionLabel>Меню дня</SectionLabel>
+        <EmptyHint>Питание ведём после согласия клиента на данные о здоровье. Меню не собираем и не показываем.</EmptyHint>
+      </Surface>
+    );
+  }
 
   if (role === "trainer") {
     const build = () => {
