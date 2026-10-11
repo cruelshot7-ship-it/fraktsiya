@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { addDays, isoDate, MEALS, dayKbju, parseISODate, studioToday, type Booking, type Client } from "@/data/studio";
 import {
   buildDayMenu,
@@ -53,6 +53,24 @@ function RecipeList({ offers }: { offers: Record<string, string[]> }) {
           );
         })}
       </div>
+    </details>
+  );
+}
+
+/** Приём пищи: свёрнут по умолчанию, при нажатии раскрывает варианты. */
+function SlotGroup({ label, target, summary, children }: { label: string; target: number; summary: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-xl bg-card">
+      <summary className="pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm">{label}</span>
+          <span className="block truncate text-tiny text-muted-foreground">
+            ~{target} ккал · {summary}
+          </span>
+        </span>
+        <span aria-hidden className="shrink-0 text-muted-foreground transition-transform group-open:rotate-45">+</span>
+      </summary>
+      <div className="px-2 pb-2 pt-1">{children}</div>
     </details>
   );
 }
@@ -193,11 +211,13 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
         ) : (
           <div className="mt-3 space-y-3">
             {slots.map((slot) => (
-              <div key={slot.id}>
-                <p className="text-tiny text-muted-foreground">
-                  {slot.label} · ~{slot.target.calories} ккал
-                </p>
-                <ul className="mt-1.5 space-y-1.5">
+              <SlotGroup
+                key={slot.id}
+                label={slot.label}
+                target={Math.round(slot.target.calories)}
+                summary={`вариантов: ${(rec.offers[slot.id] ?? []).length}`}
+              >
+                <ul className="space-y-1.5">
                   {(rec.offers[slot.id] ?? []).map((dishId) => (
                     <li key={dishId} className="flex items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-sm">
                       <span className="min-w-0 truncate">
@@ -215,7 +235,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                     </li>
                   ))}
                 </ul>
-              </div>
+              </SlotGroup>
             ))}
             <RecipeList offers={rec.offers} />
             {rec.confirmed ? (
@@ -306,33 +326,34 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
     <Surface glow={complete ? "ok" : undefined}>
       <SectionLabel>Меню дня · выберите по одному блюду</SectionLabel>
       <div className="mt-3 space-y-3">
-        {slots.map((slot) => (
-          <div key={slot.id}>
-            <p className="text-tiny text-muted-foreground">
-              {slot.label} · ~{slot.target.calories} ккал
-            </p>
-            <div className="mt-1.5 flex flex-col gap-1.5">
-              {(rec.offers[slot.id] ?? []).map((dishId) => {
-                const active = rec.choice[slot.id] === dishId;
-                return (
-                  <button
-                    key={dishId}
-                    type="button"
-                    onClick={() => setMenuChoice(client.id, date, slot.id, dishId)}
-                    aria-pressed={active}
-                    className={cn(
-                      "pressable flex min-h-11 items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm",
-                      active ? "bg-ok-dim text-foreground lit-ok" : "bg-card text-muted-foreground",
-                    )}
-                  >
-                    <span className="min-w-0 truncate">{dishOf(rec, dishId)?.name ?? dishId}</span>
-                    <span className="shrink-0 text-tiny">{dishOf(rec, dishId)?.calories ?? 0} ккал</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {slots.map((slot) => {
+          const chosenId = rec.choice[slot.id];
+          const chosenName = chosenId ? (dishOf(rec, chosenId)?.name ?? chosenId) : "не выбрано";
+          return (
+            <SlotGroup key={slot.id} label={slot.label} target={Math.round(slot.target.calories)} summary={chosenName}>
+              <div className="flex flex-col gap-1.5">
+                {(rec.offers[slot.id] ?? []).map((dishId) => {
+                  const active = rec.choice[slot.id] === dishId;
+                  return (
+                    <button
+                      key={dishId}
+                      type="button"
+                      onClick={() => setMenuChoice(client.id, date, slot.id, dishId)}
+                      aria-pressed={active}
+                      className={cn(
+                        "pressable flex min-h-11 items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm",
+                        active ? "bg-ok-dim text-foreground lit-ok" : "bg-card text-muted-foreground",
+                      )}
+                    >
+                      <span className="min-w-0 truncate">{dishOf(rec, dishId)?.name ?? dishId}</span>
+                      <span className="shrink-0 text-tiny">{dishOf(rec, dishId)?.calories ?? 0} ккал</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </SlotGroup>
+          );
+        })}
         <p className="text-tiny text-muted-foreground">
           {Object.keys(rec.choice).length
             ? `Выбрано: ${Math.round(chosen.calories)} ккал из ${Math.round(target.calories)} · ${statusLine(chosen, target)}`
