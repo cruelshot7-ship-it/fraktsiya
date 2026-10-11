@@ -1,6 +1,6 @@
 import {
+  applyDeliveryResults,
   enqueueEvent,
-  flushOutbox,
   pendingCount,
   type OutboxEvent,
 } from "@/lib/notify/outbox";
@@ -40,10 +40,9 @@ export function enqueueLocal(
   return next;
 }
 
-export async function flushLocal(simulateOk = true): Promise<OutboxEvent[]> {
-  const next = await flushOutbox(read(), async () =>
-    simulateOk ? { ok: true } : { ok: false, error: "bot_not_configured" },
-  );
+/** Применить ответ сервера. Без ответа событие остаётся в очереди. Поддельного «ок» больше нет. */
+export function applyLocalResults(results: { id: string; ok: boolean; error?: string }[]): OutboxEvent[] {
+  const next = applyDeliveryResults(read(), results);
   write(next);
   return next;
 }

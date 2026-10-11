@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStudio } from "@/lib/studio-store";
-import { flushLocal, loadOutbox, outboxPending } from "@/lib/notify/local-outbox-store";
+import { applyLocalResults, loadOutbox, outboxPending } from "@/lib/notify/local-outbox-store";
 import type { OutboxEvent } from "@/lib/notify/outbox";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { getTelegramInitData } from "@/lib/telegram";
@@ -33,7 +33,6 @@ export function OutboxPanel() {
     try {
       const pendingItems = loadOutbox().filter((e) => e.status === "pending").slice(0, 20);
       if (!pendingItems.length) {
-        await flushLocal(true);
         refresh();
         showToast("Очередь пуста.");
         return;
@@ -51,7 +50,7 @@ export function OutboxPanel() {
             })),
           },
         });
-        await flushLocal(true);
+        applyLocalResults(res.results);
         const okN = res.results.filter((r: { ok: boolean }) => r.ok).length;
         const failN = res.results.length - okN;
         showToast(
@@ -60,8 +59,7 @@ export function OutboxPanel() {
             : `Бот: отправлено ${okN}.`,
         );
       } catch {
-        await flushLocal(true);
-        showToast("Локальная очередь обработана (сервер бота недоступен).");
+        showToast("Сервер бота недоступен. События остались в очереди.");
       }
       refresh();
     } finally {

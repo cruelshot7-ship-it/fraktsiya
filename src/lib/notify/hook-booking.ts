@@ -38,16 +38,22 @@ export function enqueueBookingCancelled(opts: {
   });
 }
 
-/** Best-effort: ask server to deliver pending outbox (no throw). */
+let flushing = false;
+
+/**
+ * Best-effort: отправить очередь на сервер (без параллельных запусков).
+ * Помечаем только то, что сервер подтвердил. Сетевая ошибка оставляет события в очереди.
+ */
 export function tryFlushPending() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || flushing) return;
+  flushing = true;
   void (async () => {
     try {
-      const { loadOutbox, flushLocal } = await import("@/lib/notify/local-outbox-store");
+      const { loadOutbox, applyLocalResults } = await import("@/lib/notify/local-outbox-store");
       const pending = loadOutbox().filter((e) => e.status === "pending").slice(0, 10);
       if (!pending.length) return;
       const { flushOutboxServerFn } = await import("@/lib/notify/flush-server");
-      await flushOutboxServerFn({
+      const res = await flushOutboxServerFn({
         data: {
           initData: getTelegramInitData(),
           events: pending.map((e) => ({
@@ -58,9 +64,11 @@ export function tryFlushPending() {
           })),
         },
       });
-      await flushLocal(true);
+      applyLocalResults(res.results);
     } catch {
-      /* offline / no token */
+      /* offline / no token: события остаются pending */
+    } finally {
+      flushing = false;
     }
   })();
 }
