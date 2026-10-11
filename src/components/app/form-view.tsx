@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import { FORM_GOALS, isoDate, MOVE_KINDS } from "@/data/studio";
+import { FORM_GOALS, isTrainDay, MOVE_KINDS, studioToday } from "@/data/studio";
+import { trainDayHints, type LoadHintTone } from "@/lib/day-load-hint";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { readiness, type ReadinessDay } from "@/lib/athlete-metrics";
 import { MeasuresCard } from "@/components/app/measures-card";
+
+const TONE_CLASS: Record<LoadHintTone, string> = {
+  reduce: "text-foreground",
+  extra: "text-ok",
+  fuel: "text-foreground",
+};
 
 export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
@@ -13,9 +20,10 @@ export function FormView() {
   const ensureHealthToken = useStudio((s) => s.ensureHealthToken);
   const showToast = useStudio((s) => s.showToast);
   const clients = useStudio((s) => s.clients);
+  const bookings = useStudio((s) => s.bookings);
   const activeClientId = useStudio((s) => s.activeClientId);
   const client = activeClient({ clients, activeClientId });
-  const today = isoDate(new Date());
+  const today = studioToday();
   const saved = dayChecks.find((row) => row.clientId === client?.id && row.date === today);
   const [steps, setSteps] = useState(saved ? String(saved.steps || "") : "");
   const [sleep, setSleep] = useState(saved?.sleepHours ? String(saved.sleepHours) : "");
@@ -29,6 +37,19 @@ export function FormView() {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  // подсказки строятся из введённого сейчас; самочувствие берём только при согласии на данные о здоровье
+  const canHealth = specialDataAllowed(client?.consent);
+  const train = client ? isTrainDay(client, today, bookings) : false;
+  const loadHints =
+    train && client
+      ? trainDayHints({
+          sleepHours: Number(sleep.replace(",", ".")) || 0,
+          fatigue: canHealth ? fatigue : null,
+          soreness: canHealth ? soreness : null,
+          kcal: Number(kcal) || 0,
+          targetKcal: client.kbju.calories,
+        })
+      : [];
   const [paste, setPaste] = useState("");
   const [autoOpen, setAutoOpen] = useState(false);
 
@@ -185,6 +206,16 @@ export function FormView() {
           <p className="mt-2 text-xs text-muted-foreground" role="status">
             Сегодня: {recoveryLabel}
           </p>
+        ) : null}
+        {loadHints.length ? (
+          <div className="mt-3 space-y-1.5" aria-live="polite">
+            <p className="text-tiny text-muted-foreground">Тренировочный день. Менять программу может только тренер.</p>
+            {loadHints.map((hint) => (
+              <p key={hint.text} className={`rounded-lg bg-card px-3 py-2 text-sm ${TONE_CLASS[hint.tone]}`}>
+                {hint.text}
+              </p>
+            ))}
+          </div>
         ) : null}
         <button
           type="button"

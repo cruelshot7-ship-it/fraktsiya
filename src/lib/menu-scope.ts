@@ -23,6 +23,8 @@ export type MenuRecord = {
   confirmed: boolean;
   /** время подтверждения: выбор клиента относится только к одному подтверждению */
   confirmedAt: string | null;
+  /** норма ккал, на которую собрано меню: при смене нормы меню устаревает */
+  targetKcal: number | null;
   updatedAt: string;
 };
 
@@ -105,6 +107,7 @@ export function checkMenuRecord(raw: unknown): MenuRecord | null {
     choice: validChoice(choice, offers),
     confirmed,
     confirmedAt,
+    targetKcal: macro(r.targetKcal, MAX_KCAL),
     updatedAt,
   };
 }
@@ -198,4 +201,17 @@ export function menuChoiceLogs(rec: MenuRecord, fallback: (dishId: string) => Me
     if (!dish) return [];
     return [{ ...dish, id: dishId, logId: `${menuLogPrefix(rec)}${slotId}`, clientId: rec.clientId, date: rec.date }];
   });
+}
+
+/** Меню собрано на другую норму: варианты по старой норме клиенту не показываем. */
+export function isMenuStale(rec: Pick<MenuRecord, "targetKcal">, targetKcal: number, tolerance = 0.02): boolean {
+  if (rec.targetKcal === null) return false;
+  return Math.abs(rec.targetKcal - targetKcal) / Math.max(targetKcal, 1) > tolerance;
+}
+
+/** Хранятся меню за последние keepDays дней: старые не растут в базе без конца. */
+export function pruneMenus(menus: MenuRecord[], today: string, keepDays = 60): MenuRecord[] {
+  const [y, mo, d] = today.split("-").map(Number);
+  const cutoff = new Date(Date.UTC(y, mo - 1, d - keepDays)).toISOString().slice(0, 10);
+  return menus.filter((m) => m.date >= cutoff);
 }

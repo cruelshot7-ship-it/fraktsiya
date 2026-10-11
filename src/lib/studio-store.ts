@@ -4,7 +4,7 @@ import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION } from "@/lib/privacy";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
-import { checkMenus, keepClientChoices, menuChoiceLogs, menuKey, menuLogPrefix, type MenuRecord } from "@/lib/menu-scope";
+import { checkMenus, keepClientChoices, menuChoiceLogs, menuKey, menuLogPrefix, pruneMenus, type MenuRecord } from "@/lib/menu-scope";
 import {
   BOT_USERNAME,
   addDays,
@@ -22,6 +22,7 @@ import {
   hoursUntilSlot,
   ARRIVE_WATER,
   isoDate,
+  studioToday,
   isFrozen,
   isLateCancel,
   isSlotPast,
@@ -208,7 +209,7 @@ type State = {
 
 const KEY = "ruksha:v8";
 const LEGACY_KEYS = ["ruksha:v7", "fraktsiya:v7", "fraktsiya:v6", "fraktsiya:v5"];
-const todayIso = () => isoDate(new Date());
+const todayIso = () => studioToday();
 
 function readPersist(): string | null {
   try {
@@ -1503,7 +1504,7 @@ export const useStudio = create<State>((set, get) => ({
   },
 
   saveMenu: (record) => {
-    const menus = [...get().menus.filter((m) => menuKey(m) !== menuKey(record)), record];
+    const menus = pruneMenus([...get().menus.filter((m) => menuKey(m) !== menuKey(record)), record], studioToday());
     set({ menus });
     persist(snap(get()));
   },
