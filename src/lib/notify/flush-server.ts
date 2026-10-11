@@ -1,10 +1,12 @@
 /**
  * Server: durable outbox on Neon + Telegram Bot delivery (best-effort).
+ * Доступ только по проверенной сессии Telegram; правила адресатов — в flush-rules.ts.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const Input = z.object({
+  initData: z.string().optional(),
   events: z
     .array(
       z.object({
@@ -25,7 +27,12 @@ export type FlushResult = {
 export const flushOutboxServerFn = createServerFn({ method: "POST" })
   .validator(Input)
   .handler(async ({ data }): Promise<FlushResult> => {
+    const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
+    const { checkFlushEvent } = await import("@/lib/notify/flush-rules");
     const { sendBotLink } = await import("@/lib/telegram-bot.server");
+    const auth = verifyTelegramInitData(data.initData);
+    const session = auth ? { role: auth.role, userId: auth.user.id } : null;
+
     const results: FlushResult["results"] = [];
     let durable = false;
 
@@ -41,7 +48,11 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
     }
 
     for (const e of data.events) {
-      const payload = e.payload ?? {};
+      const check = checkFlushEvent({ ...e, payload: e.payload ?? {} }, session);
+      if (!check.ok) {
+        results.push({ id: e.id, ok: false, error: check.error });
+        continue;
+      }
       if (sql) {
         try {
           await sql.query(
@@ -50,7 +61,7 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
              on conflict (id) do update set
                payload = excluded.payload,
                updated_at = now()`,
-            [e.id, e.kind, e.telegramId, JSON.stringify(payload)],
+            [e.id, e.kind, e.telegramId, JSON.stringify(e.payload ?? {})],
           );
         } catch (err) {
           console.error("[outbox] persist failed", err);
@@ -58,22 +69,8 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
         }
       }
 
-      const date = String(payload.date ?? "");
-      const time = String(payload.time ?? "");
-      let text = "";
-      if (e.kind === "booking_confirmed") {
-        text =
-          date && time
-            ? `Запись подтверждена: ${date} · ${time}`
-            : "Запись подтверждена.";
-      } else if (e.kind === "booking_cancelled") {
-        text = "Запись отменена.";
-      } else {
-        text = `Уведомление: ${e.kind}`;
-      }
-
       try {
-        const r = await sendBotLink(e.telegramId, text);
+        const r = await sendBotLink(e.telegramId, check.text);
         const ok = Boolean(r && (r as { ok?: boolean }).ok !== false);
         const error = (r as { description?: string })?.description;
         results.push({ id: e.id, ok, error });

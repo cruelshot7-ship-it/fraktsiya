@@ -3,7 +3,7 @@ import test from "node:test";
 import { checkFoodProduct } from "./food-catalog-rules.ts";
 
 const good = {
-  barcode: "4607001234567",
+  barcode: "4607001234562",
   name: "  Творог 5%  ",
   brand: "Бабушкина крынка",
   per100: { calories: 121.04, protein: 16.5, fat: 5, carbs: 3 },
@@ -37,4 +37,14 @@ test("name and serving limits", () => {
   assert.equal(checkFoodProduct({ ...good, servingGrams: 0 }).ok, false);
   assert.equal(checkFoodProduct({ ...good, servingGrams: 5000 }).ok, false);
   assert.equal(checkFoodProduct(null).ok, false);
+});
+
+test("UPC-A сохраняется в том же виде, что и поиск: 13 знаков", () => {
+  const res = checkFoodProduct({ ...good, barcode: "036000291452" });
+  assert.equal(res.ok, true);
+  if (res.ok) assert.equal(res.value.barcode, "0036000291452");
+});
+
+test("код с неверной контрольной цифрой не принимается", () => {
+  assert.deepEqual(checkFoodProduct({ ...good, barcode: "4600690101081" }), { ok: false, reason: "barcode" });
 });

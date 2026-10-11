@@ -3,6 +3,7 @@ import { useStudio } from "@/lib/studio-store";
 import { flushLocal, loadOutbox, outboxPending } from "@/lib/notify/local-outbox-store";
 import type { OutboxEvent } from "@/lib/notify/outbox";
 import { SectionLabel, Surface } from "@/components/app/bits";
+import { getTelegramInitData } from "@/lib/telegram";
 
 const BUILD = "stage2 · 29.09.2026";
 
@@ -41,6 +42,7 @@ export function OutboxPanel() {
         const { flushOutboxServerFn } = await import("@/lib/notify/flush-server");
         const res = await flushOutboxServerFn({
           data: {
+            initData: getTelegramInitData(),
             events: pendingItems.map((e) => ({
               id: e.id,
               kind: e.kind,
