@@ -150,7 +150,6 @@ function NutritionContent({ client }: { client: Client }) {
 
   return (
     <div className="stagger-in relative flex flex-col gap-3">
-      <MenuDay client={client} bookings={bookings} />
       <Surface glow={low ? "alert" : "ok"}>
         <KbjuMeters
           title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`}
@@ -159,14 +158,15 @@ function NutritionContent({ client }: { client: Client }) {
         />
         {hasGoal ? (
           <p className="mt-3 text-tiny text-muted-foreground">
-            Осталось ≈ {leftCal} ккал · Б {leftP} г — конструктор подбирает из меню.
+            Осталось ≈ {leftCal} ккал · Б {leftP} г. Варианты на день — в меню дня ниже.
           </p>
         ) : (
           <p className="mt-3 text-tiny text-muted-foreground">
-            Цель КБЖУ ещё не задана — ниже варианты из меню зала.
+            Цель КБЖУ ещё не задана — тренер укажет её.
           </p>
         )}
       </Surface>
+      <MenuDay client={client} bookings={bookings} />
 
       <Surface>
         <SectionLabel>Конструктор · меню зала</SectionLabel>
@@ -251,9 +251,14 @@ function NutritionContent({ client }: { client: Client }) {
                   {entry.calories} ккал · Б {entry.protein} Ж {entry.fat} У {entry.carbs}
                 </p>
               </div>
-              <button type="button" onClick={() => removeFood(entry.logId)} className="h-10 px-2 text-xs text-muted-foreground">
-                Убрать
-              </button>
+              {entry.logId.startsWith("menu_") ? (
+                // блюдо из меню убирается выбором в меню дня, иначе журнал и выбор расходятся
+                <span className="text-tiny text-muted-foreground">из меню</span>
+              ) : (
+                <button type="button" onClick={() => removeFood(entry.logId)} className="h-11 px-2 text-xs text-muted-foreground">
+                  Убрать
+                </button>
+              )}
             </Surface>
           ))}
         </div>
