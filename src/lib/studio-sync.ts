@@ -13,7 +13,7 @@ import { coachTierLine } from "@/lib/coach-tier";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
-import { applyClientChoices, checkMenus, menusForClient, mergeMenus } from "@/lib/menu-scope";
+import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
 import {
   clientCoach,
   coachKey,
