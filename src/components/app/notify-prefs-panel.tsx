@@ -52,7 +52,7 @@ function Toggle({
       onClick={onClick}
       className={cn(
         "pressable flex h-11 items-center justify-between rounded-xl px-3 text-left text-sm",
-        on ? "bg-primary/15 ring-1 ring-primary/30" : "bg-secondary",
+        on ? "bg-ok-dim ring-1 ring-ok/30" : "bg-secondary",
       )}
     >
       <span>{label}</span>

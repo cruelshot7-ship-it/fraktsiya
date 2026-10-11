@@ -13,6 +13,7 @@ import { ScheduleView } from "@/components/app/schedule-view";
 import { MoreView } from "@/components/app/more-view";
 import { NutritionView } from "@/components/app/nutrition-view";
 import { ProgramView } from "@/components/app/program-view";
+import { ProgramsView } from "@/components/app/programs-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { TemplatesPanel } from "@/components/app/templates-panel";
@@ -43,6 +44,7 @@ const TRAINER_NAV: NavItem[] = [
   { id: "clients", label: "Клиенты", icon: Users },
   { id: "schedule", label: "Расписание", icon: CalendarDays },
   { id: "signals", label: "Сигналы", icon: Bell },
+  { id: "programs", label: "Программы", icon: ClipboardList },
 ];
 
 const TITLES: Partial<Record<TabId, string>> = {
@@ -57,6 +59,7 @@ const TITLES: Partial<Record<TabId, string>> = {
   hall: "Зал",
   clients: "Клиенты",
   signals: "Сигналы",
+  programs: "Программы",
 };
 
 function navActive(id: TabId, tab: TabId) {
@@ -258,6 +261,7 @@ export function MiniApp() {
                 ) : null}
               </>
             ) : null}
+            {tab === "programs" && role === "trainer" ? <ProgramsView /> : null}
             {tab === "food" ? <NutritionView /> : null}
             {tab === "more" || tab === "form" || tab === "hall" ? (
               <MoreView initial={tab === "hall" ? "hall" : "form"} />
@@ -328,10 +332,10 @@ export function MiniApp() {
 function RoleSwitch({ role, onChange, compact }: { role: "client" | "trainer"; onChange: (role: "client" | "trainer") => void; compact?: boolean }) {
   return (
     <div className={cn("grid grid-cols-2 gap-0.5 rounded-full bg-secondary p-0.5", compact && "opacity-80")}>
-      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Клиент
       </button>
-      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-primary text-primary-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Тренер
       </button>
     </div>

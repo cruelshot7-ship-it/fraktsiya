@@ -248,7 +248,7 @@ export function TrainerSlots() {
                 onClick={() => setTime(t)}
                 className={cn(
                   "h-9 rounded-lg px-2.5 text-xs font-medium",
-                  time === t ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                  time === t ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                 )}
               >
                 {t}

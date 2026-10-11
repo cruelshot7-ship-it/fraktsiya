@@ -166,7 +166,7 @@ export function SignalsView() {
                   onClick={() => setNotifyPrefs({ windowHours: hours })}
                   className={cn(
                     "pressable h-9 rounded-lg px-3 text-xs",
-                    active ? "bg-primary text-primary-foreground lit-red" : "bg-secondary text-muted-foreground",
+                    active ? "bg-ok text-ok-foreground lit-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
                   {hours} ч
@@ -185,7 +185,7 @@ export function SignalsView() {
                   onClick={() => setNotifyPrefs({ absentDays: days })}
                   className={cn(
                     "pressable h-9 rounded-lg px-3 text-xs",
-                    active ? "bg-primary text-primary-foreground lit-red" : "bg-secondary text-muted-foreground",
+                    active ? "bg-ok text-ok-foreground lit-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
                   {days} дн

@@ -736,7 +736,7 @@ function ClientSheetBody({ client, onClose }: { client: Client; onClose: () => v
                               type="button"
                               className={cn(
                                 "pressable h-9 rounded-lg px-2.5 text-xs",
-                                on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                                on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                               )}
                               onClick={() =>
                                 updateClient(client.id, {

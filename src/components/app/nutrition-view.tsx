@@ -184,7 +184,7 @@ function NutritionContent({ client }: { client: Client }) {
               onClick={() => setSlot(id)}
               className={cn(
                 "pressable h-8 rounded-full px-3 text-xs font-medium",
-                slot === id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                slot === id ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
               {SLOT_LABEL[id]}

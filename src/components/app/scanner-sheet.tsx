@@ -310,7 +310,7 @@ export function ScannerSheet({
                       key={g}
                       type="button"
                       onClick={() => setGrams(g)}
-                      className={`pressable h-11 flex-1 rounded-lg text-tiny font-medium ${grams === g ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                      className={`pressable h-11 flex-1 rounded-lg text-tiny font-medium ${grams === g ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"}`}
                     >
                       {g} г
                     </button>
