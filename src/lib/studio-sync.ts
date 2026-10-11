@@ -1,5 +1,6 @@
 
 import { createServerFn } from "@tanstack/react-start";
+import { bindCoachRule, canSendBotLinkRule, isCoachUserRule, visitsForClients } from "@/lib/access/binding-rules";
 import { backupDay, shouldSendBackup } from "@/lib/studio-backup";
 import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
@@ -234,33 +235,18 @@ function sameHandle(a: string | null | undefined, b: string | null | undefined) 
   return Boolean(left) && left === right;
 }
 
+/** Чужой telegramId строки тренера не перезаписывается; handle занимает только пустую строку (см. binding-rules). */
 export function bindCoach(payload: StudioPayload, user: { id: string; username: string | null; firstName: string; lastName: string }) {
-  const coaches = payload.coaches ?? [];
-  const idx = coaches.findIndex((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
-  if (idx < 0) return payload;
-  const row = coaches[idx];
-  if (row.telegramId === user.id && row.firstName) return payload;
-  const next = coaches.slice();
-  next[idx] = {
-    ...row,
-    telegramId: user.id,
-    username: user.username ?? row.username,
-    firstName: row.firstName || user.firstName,
-    lastName: row.lastName || user.lastName,
-  };
-  return { ...payload, coaches: next };
+  return bindCoachRule(payload, user);
 }
 
+/** Доступ тренера — только по numeric Telegram id (правила в binding-rules). */
 export function isCoachUser(payload: StudioPayload, user: { id: string; username: string | null }) {
-  if (user.id === String(TRAINER_TG_ID)) return true;
-  const row = (payload.coaches ?? []).find((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
-  if (!row) return false;
-  const phase = coachPhase(row);
-  return phase === "trial" || phase === "paid" || phase === "paused";
+  return isCoachUserRule(payload, user);
 }
 
 function coachRow(payload: StudioPayload, user: { id: string; username: string | null }) {
-  return (payload.coaches ?? []).find((c) => c.telegramId === user.id || sameHandle(c.username, user.username));
+  return (payload.coaches ?? []).find((c) => c.telegramId === user.id);
 }
 
 export function coachFromStart(start: string, payload: StudioPayload) {
@@ -306,6 +292,8 @@ export function scopeCoach(payload: StudioPayload, coachId: string): StudioPaylo
     menus: (payload.menus ?? []).filter((m) => ids.has(m.clientId)),
     lifts: payload.lifts.filter((l) => ids.has(l.clientId)),
     workoutLogs: payload.workoutLogs.filter((w) => ids.has(w.clientId)),
+    // F-21: без этого строки визитов всех клиентов уходили бы тренеру через ...payload
+    visits: visitsForClients(payload.visits, ids),
     waitlist: payload.waitlist.filter((w) => ids.has(w.clientId)),
     notices: payload.notices.filter((n) => n.clientId && ids.has(n.clientId)),
     checks: Object.fromEntries(Object.entries(payload.checks).filter(([k]) => [...ids].some((id) => k.startsWith(`${id}:`)))),
@@ -876,24 +864,10 @@ export const pullStudio = createServerFn({ method: "POST" })
     const created = false;
 
     if (!trainer) {
+      // F-22: клиент привязывается только по telegramId. Привязка по @username убрана:
+      // handle меняется и может перейти к другому человеку. Новый клиент — через заявку на вступление.
       const byId = payload.clients.some((c) => c.telegramId === session.user.id);
-      const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
-      const byName = uname
-        ? payload.clients.find((c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname)
-        : undefined;
-      // Phone is typed by the caller and nobody verifies ownership of it, so it can
-      // no longer bind a profile to a Telegram account. Binding goes via @username
-      // (set by the trainer) or via a join request the trainer approves.
-      const match = byName;
-      if (!byId && match) {
-        payload = {
-          ...payload,
-          clients: payload.clients.map((c) =>
-            c.id === match.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
-          ),
-        };
-        await saveStudioState(payload);
-      } else if (!byId) {
+      if (!byId) {
         return {
           ok: true,
           role: "client",
@@ -994,12 +968,19 @@ export const sendTrainerNoteFn = createServerFn({ method: "POST" })
   });
 
 export const sendBotLinkFn = createServerFn({ method: "POST" })
-  .validator(z.object({ initData: z.string().optional(), telegramId: z.string(), text: z.string() }))
+  .validator(
+    z.object({
+      initData: z.string().optional(),
+      telegramId: z.string().max(20),
+      text: z.string().min(1).max(1000),
+    }),
+  )
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
     const current = await loadStudioState();
-    if (!session || !isCoachUser(current, session.user)) return { ok: false };
+    // F-08: только свои клиенты, не на паузе, только числовой id
+    if (!session || !canSendBotLinkRule(current, session.user, data.telegramId)) return { ok: false };
     const bot = await import("@/lib/telegram-bot.server");
     const res = await bot.sendBotLink(data.telegramId, data.text);
     return { ok: Boolean(res.ok) };
@@ -1017,35 +998,15 @@ export const pushStudio = createServerFn({ method: "POST" })
     for (let attempt = 1; attempt <= 3; attempt++) {
       const current = await loadStudioState();
       const trainer = isCoachUser(current, session.user);
-      const uname = (session.user.username ?? "").replace(/^@/, "").trim().toLowerCase();
-      const known =
-        trainer ||
-        current.clients.some((c) => c.telegramId === session.user.id) ||
-        Boolean(
-          uname &&
-            current.clients.some((c) => (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
-        );
+      // F-22: известен только по telegramId; handle для записи не используется
+      const known = trainer || current.clients.some((c) => c.telegramId === session.user.id);
       let next: StudioPayload;
       if (trainer) {
         next = mergeCoachPayload(current, normalizePayload(incoming), session.user.id);
       } else if (!known) {
         return { ok: true };
       } else {
-        let bound = current;
-        if (!current.clients.some((c) => c.telegramId === session.user.id) && uname) {
-          const byName = current.clients.find(
-            (c) => !c.telegramId && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname,
-          );
-          if (byName) {
-            bound = {
-              ...current,
-              clients: current.clients.map((c) =>
-                c.id === byName.id ? { ...c, telegramId: session.user.id, telegramUsername: session.user.username } : c,
-              ),
-            };
-          }
-        }
-        next = mergeClientWrite(bound, incoming, session.user.id);
+        next = mergeClientWrite(current, incoming, session.user.id);
       }
       try {
         await saveStudioState(next);
