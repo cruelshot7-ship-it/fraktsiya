@@ -12,6 +12,7 @@ import { TodayView } from "@/components/app/today-view";
 import { ScheduleView } from "@/components/app/schedule-view";
 import { MoreView } from "@/components/app/more-view";
 import { NutritionView } from "@/components/app/nutrition-view";
+import { MenuDay } from "@/components/app/menu-day";
 import { ProgramView } from "@/components/app/program-view";
 import { ClientSheet, ClientsView } from "@/components/app/clients-view";
 import { CsvImportPanel } from "@/components/app/csv-import-panel";
@@ -254,7 +255,10 @@ export function MiniApp() {
                 <ProgramCycleExtras />
                 <ProgramView />
                 {role === "trainer" && client ? (
-                  <TrainerProgramTools clientId={client.id} coachId={client.coachId} />
+                  <>
+                    <MenuDay client={client} bookings={bookings} />
+                    <TrainerProgramTools clientId={client.id} coachId={client.coachId} />
+                  </>
                 ) : null}
               </>
             ) : null}
