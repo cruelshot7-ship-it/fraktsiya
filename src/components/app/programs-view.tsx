@@ -2,11 +2,13 @@ import { ChevronRight } from "lucide-react";
 import { useStudio } from "@/lib/studio-store";
 import { EmptyHint, SectionLabel, Surface } from "@/components/app/bits";
 
-/** Вкладка тренера «Программы»: список клиентов с их программами. Открывает программу клиента. */
+/**
+ * Вкладка тренера «Программы»: список клиентов с программами.
+ * Нажатие открывает карточку клиента сразу в редакторе программы (назначить или изменить).
+ */
 export function ProgramsView() {
   const clients = useStudio((s) => s.clients);
-  const setActiveClient = useStudio((s) => s.setActiveClient);
-  const setTab = useStudio((s) => s.setTab);
+  const openClientSheet = useStudio((s) => s.openClientSheet);
 
   if (clients.length === 0) {
     return <EmptyHint>Клиентов пока нет. Программы появятся, когда клиенты подключатся.</EmptyHint>;
@@ -22,10 +24,7 @@ export function ProgramsView() {
             <li key={c.id}>
               <button
                 type="button"
-                onClick={() => {
-                  setActiveClient(c.id);
-                  setTab("program");
-                }}
+                onClick={() => openClientSheet(c.id, "program")}
                 className="pressable flex w-full items-center justify-between gap-3 rounded-xl bg-card px-3.5 py-3 text-left shadow-border"
               >
                 <span className="min-w-0">
