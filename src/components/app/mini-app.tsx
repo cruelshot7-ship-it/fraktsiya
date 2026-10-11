@@ -297,9 +297,9 @@ export function MiniApp() {
                 return (
                   <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
-                      active ? "text-foreground" : "text-muted-foreground",
+                      active ? "text-ok" : "text-muted-foreground",
                     )} aria-current={active ? "page" : undefined}>
-                    {active ? <span className="absolute top-0 h-[3px] w-7 rounded-b-[3px] bg-primary" /> : null}
+                    {active ? <span className="absolute top-0 h-[3px] w-7 rounded-b-[3px] bg-ok" /> : null}
                     <span className="relative">
                       <Icon className="size-5" />
                       {badge > 0 ? (
