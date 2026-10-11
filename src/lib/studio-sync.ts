@@ -602,6 +602,7 @@ function eraseClientRows(current: StudioPayload, id: string): StudioPayload {
           },
     ),
     food: keep(current.food),
+    menus: keep(current.menus ?? []),
     dayChecks: keep(current.dayChecks ?? []),
     lifts: keep(current.lifts),
     workoutLogs: keep(current.workoutLogs),
