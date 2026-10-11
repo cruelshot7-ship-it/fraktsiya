@@ -654,6 +654,10 @@ export type Client = {
   consentLog?: import("@/lib/privacy").ConsentEvent[];
   frozenUntil?: string | null;
   packExpiresAt?: string | null;
+  /** цена одного занятия, BYN. Личное для тренера: клиенту не отдаётся (см. withoutTrainerMoney) */
+  price?: number | null;
+  /** оплаты клиента, BYN. Личное для тренера: клиенту не отдаются */
+  payments?: import("@/lib/payments").Payment[];
   telegramId?: string | null;
   telegramUsername?: string | null;
   phone?: string | null;
