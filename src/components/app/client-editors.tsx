@@ -64,7 +64,7 @@ export function FilterChip({
       onClick={onClick}
       className={cn(
         "pressable h-8 rounded-full px-3 text-tiny font-medium",
-        active ? "bg-foreground text-background" : "bg-secondary text-muted-foreground",
+        active ? "bg-foreground text-background lit-ok" : "bg-secondary text-muted-foreground",
       )}
     >
       {children}

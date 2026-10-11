@@ -256,39 +256,38 @@
   animation: halo-flow 6s ease-in-out infinite;
 }
 
-/* Записи на неделю: по каждой строке проходит мягкий блик, строки сдвинуты по времени. */
-@keyframes row-sheen {
+/* Записи на неделю: каждый день мягко светится цианом; дни сдвинуты по времени, волной сверху вниз. */
+@keyframes row-glow {
   0%,
-  60% {
-    transform: translateX(-120%);
-  }
   100% {
-    transform: translateX(120%);
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.06), 0 0 0 0 rgb(69 212 228 / 0);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(69 212 228 / 0.28), 0 0 16px 0 rgb(69 212 228 / 0.16);
   }
 }
 
 .week-sheen > button {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  animation: row-glow 5.6s ease-in-out infinite;
 }
 
-.week-sheen > button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent 40%, rgb(69 212 228 / 0.09) 50%, rgb(232 56 47 / 0.06) 58%, transparent 66%);
-  transform: translateX(-120%);
-  animation: row-sheen 8s ease-in-out infinite;
+.week-sheen > button:nth-child(2) { animation-delay: 0.8s; }
+.week-sheen > button:nth-child(3) { animation-delay: 1.6s; }
+.week-sheen > button:nth-child(4) { animation-delay: 2.4s; }
+.week-sheen > button:nth-child(5) { animation-delay: 3.2s; }
+.week-sheen > button:nth-child(6) { animation-delay: 4s; }
+.week-sheen > button:nth-child(7) { animation-delay: 4.8s; }
+
+/* Активные кнопки: мягкое свечение. Циан — выбранный фильтр, красный — выбранный вариант. */
+.lit-ok {
+  box-shadow: 0 0 0 1px rgb(69 212 228 / 0.35), 0 0 16px rgb(69 212 228 / 0.2);
+  transition: box-shadow 280ms var(--ease-apple);
 }
 
-.week-sheen > button:nth-child(2)::after { animation-delay: 1.1s; }
-.week-sheen > button:nth-child(3)::after { animation-delay: 2.2s; }
-.week-sheen > button:nth-child(4)::after { animation-delay: 3.3s; }
-.week-sheen > button:nth-child(5)::after { animation-delay: 4.4s; }
-.week-sheen > button:nth-child(6)::after { animation-delay: 5.5s; }
-.week-sheen > button:nth-child(7)::after { animation-delay: 6.6s; }
+.lit-red {
+  box-shadow: 0 0 0 1px rgb(232 56 47 / 0.45), 0 0 16px rgb(232 56 47 / 0.25);
+  transition: box-shadow 280ms var(--ease-apple);
+}
 
 /* Фоновые световые пятна медленно дрейфуют: фон живёт, контент стоит на месте. */
 @keyframes ambient-drift-red {
@@ -478,7 +477,7 @@
   .title-in,
   .title-grad,
   .tools-body,
-  .week-sheen > button::after,
+  .week-sheen > button,
   .scroll-hint {
     animation: none;
   }
