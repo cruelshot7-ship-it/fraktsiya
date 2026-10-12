@@ -397,6 +397,10 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
       ? (incoming.bookings ?? []).filter((b) => oldBookingIds.has(b.id))
       : incoming.bookings ?? [];
   const myIds = new Set(myClients.map((c) => c.id));
+  // Строки о здоровье (еда, дни, меню) своих клиентов без согласия не заменяются копией тренера,
+  // даже если копия свежее: отозванное согласие не возвращает данные.
+  const healthBlocked = new Set([...myIds].filter((id) => !healthWriteAllowed(myClients.find((c) => c.id === id)?.consent)));
+  const healthRowIds = new Set([...oldIds, ...myIds].filter((id) => !healthBlocked.has(id)));
   // Balances and bookings of this coach's clients are settled by the server from ledger events.
   const settled = settleOwned(
     current,
@@ -413,7 +417,11 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     const program = programFor(prev, { sessions: c.sessions, programAt: c.programAt });
     // Client-authored fields (measures, consent, streak...) are never taken from a trainer's copy.
     const history = mergeWeightHistory(prev?.weightHistory, c.weightHistory);
-    const owned = keepClientOwned(prev, { ...c, ...program, weightHistory: history, weight: weightNow(history, c.weight) });
+    const merged = keepClientOwned(prev, { ...c, ...program, weightHistory: history, weight: weightNow(history, c.weight) });
+    // вес — данные о здоровье клиента: тренер пишет его только при действующем согласии клиента
+    const owned = healthWriteAllowed(merged.consent)
+      ? merged
+      : { ...merged, weightHistory: prev?.weightHistory ?? [], weight: prev?.weight ?? 0 };
     const balance: Balance | undefined = settled.balances.get(c.id);
     if (!balance) return owned;
     const packExpiresAt = c.packExpiresAt ?? (prev?.packExpiresAt ?? null);
@@ -441,9 +449,12 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
     clients,
     programTemplates: mergeCoachTemplates(current.programTemplates ?? [], incoming.programTemplates ?? [], mine, coachKey),
     bookings: settled.bookings.filter((row) => !oldIds.has(row.clientId) || myIds.has(row.clientId)),
-    food: takeMine(current.food, incoming.food ?? []),
-    dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([...oldIds, ...myIds])),
-    menus: mergeMenus(current.menus ?? [], incoming.menus ?? [], new Set([...oldIds, ...myIds])),
+    food: [
+      ...current.food.filter((row) => !oldIds.has(row.clientId) || healthBlocked.has(row.clientId)),
+      ...(incoming.food ?? []).filter((row) => myIds.has(row.clientId) && !healthBlocked.has(row.clientId)),
+    ],
+    dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], healthRowIds),
+    menus: mergeMenus(current.menus ?? [], incoming.menus ?? [], healthRowIds),
     lifts: takeMine(current.lifts, incoming.lifts ?? []),
     workoutLogs: takeMine(current.workoutLogs, incoming.workoutLogs ?? []),
     visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([...oldIds, ...myIds])),

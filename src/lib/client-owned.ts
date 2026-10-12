@@ -6,7 +6,8 @@
 import type { Client } from "@/data/studio";
 
 export function keepClientOwned(server: Client | undefined, incoming: Client): Client {
-  if (!server) return incoming;
+  // Новый клиент, которого добавил тренер: согласие и журнал согласий ставит только сам клиент.
+  if (!server) return { ...incoming, consent: null, consentLog: [] };
   return {
     ...incoming,
     measures: server.measures ?? [],
