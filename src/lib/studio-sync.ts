@@ -12,7 +12,8 @@ import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/progr
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { coachTierLine } from "@/lib/coach-tier";
-import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, specialDataAllowed, stampConsent } from "@/lib/privacy";
+import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
+import { guardBodyFields, guardRows, healthWriteAllowed } from "@/lib/health-write-gate";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
 import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
@@ -624,13 +625,20 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ),
   );
   const balance = settled.balances.get(id);
-  const weights = mergeWeightHistory(mine.weightHistory, incomingSelf.weightHistory);
+  // данные о здоровье клиента пишутся только при действующем согласии (согласие решается по итоговой записи)
+  const consent = stampConsent(mine.consent, incomingSelf.consent, now);
+  const healthOk = healthWriteAllowed(consent);
+  const weights = guardBodyFields(
+    healthOk,
+    mine.weightHistory,
+    mergeWeightHistory(mine.weightHistory, incomingSelf.weightHistory),
+  );
   const nextSelf: Client = {
     ...mine,
     weightHistory: weights,
-    weight: weightNow(weights, incomingSelf.weight ?? mine.weight),
-    measures: mergeMeasures(mine.measures, incomingSelf.measures),
-    consent: stampConsent(mine.consent, incomingSelf.consent, now),
+    weight: guardBodyFields(healthOk, mine.weight, weightNow(weights, incomingSelf.weight ?? mine.weight)),
+    measures: guardBodyFields(healthOk, mine.measures, mergeMeasures(mine.measures, incomingSelf.measures)),
+    consent,
     consentLog: consentLogAfter(mine, incomingSelf.consent, now),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
@@ -641,10 +649,21 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     ...current,
     clients: current.clients.map((c) => (c.id === id ? nextSelf : c)),
     bookings: settled.bookings,
-    food: [...current.food.filter((f) => f.clientId !== id), ...incoming.food.filter((f) => f.clientId === id)],
-    dayChecks: mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
+    food: [
+      ...current.food.filter((f) => f.clientId !== id),
+      ...guardRows(
+        healthOk,
+        current.food.filter((f) => f.clientId === id),
+        incoming.food.filter((f) => f.clientId === id),
+      ),
+    ],
+    dayChecks: guardRows(
+      healthOk,
+      current.dayChecks ?? [],
+      mergeDayRows(current.dayChecks ?? [], incoming.dayChecks ?? [], new Set([id])),
+    ),
     // меню дня — данные о здоровье: без согласия клиента не хранятся
-    menus: specialDataAllowed(nextSelf.consent)
+    menus: healthOk
       ? applyClientChoices(current.menus ?? [], checkMenus(incoming.menus), id)
       : (current.menus ?? []).filter((m) => m.clientId !== id),
     lifts: [...current.lifts.filter((l) => l.clientId !== id), ...incoming.lifts.filter((l) => l.clientId === id)],
