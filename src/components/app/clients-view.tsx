@@ -1,4 +1,5 @@
 import { confirmAction } from "@/lib/confirm";
+import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
 import { weightChangeWeek } from "@/lib/weight-trend";
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -107,9 +108,13 @@ export function ClientsView() {
     return d >= start && d < end;
   }).length;
 
+  const emptyCount = rows.filter((r) => isEmptyClient(r.client)).length;
+  const packSoonCount = rows.filter((r) => isPackSoon(r.client, today)).length;
   const visible = rows.filter((r) => {
     if (clientFilter === "attention") return r.flag.attention;
     if (clientFilter === "today") return r.flag.today;
+    if (clientFilter === "empty") return isEmptyClient(r.client);
+    if (clientFilter === "packSoon") return isPackSoon(r.client, today);
     return true;
   });
   const myCoachKey = String(me?.id ?? TRAINER_TG_ID);
@@ -235,6 +240,12 @@ export function ClientsView() {
         </FilterChip>
         <FilterChip active={clientFilter === "today"} onClick={() => setClientFilter("today")}>
           Сегодня {todayCount}
+        </FilterChip>
+        <FilterChip active={clientFilter === "empty"} onClick={() => setClientFilter("empty")}>
+          Без занятий {emptyCount}
+        </FilterChip>
+        <FilterChip active={clientFilter === "packSoon"} onClick={() => setClientFilter("packSoon")}>
+          Пакет до 7 дн. {packSoonCount}
         </FilterChip>
         <button type="button" onClick={() => refreshCloud()} className="ml-auto text-tiny text-muted-foreground">
           Обновить
