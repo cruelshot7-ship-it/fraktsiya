@@ -624,27 +624,15 @@ function SessionEditor({
                 sameAsPrev && "border border-primary/40",
               )}
             >
-              <div className="flex items-center gap-1.5">
-                <input
-                  className={cn(inputClass, "min-w-0 flex-1")}
-                  list={listId}
-                  enterKeyHint="next"
-                  aria-label={`Упражнение ${i + 1}`}
-                  value={b.exercise}
-                  onChange={(e) => patch(i, { exercise: e.target.value })}
-                />
-                <IconButton label="Выше" disabled={i === 0} onClick={() => move(i, i - 1)}>↑</IconButton>
-                <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
-                <IconButton
-                  label="Убрать блок"
-                  onClick={async () => {
-                    if (await confirmAction(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
-                  }}
-                >
-                  ×
-                </IconButton>
-              </div>
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
+              <input
+                className={inputClass}
+                list={listId}
+                enterKeyHint="next"
+                aria-label={`Упражнение ${i + 1}`}
+                value={b.exercise}
+                onChange={(e) => patch(i, { exercise: e.target.value })}
+              />
+              <div className="mt-2 grid grid-cols-2 gap-2">
                 <Field label="Подходы">
                   <input
                     className={inputClass}
@@ -695,6 +683,18 @@ function SessionEditor({
                     {rir ?? "нет"}
                   </ChipToggle>
                 ))}
+              </div>
+              <div className="mt-2 flex justify-end gap-1.5">
+                <IconButton label="Выше" disabled={i === 0} onClick={() => move(i, i - 1)}>↑</IconButton>
+                <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
+                <IconButton
+                  label="Убрать блок"
+                  onClick={async () => {
+                    if (await confirmAction(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
+                  }}
+                >
+                  ×
+                </IconButton>
               </div>
             </div>
           );
