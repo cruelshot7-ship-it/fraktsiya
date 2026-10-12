@@ -71,7 +71,7 @@ import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "today" | "schedule" | "program" | "programs" | "progress" | "more" | "slots" | "bookings" | "food" | "form" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
-export type ClientFilter = "all" | "attention" | "today" | "empty" | "packSoon";
+export type ClientFilter = "all" | "attention" | "today" | "empty" | "packSoon" | "lapsed";
 
 function coachGate(coaches: Coach[]) {
   const me = String(getTelegramUser()?.id || "");
