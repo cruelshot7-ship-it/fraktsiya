@@ -90,7 +90,7 @@ export function applyCoachNotices<T extends { coaches?: Coach[]; notices: Notice
 ): { next: T; due: CoachNotice[] } | null {
   const due = dueCoachNotices(payload.coaches ?? [], now);
   if (!due.length) return null;
-  const marks = new Map(due.map((n) => [n.telegramId, `${n.key}:${n.stamp}`]));
+  const marks = new Map<string, string>(due.map((n): [string, string] => [n.telegramId, `${n.key}:${n.stamp}`]));
   const at = new Date(now).toISOString();
   const owner: Notice[] = due.map((n) => ({
     id: `nt_coach_${n.telegramId}_${n.key}_${now}`,

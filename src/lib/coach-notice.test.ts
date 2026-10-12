@@ -1,13 +1,21 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import type { Coach, Notice } from "@/data/studio";
 import { applyCoachNotices, coachNoticeText, dueCoachNotices } from "./coach-notice.ts";
 
 const DAY = 86_400_000;
 const NOW = Date.parse("2026-10-12T10:00:00Z");
 const iso = (ms: number) => new Date(ms).toISOString();
 
-const coach = (over: Record<string, unknown>) =>
-  ({ telegramId: "77", username: "a", firstName: "Аня", lastName: "", addedAt: iso(NOW), paidUntil: null, ...over }) as never;
+const coach = (over: Partial<Coach>): Coach => ({
+  telegramId: "77",
+  username: "a",
+  firstName: "Аня",
+  lastName: "",
+  addedAt: iso(NOW),
+  paidUntil: null,
+  ...over,
+});
 
 test("пробный период: предупреждение за 2 дня и не раньше", () => {
   assert.deepEqual(dueCoachNotices([coach({ addedAt: iso(NOW - 4 * DAY) })], NOW), [], "3 дня — ещё рано");
@@ -34,9 +42,8 @@ test("тренер без Telegram не получает уведомлений"
 });
 
 test("applyCoachNotices: сигнал владельцу и отметка; повтор ничего не меняет", () => {
-  const payload = { coaches: [coach({ addedAt: iso(NOW - 6 * DAY) })], notices: [] as never[] };
-  const first = applyCoachNotices(payload, NOW);
-  assert.ok(first);
+  const payload: { coaches: Coach[]; notices: Notice[] } = { coaches: [coach({ addedAt: iso(NOW - 6 * DAY) })], notices: [] };
+  const first = applyCoachNotices(payload, NOW)!;
   assert.equal(first.next.notices.length, 1);
   assert.equal(first.next.notices[0].audience, "trainer");
   assert.equal(first.next.coaches[0].lastNotice, `trial_soon:${iso(NOW - 6 * DAY)}`);
