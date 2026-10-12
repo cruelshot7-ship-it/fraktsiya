@@ -20,3 +20,29 @@ test("unsorted history is read by date", () => {
   const history = [p("2026-10-08", 79), p("2026-10-01", 80)];
   assert.equal(weightChangeWeek(history), -1);
 });
+
+import { weightSeries } from "./weight-trend.ts";
+
+test("weight series: a 7-day range keeps points from the last week, sorted by date", () => {
+  const history = [p("2026-10-01", 80), p("2026-10-09", 79.5), p("2026-10-05", 79.8), p("2026-10-12", 79.2)];
+  assert.deepEqual(
+    weightSeries(history, 7, "2026-10-12").map((x) => x.date),
+    ["2026-10-05", "2026-10-09", "2026-10-12"],
+  );
+});
+
+test("weight series: range 0 is the whole history, sorted; a future point is not shown", () => {
+  const history = [p("2026-10-08", 79), p("2026-10-01", 80), p("2026-10-20", 70)];
+  assert.deepEqual(
+    weightSeries(history, 0, "2026-10-12").map((x) => x.date),
+    ["2026-10-01", "2026-10-08", "2026-10-20"],
+  );
+  assert.deepEqual(
+    weightSeries(history, 30, "2026-10-12").map((x) => x.date),
+    ["2026-10-01", "2026-10-08"],
+  );
+});
+
+test("weight series: empty history gives an empty list", () => {
+  assert.deepEqual(weightSeries([], 30, "2026-10-12"), []);
+});
