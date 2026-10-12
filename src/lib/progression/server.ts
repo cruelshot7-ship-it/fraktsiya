@@ -3,6 +3,7 @@ import { z } from "zod";
 import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
 import { suggestProgression, type SessionResultInput } from "./engine";
 import { canDecideProgression, canSuggestProgression, type Role } from "@/lib/access/stage1-rules";
+import { applyPainBlock, painBlocksProgression } from "./pain-block.ts";
 
 const SuggestInput = z.object({
   initData: z.string().optional(),
@@ -54,7 +55,12 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
       rpe: r.rpe,
     }));
 
-    const suggestion = suggestProgression(results);
+    // боль в чек-ине за последние 7 дней блокирует повышение нагрузки
+    const { loadStudioState: loadForPain } = await import("@/lib/studio-sync");
+    const { studioToday } = await import("@/lib/minsk-time");
+    const painState = await loadForPain();
+    const checks = (painState.dayChecks ?? []).filter((c) => c.clientId === data.clientId);
+    const suggestion = applyPainBlock(suggestProgression(results), painBlocksProgression(checks, studioToday()));
     const id = `psug_${data.programId}_${Date.now()}`;
 
     await sql.query(
