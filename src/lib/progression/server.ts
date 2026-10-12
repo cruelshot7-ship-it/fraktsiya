@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
 import { suggestProgression, type SessionResultInput } from "./engine";
-import { canSuggestProgression } from "@/lib/access/stage1-rules";
+import { canDecideProgression, canSuggestProgression, type Role } from "@/lib/access/stage1-rules";
 
 const SuggestInput = z.object({
   initData: z.string().optional(),
@@ -118,22 +118,20 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
       [data.suggestionId],
     );
     if (!row[0]) return { ok: false as const, reason: "missing" };
-    // Only the owning coach may resolve (or platform admin if role set).
-    const isOwner = row[0].coach_id === session.user.id;
-    const isAdmin = (session.role as string) === "admin";
-    if (!isOwner && !isAdmin) {
-      return { ok: false as const, reason: "forbidden" };
-    }
-    // добавленный тренер решает только с действующим доступом; главный тренер — без этого условия
-    if (isOwner && session.role !== "trainer") {
+    // право решить — по правилу stage1: главный тренер — по любому предложению, добавленный — только своему
+    const isMainTrainer = session.role === "trainer";
+    let coachActive = true;
+    if (!isMainTrainer) {
       const { loadStudioState } = await import("@/lib/studio-sync");
       const { coachPhase } = await import("@/data/studio");
       const state = await loadStudioState();
       const coach = (state.coaches ?? []).find((c) => c.telegramId === session.user.id);
       const phase = coach ? coachPhase(coach) : "expired";
-      if (phase !== "trial" && phase !== "paid") {
-        return { ok: false as const, reason: "forbidden" };
-      }
+      coachActive = phase === "trial" || phase === "paid";
+    }
+    const decider: Role = isMainTrainer ? "admin" : "trainer";
+    if (!coachActive || !canDecideProgression(decider, session.user.id, row[0].coach_id)) {
+      return { ok: false as const, reason: "forbidden" };
     }
     if (row[0].status !== "pending" && row[0].status !== "insufficient_data") {
       return { ok: false as const, reason: "already-resolved" };

@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { monthLabel, monthOf, parseAmount, recentPayments, revenueForMonth, withoutTrainerMoney } from "./payments.ts";
+import { monthLabel, monthOf, parseAmount, paymentRowsForMonth, recentPayments, revenueForMonth, shiftMonth, withoutTrainerMoney } from "./payments.ts";
 
 test("parseAmount reads spaces, comma and dot; rejects empty, zero, negative and extra decimals", () => {
   assert.equal(parseAmount("1 200"), 1200);
@@ -47,4 +47,23 @@ test("withoutTrainerMoney removes price and payments and keeps the rest; input i
   assert.equal("payments" in shared, false);
   assert.equal(shared.firstName, "Анна");
   assert.equal(mine.price, 60, "original keeps its money fields");
+});
+
+test("оплаты месяца: только свой месяц, новые сверху, с именем клиента", () => {
+  const rows = paymentRowsForMonth(
+    [
+      { id: "a", firstName: "Аня", lastName: "Иванова", payments: [{ id: "p1", at: "2026-10-02", amount: 100, sessions: 8 }, { id: "p2", at: "2026-09-30", amount: 50, sessions: 4 }] },
+      { id: "b", firstName: "", lastName: "", payments: [{ id: "p3", at: "2026-10-10", amount: 80, sessions: 0 }] },
+    ],
+    "2026-10",
+  );
+  assert.deepEqual(rows.map((r) => r.payment.id), ["p3", "p1"]);
+  assert.equal(rows[1].name, "Аня Иванова");
+  assert.equal(rows[0].name, "Клиент");
+});
+
+test("соседний месяц переходит через год", () => {
+  assert.equal(shiftMonth("2026-01", -1), "2025-12");
+  assert.equal(shiftMonth("2025-12", 1), "2026-01");
+  assert.equal(shiftMonth("2026-10", 0), "2026-10");
 });

@@ -70,3 +70,29 @@ export function withoutTrainerMoney<T extends { price?: unknown; payments?: unkn
   delete copy.payments;
   return copy;
 }
+
+export type PaymentRow = { clientId: string; name: string; payment: Payment };
+
+/** Оплаты месяца по всем клиентам: новые сверху. Только для тренера. */
+export function paymentRowsForMonth(
+  clients: { id: string; firstName: string; lastName: string; payments?: Payment[] }[],
+  ym: string,
+): PaymentRow[] {
+  const rows: PaymentRow[] = [];
+  for (const c of clients) {
+    const name = [c.firstName, c.lastName].filter(Boolean).join(" ") || "Клиент";
+    for (const p of c.payments ?? []) {
+      if (monthOf(p.at) === ym) rows.push({ clientId: c.id, name, payment: p });
+    }
+  }
+  return rows.sort((a, b) => b.payment.at.localeCompare(a.payment.at) || b.payment.id.localeCompare(a.payment.id));
+}
+
+/** Соседний месяц: shiftMonth("2026-01", -1) -> "2025-12". */
+export function shiftMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split("-").map(Number);
+  const idx = y * 12 + (m - 1) + delta;
+  const ny = Math.floor(idx / 12);
+  const nm = (idx % 12) + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}`;
+}

@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { confirmAction } from "@/lib/confirm";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
+import { PaymentsView } from "@/components/app/payments-view";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -48,6 +49,7 @@ export function TodayView() {
   const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
+  const [showPayments, setShowPayments] = useState(false);
 
   /** занятия по клиентам тренера: остатки и пакеты, которые скоро закончатся */
   const balance = useMemo(() => balanceSummary(clients, today), [clients, today]);
@@ -71,6 +73,10 @@ export function TodayView() {
     const gap = lastPast ? daysSince(lastPast.date, today) : null;
     return { next, todayDone, eatenToday, gap };
   }, [me, bookings, food, today]);
+
+  if (role === "trainer" && showPayments) {
+    return <PaymentsView clients={clients} initialMonth={monthOf(today)} onBack={() => setShowPayments(false)} />;
+  }
 
   if (role === "trainer") {
     const todayRows = bookings
@@ -308,13 +314,13 @@ export function TodayView() {
               </p>
             </button>
           </div>
-          <div className="apple-block p-4">
+          <button type="button" className="apple-block pressable p-4 text-left" onClick={() => setShowPayments(true)}>
             <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
             <p className="mt-1 font-display text-2xl tabular-nums leading-none">
               {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
             </p>
             <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
-          </div>
+          </button>
         </div>
       </div>
     );

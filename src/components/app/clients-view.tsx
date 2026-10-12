@@ -1,5 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
 import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
+import { isLapsed, lastActivityDate, retentionExpired } from "@/lib/lapsed";
 import { weightChangeWeek } from "@/lib/weight-trend";
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -29,6 +30,7 @@ import {
   relativeDayLabel,
   shortName,
   startOfWeek,
+  visitDatesOf,
   visitSession,
   type Client,
 } from "@/data/studio";
@@ -68,6 +70,7 @@ export function ClientsView() {
   const addCoach = useStudio((s) => s.addCoach);
   const removeCoach = useStudio((s) => s.removeCoach);
   const payCoach = useStudio((s) => s.payCoach);
+  const visits = useStudio((s) => s.visits);
   const today = isoDate(new Date());
   const [adding, setAdding] = useState(false);
   const [actionClientId, setActionClientId] = useState<string | null>(null);
@@ -90,8 +93,15 @@ export function ClientsView() {
         client,
         flag: clientFlag(client, today, food, bookings),
         week: programWeek(client, today),
+        lapsed: isLapsed({
+          erased: Boolean(client.erasedAt),
+          lastActivity: lastActivityDate(visitDatesOf(client.id, bookings, visits), client.programStart),
+          hasUpcoming: bookings.some((b) => b.clientId === client.id && b.date >= today),
+          today,
+        }),
+        retentionDue: retentionExpired(lastActivityDate(visitDatesOf(client.id, bookings, visits), client.programStart), today),
       })),
-    [clients, food, bookings, today],
+    [clients, food, bookings, visits, today],
   );
 
   const todayCount = rows.filter((r) => r.flag.today).length;
@@ -110,11 +120,13 @@ export function ClientsView() {
 
   const emptyCount = rows.filter((r) => isEmptyClient(r.client)).length;
   const packSoonCount = rows.filter((r) => isPackSoon(r.client, today)).length;
+  const lapsedCount = rows.filter((r) => r.lapsed).length;
   const visible = rows.filter((r) => {
     if (clientFilter === "attention") return r.flag.attention;
     if (clientFilter === "today") return r.flag.today;
     if (clientFilter === "empty") return isEmptyClient(r.client);
     if (clientFilter === "packSoon") return isPackSoon(r.client, today);
+    if (clientFilter === "lapsed") return r.lapsed;
     return true;
   });
   const myCoachKey = String(me?.id ?? TRAINER_TG_ID);
@@ -247,6 +259,9 @@ export function ClientsView() {
         <FilterChip active={clientFilter === "packSoon"} onClick={() => setClientFilter("packSoon")}>
           Пакет до 7 дн. {packSoonCount}
         </FilterChip>
+        <FilterChip active={clientFilter === "lapsed"} onClick={() => setClientFilter("lapsed")}>
+          Ушли {lapsedCount}
+        </FilterChip>
         <button type="button" onClick={() => refreshCloud()} className="ml-auto text-tiny text-muted-foreground">
           Обновить
         </button>
@@ -262,7 +277,7 @@ export function ClientsView() {
         {mineRows.length > 0 ? (
           <>
             <SectionLabel>Мои клиенты · {mineRows.length}</SectionLabel>
-            {mineRows.map(({ client, flag }) => {
+            {mineRows.map(({ client, flag, retentionDue }) => {
             const next = bookings
               .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
               .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
@@ -302,7 +317,10 @@ export function ClientsView() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-display truncate text-base leading-tight">{shortName(client)}</p>
-                  {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {retentionDue ? <Pill tone="alert">Срок хранения истёк</Pill> : null}
+                    {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                  </div>
                 </div>
                 <p className="mt-0.5 truncate text-tiny text-muted-foreground">
                   {client.telegramUsername
