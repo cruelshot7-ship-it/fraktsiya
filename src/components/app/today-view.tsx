@@ -113,35 +113,6 @@ export function TodayView() {
           </button>
         </div>
 
-        <div className="space-y-2">
-          <SectionLabel>Занятия</SectionLabel>
-          <div className="apple-block grid grid-cols-3 divide-x divide-border">
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
-              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
-            </div>
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
-              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
-                {balance.packsEndingSoon}
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
-              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
-                {balance.empty}
-              </p>
-            </div>
-          </div>
-          <div className="apple-block p-4">
-            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
-            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
-              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
-            </p>
-            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
-          </div>
-        </div>
-
         {needMark.length > 0 ? (
           <div className="space-y-2">
             <p className="text-2xs font-medium tracking-wide text-muted-foreground ">
@@ -289,6 +260,35 @@ export function TodayView() {
             Все записи списком
           </button>
         )}
+
+        <div className="space-y-2">
+          <SectionLabel>Занятия</SectionLabel>
+          <div className="apple-block grid grid-cols-3 divide-x divide-border">
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
+              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
+                {balance.packsEndingSoon}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
+                {balance.empty}
+              </p>
+            </div>
+          </div>
+          <div className="apple-block p-4">
+            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
+            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
+              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
+            </p>
+            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
+          </div>
+        </div>
       </div>
     );
   }
