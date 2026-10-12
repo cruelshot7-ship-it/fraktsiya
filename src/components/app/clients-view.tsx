@@ -31,6 +31,7 @@ import {
   type Client,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
+import { specialDataAllowed } from "@/lib/privacy";
 import { openPhone, openTelegramUrl, openTrainerChat, inviteUrl, getTelegramUser } from "@/lib/telegram";
 import { Avatar, BottomSheet, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -663,6 +664,8 @@ function ClientSheetBody({
   const week = programWeek(client, today);
   const session = visitSession(client, today, bookings);
   const delta = weightDelta(client.weightHistory);
+  /** питание и вес — данные о здоровье: тренер видит их только при согласии клиента */
+  const healthOk = specialDataAllowed(client.consent);
   const frozen = isFrozen(client, today);
   const expires = packDaysLeft(client, today);
   const [mode, setMode] = useState<"view" | "program" | "food" | "measures">(startMode ?? "view");
@@ -894,6 +897,8 @@ function ClientSheetBody({
               )}
             </Surface>
 
+            {healthOk ? (
+            <>
             <Surface>
               <p className="text-tiny text-muted-foreground">{todayGoal.train ? "Тренировочный день" : "День отдыха"}</p>
               <p className="font-display mt-2 text-3xl tabular-nums">
@@ -951,6 +956,15 @@ function ClientSheetBody({
                 )}
               </div>
             </Surface>
+            </>
+            ) : (
+            <Surface>
+              <SectionLabel>Питание и вес</SectionLabel>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Скрыто: клиент не дал согласия на данные о здоровье. Записи, программа и баланс работают как обычно.
+              </p>
+            </Surface>
+            )}
 
             <p className="text-tiny text-muted-foreground">Последний отчёт: {daysAgoPhrase(flag.daysSinceReport)}</p>
 
