@@ -32,6 +32,7 @@ import {
 import { parsePastedProgram, type PastedProgram } from "@/lib/program-import";
 import { templateFromSession } from "@/lib/templates/program-template";
 import { useStudio } from "@/lib/studio-store";
+import { specialDataAllowed } from "@/lib/privacy";
 
 /** Числа «набегают» от прежнего значения к новому. При «уменьшении движения» сразу показывают итог. */
 function useCountUp(target: number, ms = 700) {
@@ -828,6 +829,8 @@ export function MeasuresEditor({
   onRemove: () => void;
 }) {
   const [weight, setWeight] = useState(String(client.weight));
+  // вес — данные о здоровье: без согласия клиента тренер его не вводит и не отправляет
+  const healthOk = specialDataAllowed(client.consent);
   const [firstName, setFirstName] = useState(client.firstName);
   const [askRemove, setAskRemove] = useState(false);
   const [typed, setTyped] = useState("");
@@ -845,9 +848,13 @@ export function MeasuresEditor({
           <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} />
         </Field>
       </div>
-      <Field label="Вес, кг">
-        <input className={inputClass} inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
-      </Field>
+      {healthOk ? (
+        <Field label="Вес, кг">
+          <input className={inputClass} inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
+        </Field>
+      ) : (
+        <p className="text-tiny text-muted-foreground">Вес записывается только с согласия клиента на данные о здоровье.</p>
+      )}
       <Surface>
         <SectionLabel>Замеры, см</SectionLabel>
         <div className="mt-3">
@@ -864,6 +871,10 @@ export function MeasuresEditor({
         type="button"
         className="pressable h-12 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
         onClick={() => {
+          if (!healthOk) {
+            onSave({ firstName, lastName });
+            return;
+          }
           const kg = Number(weight.replace(",", "."));
           const today = isoDate(new Date());
           const history = [...client.weightHistory.filter((p) => p.date !== today), { date: today, kg: kg || client.weight }];
