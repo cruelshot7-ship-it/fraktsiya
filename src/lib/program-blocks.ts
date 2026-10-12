@@ -234,3 +234,67 @@ export function planTotalsFromBlocks(blocks: ProgramBlock[], checked: string[], 
   }
   return { sets, volume: Math.round(volume), restSec };
 }
+
+/** Подходов в блоке: на каждую сторону — отдельно (как в итогах тренировки). Минимум один, даже без схемы. */
+export function setCount(block: ProgramBlock): number {
+  return Math.max(1, block.sets * (block.side ? 2 : 1));
+}
+
+/**
+ * Отметка одного подхода. Хранится в отдельном списке отметок подходов клиента за день,
+ * чтобы блок «выполнен» по-прежнему означал только id блока (итоги и сохранение не меняются).
+ */
+export function setMark(blockId: string, index: number): string {
+  return `${blockId}#${index}`;
+}
+
+/** Сколько подходов блока отмечено. Блок, отмеченный целиком раньше (без подходов), считается весь. */
+export function setsDone(block: ProgramBlock, marks: string[], blockChecked: boolean): number {
+  const total = setCount(block);
+  if (blockChecked) return total;
+  let done = 0;
+  for (let i = 0; i < total; i += 1) if (marks.includes(setMark(block.id, i))) done += 1;
+  return done;
+}
+
+/**
+ * Следующий неотмеченный подход программы: первый блок, который ещё не выполнен целиком,
+ * и его первый неотмеченный подход. Null, когда всё выполнено.
+ */
+export function nextSet(
+  blocks: ProgramBlock[],
+  checked: string[],
+  marks: string[],
+): { block: ProgramBlock; index: number; total: number } | null {
+  for (const block of blocks) {
+    if (checked.includes(block.id)) continue;
+    const total = setCount(block);
+    for (let i = 0; i < total; i += 1) {
+      if (!marks.includes(setMark(block.id, i))) return { block, index: i, total };
+    }
+  }
+  return null;
+}
+
+/**
+ * Отметка одного подхода и пересчёт выполненных блоков. Блок выполнен, когда отмечены все его подходы;
+ * снятие любого подхода снимает блок. Возвращает новые списки, входные не меняются.
+ */
+export function applySetMark(
+  marks: string[],
+  checked: string[],
+  blockId: string,
+  index: number,
+  total: number,
+  on: boolean,
+): { marks: string[]; checked: string[] } {
+  const nextMarks = new Set(marks);
+  const mark = setMark(blockId, index);
+  if (on) nextMarks.add(mark);
+  else nextMarks.delete(mark);
+  const allDone = Array.from({ length: total }, (_, i) => nextMarks.has(setMark(blockId, i))).every(Boolean);
+  const nextChecked = new Set(checked);
+  if (allDone) nextChecked.add(blockId);
+  else nextChecked.delete(blockId);
+  return { marks: [...nextMarks], checked: [...nextChecked] };
+}

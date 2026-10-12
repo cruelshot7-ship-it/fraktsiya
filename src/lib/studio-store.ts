@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
 import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
+import { applySetMark } from "@/lib/program-blocks";
 import { trainerSignalText } from "@/lib/day-load-hint";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
@@ -182,6 +183,8 @@ type State = {
   addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
   /** rewrite maps legacy "index:line" marks to block ids before toggling */
   toggleCheck: (item: string, rewrite?: Record<string, string>) => void;
+  /** Отмечает или снимает один подход блока. Блок выполнен, когда отмечены все его подходы. */
+  markSet: (blockId: string, index: number, total: number, on: boolean) => void;
   completeWorkout: (totalItems: number, minutes?: number, startedAt?: string, extraVolume?: number, facts?: Record<string, string>) => void;
   /** Reopens today's finished workout within the undo window. Returns false when refused. */
   undoWorkout: () => boolean;
@@ -1680,6 +1683,16 @@ export const useStudio = create<State>((set, get) => ({
     const current = [...new Set((get().checks[key] ?? []).map((m) => rewrite?.[m] ?? m))];
     const next = current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
     set({ checks: { ...get().checks, [key]: next } });
+    persist(snap(get()));
+  },
+
+  markSet: (blockId, index, total, on) => {
+    const id = get().activeClientId;
+    const today = todayIso();
+    const setKey = `${id}:${today}:sets`;
+    const blockKey = `${id}:${today}`;
+    const next = applySetMark(get().checks[setKey] ?? [], get().checks[blockKey] ?? [], blockId, index, total, on);
+    set({ checks: { ...get().checks, [setKey]: next.marks, [blockKey]: next.checked } });
     persist(snap(get()));
   },
 
