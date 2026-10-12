@@ -683,7 +683,6 @@ function BlockRow({
   const meta = [
     block.sets > 0 && block.reps ? `${block.sets}×${block.reps}${block.side ? ` на каждую ${block.side}` : ""}` : "",
     block.load ? `${block.load} кг` : "",
-    block.rest != null ? `отдых ${block.rest} с` : "",
     block.rir != null ? `RIR ${block.rir}` : "",
   ]
     .filter(Boolean)

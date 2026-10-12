@@ -441,9 +441,13 @@ export function TodayView() {
             </Surface>
           </button>
         ) : (
-          <Surface className="opacity-80">
-            <p className="text-sm text-muted-foreground">В день визита здесь появится быстрый вход в еду</p>
-          </Surface>
+          <button type="button" className="pressable w-full text-left" onClick={() => setTab("food")}>
+            <Surface>
+              <p className="font-display text-base leading-tight">Питание</p>
+              <p className="mt-1 text-tiny text-muted-foreground">Дневник и КБЖУ за день</p>
+              <p className="mt-3 text-xs font-medium text-muted-foreground">Открыть питание →</p>
+            </Surface>
+          </button>
         )}
       </div>
 

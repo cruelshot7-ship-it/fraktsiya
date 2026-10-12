@@ -1,7 +1,7 @@
 import { PrivacyGate } from "@/components/app/privacy-panel";
 import { needsDecision } from "@/lib/privacy";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CalendarDays, ClipboardList, LayoutGrid, MessageCircle, Sparkles, Users, Utensils } from "lucide-react";
+import { Bell, CalendarDays, ClipboardList, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
@@ -28,15 +28,17 @@ import { TRAINER_TG_ID } from "@/data/studio";
 import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
 import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
 import { ProgramCycleExtras } from "@/components/app/program-cycle-extras";
+import { ProgressView } from "@/components/app/progress-view";
 
 type NavItem = { id: TabId; label: string; icon: typeof Users };
 
+/** Клиент: пять вкладок. Питание — с «Сегодня» (плитка), Профиль — справа. */
 const CLIENT_NAV: NavItem[] = [
   { id: "today", label: "Сегодня", icon: Sparkles },
-  { id: "schedule", label: "Запись", icon: CalendarDays },
   { id: "program", label: "Программа", icon: ClipboardList },
-  { id: "food", label: "Еда", icon: Utensils },
-  { id: "more", label: "Ещё", icon: LayoutGrid },
+  { id: "schedule", label: "Запись", icon: CalendarDays },
+  { id: "progress", label: "Прогресс", icon: TrendingUp },
+  { id: "more", label: "Профиль", icon: User },
 ];
 
 const TRAINER_NAV: NavItem[] = [
@@ -51,7 +53,8 @@ const TITLES: Partial<Record<TabId, string>> = {
   today: "Сегодня",
   schedule: "Расписание",
   program: "Программа",
-  more: "Ещё",
+  progress: "Прогресс",
+  more: "Профиль",
   slots: "Слоты",
   bookings: "Записи",
   food: "Питание",
@@ -63,6 +66,7 @@ const TITLES: Partial<Record<TabId, string>> = {
 };
 
 function navActive(id: TabId, tab: TabId) {
+  if (id === "today") return tab === "today" || tab === "food";
   if (id === "schedule") return tab === "schedule" || tab === "slots" || tab === "bookings";
   if (id === "more") return tab === "more" || tab === "form" || tab === "hall";
   return tab === id;
@@ -262,7 +266,15 @@ export function MiniApp() {
               </>
             ) : null}
             {tab === "programs" && role === "trainer" ? <ProgramsView /> : null}
-            {tab === "food" ? <NutritionView /> : null}
+            {tab === "progress" ? <ProgressView /> : null}
+            {tab === "food" ? (
+              <div className="space-y-3">
+                <button type="button" onClick={() => setTab("today")} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+                  ← Сегодня
+                </button>
+                <NutritionView />
+              </div>
+            ) : null}
             {tab === "more" || tab === "form" || tab === "hall" ? (
               <MoreView initial={tab === "hall" ? "hall" : "form"} />
             ) : null}

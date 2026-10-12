@@ -20,7 +20,7 @@ export function MeasuresCard({ client }: { client: Client }) {
       <Surface>
         <SectionLabel>Замеры, см</SectionLabel>
         <p className="mt-2 text-tiny text-muted-foreground">
-          Замеры тела ведём только с согласия. Дать или отозвать его можно в «Ещё» → «Мои данные».
+          Замеры тела ведём только с согласия. Дать или отозвать его можно в «Профиль» → «Мои данные».
         </p>
       </Surface>
     );
