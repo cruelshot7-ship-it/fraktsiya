@@ -17,7 +17,6 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const openNote = useStudio((s) => s.openNote);
-  const setTab = useStudio((s) => s.setTab);
   const me = activeClient({ clients, activeClientId });
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           onClick={() => setSub("menu")}
           className="pressable self-start min-h-11 text-sm text-muted-foreground"
         >
-          ← Ещё
+          ← Профиль
         </button>
         <Surface>
           <PolicyText />
@@ -49,7 +48,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           onClick={() => setSub("menu")}
           className="pressable self-start min-h-11 text-sm text-muted-foreground"
         >
-          ← Ещё
+          ← Профиль
         </button>
         <MyDataPanel />
       </div>
@@ -64,7 +63,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           onClick={() => setSub("menu")}
           className="pressable self-start min-h-11 text-sm text-muted-foreground"
         >
-          ← Ещё
+          ← Профиль
         </button>
         <FormView />
       </div>
@@ -79,7 +78,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           onClick={() => setSub("menu")}
           className="pressable self-start min-h-11 text-sm text-muted-foreground"
         >
-          ← Ещё
+          ← Профиль
         </button>
         <HallView />
       </div>
@@ -89,8 +88,8 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
   return (
     <div className="space-y-3">
       <div>
-        <SectionLabel>Ещё</SectionLabel>
-        <p className="mt-1 text-tiny text-muted-foreground">Редко нужно · не мешает основным вкладкам</p>
+        <SectionLabel>Профиль</SectionLabel>
+        <p className="mt-1 text-tiny text-muted-foreground">Данные, зал и связь с тренером</p>
       </div>
 
       {me ? (
@@ -105,15 +104,6 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
         </Surface>
       ) : null}
 
-      <button type="button" className="pressable w-full text-left" onClick={() => setSub("form")}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Форма</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Шаги, сон, вода, лёгкое движение</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
 
       <button type="button" className="pressable w-full text-left" onClick={() => setSub("policy")}>
         <Surface className="flex items-center gap-3">
@@ -145,15 +135,6 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
         </Surface>
       </button>
 
-      <button type="button" className="pressable w-full text-left" onClick={() => setTab("schedule")}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Записи и баланс</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Ближайшие слоты · списания</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
 
       <button type="button" className="pressable w-full text-left" onClick={() => openNote()}>
         <Surface className="flex items-center gap-3">

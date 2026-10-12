@@ -287,7 +287,7 @@ export function ProgramView() {
           <button
             type="button"
             onClick={() => arrive()}
-            className="pressable mt-3 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+            className="pressable mt-3 h-12 w-full rounded-xl bg-secondary text-sm font-medium text-foreground"
           >
             Я на месте
           </button>

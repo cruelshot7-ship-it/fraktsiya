@@ -93,7 +93,7 @@ export function TodayView() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <SectionLabel>Смена</SectionLabel>
-            <p className="mt-1 text-tiny text-muted-foreground">Явка · заявки · внимание</p>
+            <p className="mt-1 text-tiny text-muted-foreground">Что требует внимания сегодня?</p>
           </div>
           <SyncStatusChip />
         </div>
@@ -111,35 +111,6 @@ export function TodayView() {
             <p className="min-h-9 text-2xs text-muted-foreground">Заявки</p>
             <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", pendingJoins.length > 0 && "text-alert-text")}>{pendingJoins.length}</p>
           </button>
-        </div>
-
-        <div className="space-y-2">
-          <SectionLabel>Занятия</SectionLabel>
-          <div className="apple-block grid grid-cols-3 divide-x divide-border">
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
-              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
-            </div>
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
-              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
-                {balance.packsEndingSoon}
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
-              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
-                {balance.empty}
-              </p>
-            </div>
-          </div>
-          <div className="apple-block p-4">
-            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
-            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
-              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
-            </p>
-            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
-          </div>
         </div>
 
         {needMark.length > 0 ? (
@@ -289,6 +260,43 @@ export function TodayView() {
             Все записи списком
           </button>
         )}
+
+        <button
+          type="button"
+          className="pressable h-11 w-full rounded-lg bg-secondary text-sm font-medium"
+          onClick={() => setTab("signals")}
+        >
+          Сигналы и настройки →
+        </button>
+
+        <div className="space-y-2">
+          <SectionLabel>Занятия</SectionLabel>
+          <div className="apple-block grid grid-cols-3 divide-x divide-border">
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
+              <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
+                {balance.packsEndingSoon}
+              </p>
+            </div>
+            <div className="p-4">
+              <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
+              <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
+                {balance.empty}
+              </p>
+            </div>
+          </div>
+          <div className="apple-block p-4">
+            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
+            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
+              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
+            </p>
+            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -305,7 +313,7 @@ export function TodayView() {
       <div className="flex items-start justify-between gap-2">
         <div>
           <SectionLabel>Мой день</SectionLabel>
-          <p className="mt-1 text-tiny text-muted-foreground">Запись · тренировка · еда</p>
+          <p className="mt-1 text-tiny text-muted-foreground">{me?.firstName ? `${me.firstName}, что` : "Что"} нужно сделать сегодня?</p>
         </div>
         <SyncStatusChip quietWhenOk />
       </div>
@@ -334,7 +342,7 @@ export function TodayView() {
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">1 · Запись</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Запись</p>
         {next && isToday ? (
           <Surface glow="ok">
             <p className="font-display text-xl leading-tight">Сегодня · {next.time}</p>
@@ -385,7 +393,7 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">2 · Тренировка</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Тренировка</p>
         {isToday || afterSession ? (
           <button type="button" className="pressable w-full text-left" onClick={() => setTab("program")}>
             <Surface glow="ok" className="border border-ok/30">
@@ -420,7 +428,7 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">3 · Еда</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Питание</p>
         {visit?.eatenToday ? (
           <Surface>
             <p className="text-sm">Сегодня уже есть запись по еде</p>
@@ -441,9 +449,13 @@ export function TodayView() {
             </Surface>
           </button>
         ) : (
-          <Surface className="opacity-80">
-            <p className="text-sm text-muted-foreground">В день визита здесь появится быстрый вход в еду</p>
-          </Surface>
+          <button type="button" className="pressable w-full text-left" onClick={() => setTab("food")}>
+            <Surface>
+              <p className="font-display text-base leading-tight">Питание</p>
+              <p className="mt-1 text-tiny text-muted-foreground">Дневник и КБЖУ за день</p>
+              <p className="mt-3 text-xs font-medium text-muted-foreground">Открыть питание →</p>
+            </Surface>
+          </button>
         )}
       </div>
 

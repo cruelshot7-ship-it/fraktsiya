@@ -769,7 +769,7 @@ function ClientSheetBody({
               </Surface>
             ) : null}
 
-            <PaymentPanel key={client.id} client={client} />
+            <p className="text-tiny text-muted-foreground">Последний отчёт: {daysAgoPhrase(flag.daysSinceReport)}</p>
 
             <Surface glow={frozen || client.sessionsLeft <= 2 ? "alert" : "ok"}>
               <SectionLabel>Баланс занятий</SectionLabel>
@@ -897,6 +897,8 @@ function ClientSheetBody({
               )}
             </Surface>
 
+            <PaymentPanel key={client.id} client={client} />
+
             {healthOk ? (
             <>
             <Surface>
@@ -965,8 +967,6 @@ function ClientSheetBody({
               </p>
             </Surface>
             )}
-
-            <p className="text-tiny text-muted-foreground">Последний отчёт: {daysAgoPhrase(flag.daysSinceReport)}</p>
 
             <div className="grid grid-cols-2 gap-2">
               <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("program")}>
