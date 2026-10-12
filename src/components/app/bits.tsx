@@ -7,7 +7,7 @@ export function Toast({ message }: { message: string | null }) {
   return (
     <div
       role="status"
-      className="pointer-events-none absolute top-4 left-1/2 z-50 max-w-[calc(100%-2.5rem)] rounded-lg border border-primary/40 bg-card px-4 py-2.5 text-center text-sm shadow-glow-alert"
+      className="pointer-events-none absolute top-[calc(var(--inset-top)+1rem)] left-1/2 z-50 max-w-[calc(100%-2.5rem)] rounded-lg border border-primary/40 bg-card px-4 py-2.5 text-center text-sm shadow-glow-alert"
       style={{ animation: "toast-in 220ms var(--ease-smooth-out)" }}
     >
       {message}

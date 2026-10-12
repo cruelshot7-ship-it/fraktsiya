@@ -77,7 +77,7 @@ export function TrainerSlots() {
       {ownHall ? null : (
         <p className="pb-3 text-xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
       )}
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-4">
+      <div className="flex gap-1 pt-1 pb-4">
         {days.map((day, i) => {
           const selected = selectedDate === day.key;
           return (
@@ -89,7 +89,7 @@ export function TrainerSlots() {
                 setOpenId(null);
               }}
               className={cn(
-                "min-w-11 flex-1 rounded-xl px-1 py-2 text-center shadow-border",
+                "min-w-0 flex-1 rounded-xl px-0.5 py-2 text-center shadow-border",
                 selected ? "glow-ok bg-ok-dim" : "bg-card",
               )}
             >
