@@ -17,6 +17,8 @@ export type Coach = {
   code?: string;
   addedAt?: string;
   paidUntil?: string | null;
+  /** ключ последнего уведомления о доступе (вид и период), чтобы не повторять; см. lib/coach-notice */
+  lastNotice?: string | null;
 };
 
 export const COACH_PRICE_USD = 10;

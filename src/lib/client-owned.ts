@@ -16,5 +16,7 @@ export function keepClientOwned(server: Client | undefined, incoming: Client): C
     lastReportAt: server.lastReportAt,
     streak: server.streak,
     consentLog: server.consentLog ?? [],
+    // токен ingest выдаётся сервером и не должен теряться от копии тренера
+    healthToken: server.healthToken ?? null,
   };
 }
