@@ -276,7 +276,7 @@ export function MiniApp() {
               </div>
             ) : null}
             {tab === "more" || tab === "form" || tab === "hall" ? (
-              <MoreView initial={tab === "hall" ? "hall" : "form"} />
+              <MoreView initial={tab === "hall" ? "hall" : tab === "form" ? "form" : undefined} />
             ) : null}
             {tab === "clients" ? (
               <div className="space-y-4">

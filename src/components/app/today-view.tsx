@@ -93,7 +93,7 @@ export function TodayView() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <SectionLabel>Смена</SectionLabel>
-            <p className="mt-1 text-tiny text-muted-foreground">Явка · заявки · внимание</p>
+            <p className="mt-1 text-tiny text-muted-foreground">Что требует внимания сегодня?</p>
           </div>
           <SyncStatusChip />
         </div>
@@ -305,7 +305,7 @@ export function TodayView() {
       <div className="flex items-start justify-between gap-2">
         <div>
           <SectionLabel>Мой день</SectionLabel>
-          <p className="mt-1 text-tiny text-muted-foreground">Запись · тренировка · еда</p>
+          <p className="mt-1 text-tiny text-muted-foreground">{me?.firstName ? `${me.firstName}, что` : "Что"} нужно сделать сегодня?</p>
         </div>
         <SyncStatusChip quietWhenOk />
       </div>
@@ -334,7 +334,7 @@ export function TodayView() {
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">1 · Запись</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Запись</p>
         {next && isToday ? (
           <Surface glow="ok">
             <p className="font-display text-xl leading-tight">Сегодня · {next.time}</p>
@@ -385,7 +385,7 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">2 · Тренировка</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Тренировка</p>
         {isToday || afterSession ? (
           <button type="button" className="pressable w-full text-left" onClick={() => setTab("program")}>
             <Surface glow="ok" className="border border-ok/30">
@@ -420,7 +420,7 @@ export function TodayView() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">3 · Еда</p>
+        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Питание</p>
         {visit?.eatenToday ? (
           <Surface>
             <p className="text-sm">Сегодня уже есть запись по еде</p>

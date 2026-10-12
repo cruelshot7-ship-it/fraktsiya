@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookingsView } from "@/components/app/bookings-view";
 import { SlotsView } from "@/components/app/slots-view";
 import { useStudio } from "@/lib/studio-store";
@@ -10,7 +10,12 @@ import { cn } from "@/lib/utils";
  */
 export function ScheduleView() {
   const role = useStudio((s) => s.role);
-  const [sub, setSub] = useState<"slots" | "bookings">("slots");
+  const tab = useStudio((s) => s.tab);
+  const [sub, setSub] = useState<"slots" | "bookings">(tab === "bookings" ? "bookings" : "slots");
+  // «Записи» из других экранов открывают свой подраздел, а не «Записаться»
+  useEffect(() => {
+    if (tab === "bookings" || tab === "slots") setSub(tab);
+  }, [tab]);
 
   return (
     <div className="space-y-3">

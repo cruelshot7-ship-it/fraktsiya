@@ -287,7 +287,7 @@ export function ProgramView() {
           <button
             type="button"
             onClick={() => arrive()}
-            className="pressable mt-3 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
+            className="pressable mt-3 h-12 w-full rounded-xl bg-secondary text-sm font-medium text-foreground"
           >
             Я на месте
           </button>
@@ -683,6 +683,7 @@ function BlockRow({
   const meta = [
     block.sets > 0 && block.reps ? `${block.sets}×${block.reps}${block.side ? ` на каждую ${block.side}` : ""}` : "",
     block.load ? `${block.load} кг` : "",
+    block.rest != null ? `отдых ${block.rest} с` : "",
     block.rir != null ? `RIR ${block.rir}` : "",
   ]
     .filter(Boolean)
