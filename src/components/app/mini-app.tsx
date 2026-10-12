@@ -327,7 +327,19 @@ export function MiniApp() {
                     <span className="relative">
                       <Icon className="size-5" />
                       {badge > 0 ? (
-                        <span className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground">{badge}</span>
+                        // счётчик ведёт к задачам: там сигнал закрывается кнопкой «Готово»
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Открыть сигналы: ${badge}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTab("signals");
+                          }}
+                          className="pressable absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground"
+                        >
+                          {badge}
+                        </span>
                       ) : null}
                     </span>
                     {item.label}
