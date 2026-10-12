@@ -1,4 +1,5 @@
 import { confirmAction } from "@/lib/confirm";
+import { weightChangeWeek } from "@/lib/weight-trend";
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -27,7 +28,6 @@ import {
   shortName,
   startOfWeek,
   visitSession,
-  weightDelta,
   type Client,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
@@ -663,7 +663,7 @@ function ClientSheetBody({
   const todayGoal = dayKbju(client, today, bookings);
   const week = programWeek(client, today);
   const session = visitSession(client, today, bookings);
-  const delta = weightDelta(client.weightHistory);
+  const delta = weightChangeWeek(client.weightHistory);
   /** питание и вес — данные о здоровье: тренер видит их только при согласии клиента */
   const healthOk = specialDataAllowed(client.consent);
   const frozen = isFrozen(client, today);
@@ -925,15 +925,21 @@ function ClientSheetBody({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <SectionLabel>Вес</SectionLabel>
-                  <p className="font-display mt-2 text-3xl tabular-nums">
-                    {client.weight.toFixed(1).replace(".", ",")}
-                    <span className="ml-1 text-base text-muted-foreground">кг</span>
-                  </p>
+                  {client.weight > 0 ? (
+                    <p className="font-display mt-2 text-3xl tabular-nums">
+                      {client.weight.toFixed(1).replace(".", ",")}
+                      <span className="ml-1 text-base text-muted-foreground">кг</span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">Вес ещё не записан</p>
+                  )}
                 </div>
-                <p className="text-tiny text-muted-foreground">
-                  {delta > 0 ? "+" : ""}
-                  {delta.toFixed(1).replace(".", ",")} кг за 7 дней
-                </p>
+                {delta !== null ? (
+                  <p className="text-tiny text-muted-foreground">
+                    {delta > 0 ? "+" : ""}
+                    {delta.toFixed(1).replace(".", ",")} кг за 7 дней
+                  </p>
+                ) : null}
               </div>
               <div className="mt-2 h-24">
                 {chartReady && client.weightHistory.length > 1 ? (

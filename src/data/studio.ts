@@ -1162,13 +1162,6 @@ export function sumFood(entries: FoodLog[]): Kbju {
   );
 }
 
-export function weightDelta(history: WeightPoint[]) {
-  if (history.length < 2) return 0;
-  const first = history[0].kg;
-  const last = history[history.length - 1].kg;
-  return Math.round((last - first) * 10) / 10;
-}
-
 function historyFrom(kg: number, deltas: number[]): WeightPoint[] {
   return deltas.map((d, i) => ({
     date: isoDate(addDays(new Date(), i - (deltas.length - 1))),
