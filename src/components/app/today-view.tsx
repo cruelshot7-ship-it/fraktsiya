@@ -261,6 +261,14 @@ export function TodayView() {
           </button>
         )}
 
+        <button
+          type="button"
+          className="pressable h-11 w-full rounded-lg bg-secondary text-sm font-medium"
+          onClick={() => setTab("signals")}
+        >
+          Сигналы и настройки →
+        </button>
+
         <div className="space-y-2">
           <SectionLabel>Занятия</SectionLabel>
           <div className="apple-block grid grid-cols-3 divide-x divide-border">

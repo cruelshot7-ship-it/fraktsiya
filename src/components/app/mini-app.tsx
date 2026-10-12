@@ -45,7 +45,6 @@ const TRAINER_NAV: NavItem[] = [
   { id: "today", label: "Сегодня", icon: Sparkles },
   { id: "clients", label: "Клиенты", icon: Users },
   { id: "schedule", label: "Расписание", icon: CalendarDays },
-  { id: "signals", label: "Сигналы", icon: Bell },
   { id: "programs", label: "Программы", icon: ClipboardList },
 ];
 
@@ -66,7 +65,8 @@ const TITLES: Partial<Record<TabId, string>> = {
 };
 
 function navActive(id: TabId, tab: TabId) {
-  if (id === "today") return tab === "today" || tab === "food";
+  // «Сигналы» — экран внутри «Сегодня» у тренера, с подсветкой вкладки «Сегодня»
+  if (id === "today") return tab === "today" || tab === "food" || tab === "signals";
   if (id === "schedule") return tab === "schedule" || tab === "slots" || tab === "bookings";
   if (id === "more") return tab === "more" || tab === "form" || tab === "hall";
   return tab === id;
@@ -293,7 +293,14 @@ export function MiniApp() {
                 </details>
               </div>
             ) : null}
-            {tab === "signals" ? <SignalsView /> : null}
+            {tab === "signals" ? (
+              <div className="space-y-3">
+                <button type="button" onClick={() => setTab("today")} className="pressable self-start min-h-11 text-sm text-muted-foreground">
+                  ← Сегодня
+                </button>
+                <SignalsView />
+              </div>
+            ) : null}
               </>
             )}
           </div>
@@ -309,7 +316,8 @@ export function MiniApp() {
               {navItems.map((item) => {
                 const active = navActive(item.id, tab);
                 const Icon = item.icon;
-                const badge = item.id === "signals" ? trainerBadge : 0;
+                // у тренера сигналы живут в «Сегодня»: счётчик переехал туда
+                const badge = item.id === "today" && role === "trainer" ? trainerBadge : 0;
                 return (
                   <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",

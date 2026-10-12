@@ -146,7 +146,7 @@ function NutritionContent({ client }: { client: Client }) {
     return (
       <Surface>
         <SectionLabel>Питание</SectionLabel>
-        <EmptyHint>Питание ведём после согласия на данные о здоровье. Дать согласие: «Ещё» → «Мои данные».</EmptyHint>
+        <EmptyHint>Питание ведём после согласия на данные о здоровье. Дать согласие: «Профиль» → «Мои данные».</EmptyHint>
       </Surface>
     );
   }

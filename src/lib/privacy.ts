@@ -5,7 +5,7 @@
  */
 
 // Bump on every change of the policy text: consent given to an older text does not cover the new one.
-export const PRIVACY_VERSION = "2026-10-11.1";
+export const PRIVACY_VERSION = "2026-10-12.1";
 
 /** declinedAt is set only while the client has refused the current version; an acceptance clears it. */
 export type Consent = { version: string; acceptedAt: string | null; declinedAt?: string | null };
