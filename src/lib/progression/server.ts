@@ -124,6 +124,17 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
     if (!isOwner && !isAdmin) {
       return { ok: false as const, reason: "forbidden" };
     }
+    // добавленный тренер решает только с действующим доступом; главный тренер — без этого условия
+    if (isOwner && session.role !== "trainer") {
+      const { loadStudioState } = await import("@/lib/studio-sync");
+      const { coachPhase } = await import("@/data/studio");
+      const state = await loadStudioState();
+      const coach = (state.coaches ?? []).find((c) => c.telegramId === session.user.id);
+      const phase = coach ? coachPhase(coach) : "expired";
+      if (phase !== "trial" && phase !== "paid") {
+        return { ok: false as const, reason: "forbidden" };
+      }
+    }
     if (row[0].status !== "pending" && row[0].status !== "insufficient_data") {
       return { ok: false as const, reason: "already-resolved" };
     }

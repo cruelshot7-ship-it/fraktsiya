@@ -135,6 +135,8 @@ export function initTelegram() {
   try {
     tg.ready();
     tg.expand();
+    // свайп вниз не должен закрывать мини-приложение посреди формы (Bot API 7.7+)
+    tg.disableVerticalSwipes?.();
     tg.setHeaderColor?.("#15171b");
     tg.setBackgroundColor?.("#15171b");
     const apply = () => {
