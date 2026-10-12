@@ -10,3 +10,11 @@ export function programProgress(diffDays: number, weeks: number): { week: number
   const raw = Math.max(1, Math.floor(diffDays / 7) + 1);
   return { week: Math.min(total, raw), finished: raw > total };
 }
+
+/**
+ * Сколько визитов уже состоялось до даты: каждая дата с посещением считается один раз.
+ * Цикл дней программы идёт по этому числу: каждое посещение продвигает день на один.
+ */
+export function visitsBefore(visitDates: string[], iso: string): number {
+  return new Set(visitDates.filter((d) => d < iso)).size;
+}

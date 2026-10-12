@@ -5,7 +5,7 @@ import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/li
 export { studioToday };
 import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 import { blocksFromItems, type ProgramBlock, type ProgramPhase } from "@/lib/program-blocks";
-import { programProgress } from "@/lib/program-status";
+import { programProgress, visitsBefore } from "@/lib/program-status";
 export type { ProgramBlock } from "@/lib/program-blocks";
 export const TRAINER_TG_ID = "8144320404";
 
@@ -1170,26 +1170,30 @@ function historyFrom(kg: number, deltas: number[]): WeightPoint[] {
   }));
 }
 
-/** A pinned day wins. Otherwise visits follow the program in order. */
-export function visitSession(client: Client, iso: string, bookings: Booking[] = []): ProgramSession | null {
+/**
+ * Визит — это состоявшееся посещение: отметка «Я на месте» (визит) или отметка тренера (чекин записи).
+ * Записи без прихода день программы не двигают.
+ */
+export function visitDatesOf(clientId: string, bookings: Booking[], visits: Visit[]): string[] {
+  return [
+    ...bookings.filter((b) => b.clientId === clientId && b.checkedIn).map((b) => b.date),
+    ...visits.filter((v) => v.clientId === clientId).map((v) => v.date),
+  ];
+}
+
+/** A pinned day wins. Otherwise each visit moves the program on by one session. */
+export function visitSession(client: Client, iso: string, bookings: Booking[] = [], visits: Visit[] = []): ProgramSession | null {
   if (!client.sessions.length) return null;
   const pinned = client.sessionByDate?.[iso];
   if (pinned) {
     const chosen = client.sessions.find((session) => session.id === pinned);
     if (chosen) return chosen;
   }
-  const dates = [
-    ...new Set(
-      bookings
-        .filter((b) => b.clientId === client.id)
-        .map((b) => b.date),
-    ),
-  ].sort();
-  const bookedToday = dates.includes(iso);
+  const bookedToday = bookings.some((b) => b.clientId === client.id && b.date === iso);
   const planned = client.trainDays.includes(dowIndex(iso));
   if (!bookedToday && !planned) return null;
-  const doneBefore = dates.filter((d) => d < iso).length;
-  return client.sessions[doneBefore % client.sessions.length];
+  const done = visitsBefore(visitDatesOf(client.id, bookings, visits), iso);
+  return client.sessions[done % client.sessions.length];
 }
 
 export function epley1rm(weight: number, reps: number) {

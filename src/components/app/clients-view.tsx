@@ -659,12 +659,13 @@ function ClientSheetBody({
   const freezeClient = useStudio((s) => s.freezeClient);
   const unfreezeClient = useStudio((s) => s.unfreezeClient);
   const showToast = useStudio((s) => s.showToast);
+  const visits = useStudio((s) => s.visits);
   const today = isoDate(new Date());
   const flag = clientFlag(client, today, food, bookings);
   const todayGoal = dayKbju(client, today, bookings);
   const week = programWeek(client, today);
   const finished = programFinished(client, today);
-  const session = visitSession(client, today, bookings);
+  const session = visitSession(client, today, bookings, visits);
   const delta = weightChangeWeek(client.weightHistory);
   /** питание и вес — данные о здоровье: тренер видит их только при согласии клиента */
   const healthOk = specialDataAllowed(client.consent);

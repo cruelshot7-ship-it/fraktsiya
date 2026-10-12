@@ -149,7 +149,7 @@ export function ProgramView() {
   if (!client) {
     return <EmptyHint>Программа появится после того, как тренер добавит вас и назначит дни.</EmptyHint>;
   }
-  const session = visitSession(client, today, bookings);
+  const session = visitSession(client, today, bookings, visits);
   const week = programWeek(client, today);
   const finished = programFinished(client, today);
   const phase = finished ? undefined : client.programPhases?.[String(week)];
@@ -158,7 +158,7 @@ export function ProgramView() {
   const weekLoad = bookings.filter((b) => b.clientId === client.id && b.date >= isoDate(new Date(Date.now() - 6 * 86400000))).length;
   const weekVisits = weekVisitCount(bookings, client.id);
   const next = nextTrainDate(client);
-  const nextSession = visitSession(client, next, bookings);
+  const nextSession = visitSession(client, next, bookings, visits);
   const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
 
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
