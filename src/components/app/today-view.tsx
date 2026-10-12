@@ -304,6 +304,8 @@ export function TodayView() {
   const next = visit?.next;
   const isToday = next?.date === today;
   const afterSession = Boolean(visit?.todayDone && !next);
+  // день визита: главное действие — тренировка; запись и питание вторичны
+  const trainingFirst = isToday || afterSession;
   const lowPack = (me?.sessionsLeft ?? 0) <= 2;
   // no sessions left: booking is refused, so the button leads to the trainer instead
   const noBalance = Boolean(me) && (me?.sessionsLeft ?? 0) <= 0;
@@ -344,16 +346,9 @@ export function TodayView() {
       <div className="space-y-2">
         <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Запись</p>
         {next && isToday ? (
-          <Surface glow="ok">
+          <Surface>
             <p className="font-display text-xl leading-tight">Сегодня · {next.time}</p>
             <p className="mt-1 text-tiny text-muted-foreground">{next.duration} мин · слот подтверждён</p>
-            <button
-              type="button"
-              className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm font-medium"
-              onClick={() => setTab("schedule")}
-            >
-              К записи
-            </button>
           </Surface>
         ) : next ? (
           <Surface>
@@ -370,14 +365,16 @@ export function TodayView() {
             </button>
           </Surface>
         ) : (
-          <Surface glow="alert">
+          <Surface glow={trainingFirst ? undefined : "alert"}>
             <p className="text-sm font-medium">{noBalance ? "Занятия закончились" : "Нет ближайшей записи"}</p>
             <p className="mt-1 text-tiny text-muted-foreground">
               {noBalance ? "Запись откроется после продления пакета. Напишите тренеру." : "Выберите слот — это первый шаг визита"}
             </p>
             <button
               type="button"
-              className="pressable mt-3 h-11 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+              className={`pressable mt-3 h-11 w-full rounded-lg text-sm font-medium ${
+                trainingFirst ? "bg-secondary" : "bg-primary text-primary-foreground"
+              }`}
               onClick={() => {
                 if (!noBalance) {
                   setTab("schedule");
@@ -441,12 +438,16 @@ export function TodayView() {
             </button>
           </Surface>
         ) : isToday || afterSession ? (
-          <button type="button" className="pressable w-full text-left" onClick={() => setTab("food")}>
-            <Surface>
-              <p className="font-display text-base leading-tight">После зала · КБЖУ</p>
-              <p className="mt-1 text-tiny text-muted-foreground">Короткий лог или конструктор меню</p>
-              <p className="mt-3 text-xs font-medium text-muted-foreground">Открыть еду →</p>
-            </Surface>
+          <button
+            type="button"
+            className="pressable flex min-h-11 w-full items-center justify-between rounded-xl bg-secondary/50 px-4 py-3 text-left"
+            onClick={() => setTab("food")}
+          >
+            <span>
+              <span className="block text-sm">После зала · КБЖУ</span>
+              <span className="block text-tiny text-muted-foreground">Короткий лог или конструктор меню</span>
+            </span>
+            <span className="ml-3 text-sm text-muted-foreground">→</span>
           </button>
         ) : (
           <button type="button" className="pressable w-full text-left" onClick={() => setTab("food")}>
