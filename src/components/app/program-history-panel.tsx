@@ -1,7 +1,8 @@
 import { relativeLabel } from "@/data/studio";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { historyForClient, type ProgramHistoryEntry } from "@/lib/program-history";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { Surface } from "@/components/app/bits";
+import { Fold } from "@/components/app/fold";
 
 export function ProgramHistoryPanel() {
   const clients = useStudio((s) => s.clients);
@@ -36,9 +37,9 @@ export function ProgramHistoryPanel() {
   if (!items.length) return null;
 
   return (
+    <Fold title={`История изменений плана · ${items.length}`}>
     <Surface>
-      <SectionLabel>История изменений плана</SectionLabel>
-      <ul className="mt-3 space-y-2">
+      <ul className="space-y-2">
         {items.map((e) => (
           <li key={e.id} className="rounded-lg bg-secondary/40 px-3 py-2">
             <p className="text-sm font-medium">{e.title}</p>
@@ -48,5 +49,6 @@ export function ProgramHistoryPanel() {
         ))}
       </ul>
     </Surface>
+    </Fold>
   );
 }
