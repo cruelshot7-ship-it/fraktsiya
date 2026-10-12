@@ -1,6 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
 import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
-import { isLapsed, lastActivityDate } from "@/lib/lapsed";
+import { isLapsed, lastActivityDate, retentionExpired } from "@/lib/lapsed";
 import { weightChangeWeek } from "@/lib/weight-trend";
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -99,6 +99,7 @@ export function ClientsView() {
           hasUpcoming: bookings.some((b) => b.clientId === client.id && b.date >= today),
           today,
         }),
+        retentionDue: retentionExpired(lastActivityDate(visitDatesOf(client.id, bookings, visits), client.programStart), today),
       })),
     [clients, food, bookings, visits, today],
   );
@@ -276,7 +277,7 @@ export function ClientsView() {
         {mineRows.length > 0 ? (
           <>
             <SectionLabel>Мои клиенты · {mineRows.length}</SectionLabel>
-            {mineRows.map(({ client, flag }) => {
+            {mineRows.map(({ client, flag, retentionDue }) => {
             const next = bookings
               .filter((b) => b.clientId === client.id && !isSlotPast(b.date, b.time))
               .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
@@ -316,7 +317,10 @@ export function ClientsView() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-display truncate text-base leading-tight">{shortName(client)}</p>
-                  {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {retentionDue ? <Pill tone="alert">Срок хранения истёк</Pill> : null}
+                    {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                  </div>
                 </div>
                 <p className="mt-0.5 truncate text-tiny text-muted-foreground">
                   {client.telegramUsername

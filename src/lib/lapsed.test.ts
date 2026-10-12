@@ -22,3 +22,12 @@ test("ушедший: больше 60 дней без визитов и без �
   assert.equal(isLapsed({ lastActivity: ago(61), hasUpcoming: false, erased: true, today: TODAY }), false, "стёртые не в списке");
   assert.equal(isLapsed({ lastActivity: null, hasUpcoming: false, today: TODAY }), false, "нет данных — не ушедший");
 });
+
+import { RETENTION_DAYS, retentionExpired } from "./lapsed.ts";
+
+test("срок хранения ушедших — 12 месяцев; без данных не истёк", () => {
+  assert.equal(RETENTION_DAYS, 365);
+  assert.equal(retentionExpired(ago(364), TODAY), false);
+  assert.equal(retentionExpired(ago(365), TODAY), true);
+  assert.equal(retentionExpired(null, TODAY), false);
+});

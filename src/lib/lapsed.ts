@@ -23,3 +23,12 @@ export function isLapsed(opts: {
   if (opts.erased || opts.hasUpcoming || !opts.lastActivity) return false;
   return daysUntil(opts.lastActivity, opts.today) <= -LAPSED_DAYS;
 }
+
+/** Срок хранения карточки ушедшего клиента, дней от последней активности (решение: 12 месяцев). */
+export const RETENTION_DAYS = 365;
+
+/** Срок хранения истёк: карточку пора удалить по запросу или по решению тренера. Ничего не удаляет. */
+export function retentionExpired(lastActivity: string | null, today: string): boolean {
+  if (!lastActivity) return false;
+  return daysUntil(lastActivity, today) <= -RETENTION_DAYS;
+}
