@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import type { ProgramBlock } from "./program-blocks.ts";
+import { rirLabel, type ProgramBlock } from "./program-blocks.ts";
 import {
   blockLines,
   blocksFromItems,
@@ -188,4 +188,10 @@ test("applySetMark: marking the same set twice does not duplicate marks", async 
   const once = applySetMark([], [], "a", 0, 2, true);
   const twice = applySetMark(once.marks, once.checked, "a", 0, 2, true);
   assert.deepEqual(twice.marks, [setMark("a", 0)]);
+});
+
+test("rirLabel: 0 — до отказа, остальное — запас повторов", () => {
+  assert.equal(rirLabel(0), "до отказа");
+  assert.equal(rirLabel(1), "запас 1 повт.");
+  assert.equal(rirLabel(3), "запас 3 повт.");
 });

@@ -22,6 +22,7 @@ import {
   coachStatusLine,
   packDaysLeft,
   PACKS,
+  programFinished,
   programWeek,
   sessionsRu,
   relativeDayLabel,
@@ -662,6 +663,7 @@ function ClientSheetBody({
   const flag = clientFlag(client, today, food, bookings);
   const todayGoal = dayKbju(client, today, bookings);
   const week = programWeek(client, today);
+  const finished = programFinished(client, today);
   const session = visitSession(client, today, bookings);
   const delta = weightChangeWeek(client.weightHistory);
   /** питание и вес — данные о здоровье: тренер видит их только при согласии клиента */
@@ -680,7 +682,7 @@ function ClientSheetBody({
         <div className="min-w-0 flex-1">
           <p className="font-display text-xl leading-none">{shortName(client)}</p>
           <p className="mt-1 truncate text-tiny text-muted-foreground">
-            {client.programTitle} · неделя {week}
+            {client.programTitle} · {finished ? "программа завершена" : `неделя ${week}`}
           </p>
         </div>
         <button

@@ -298,3 +298,8 @@ export function applySetMark(
   else nextChecked.delete(blockId);
   return { marks: [...nextMarks], checked: [...nextChecked] };
 }
+
+/** Запас повторов по-человечески: клиент видит «до отказа» или «запас 2 повт.», а не голое число. */
+export function rirLabel(rir: number): string {
+  return rir <= 0 ? "до отказа" : `запас ${rir} повт.`;
+}

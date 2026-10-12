@@ -5,6 +5,7 @@ import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/li
 export { studioToday };
 import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 import { blocksFromItems, type ProgramBlock, type ProgramPhase } from "@/lib/program-blocks";
+import { programProgress } from "@/lib/program-status";
 export type { ProgramBlock } from "@/lib/program-blocks";
 export const TRAINER_TG_ID = "8144320404";
 
@@ -1197,12 +1198,20 @@ export function epley1rm(weight: number, reps: number) {
   return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }
 
-export function programWeek(client: Client, iso: string) {
+function programStatus(client: Client, iso: string) {
   const start = parseISODate(client.programStart);
   const d = parseISODate(iso);
   const diff = Math.floor((d.getTime() - start.getTime()) / 86400000);
-  const w = Math.floor(diff / 7) + 1;
-  return Math.min(client.programWeeks, Math.max(1, w));
+  return programProgress(diff, client.programWeeks);
+}
+
+export function programWeek(client: Client, iso: string) {
+  return programStatus(client, iso).week;
+}
+
+/** Все недели программы прошли: экран показывает «завершена», а не «нед. 8/8» навсегда. */
+export function programFinished(client: Client, iso: string) {
+  return programStatus(client, iso).finished;
 }
 
 export function nextTrainDate(client: Client, from = new Date()) {
