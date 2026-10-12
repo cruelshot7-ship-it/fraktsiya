@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { specialDataAllowed } from "@/lib/privacy";
 
 function tokenOf(request: Request): string {
   return (request.headers.get("authorization") || "")
@@ -45,6 +46,10 @@ export const Route = createFileRoute("/api/health")({
           (row) => (row.healthToken || "").toLowerCase() === token,
         );
         if (!client) return Response.json({ ok: false }, { status: 404 });
+        // шаги, сон, вода и активность — данные о здоровье: без согласия клиента не сохраняем
+        if (!specialDataAllowed(client.consent)) {
+          return Response.json({ ok: false, reason: "consent" }, { status: 403 });
+        }
         const { healthDays, applyHealthDays } = await import("@/lib/health-ingest");
         const body = await readBody(request);
         const days = healthDays(body);
