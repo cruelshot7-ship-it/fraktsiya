@@ -17,3 +17,17 @@ export function weightChangeWeek(history: WeightPoint[]): number | null {
   if (!base) return null;
   return Math.round((last.kg - base.kg) * 10) / 10;
 }
+
+/** Период графика веса: 7 и 30 дней назад от сегодняшней даты, 0 — вся история. */
+export type WeightRange = 7 | 30 | 0;
+
+/**
+ * Точки для графика: по возрастанию даты, за выбранный период от сегодня.
+ * Период включает дату ровно N дней назад. Пустая история — пустой список.
+ */
+export function weightSeries(history: WeightPoint[], range: WeightRange, today: string): WeightPoint[] {
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  if (range === 0) return sorted;
+  const cutoff = Date.parse(today) - range * DAY_MS;
+  return sorted.filter((p) => Date.parse(p.date) >= cutoff && Date.parse(p.date) <= Date.parse(today));
+}

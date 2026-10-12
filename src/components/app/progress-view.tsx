@@ -1,9 +1,90 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { formatDayMonth, type Client } from "@/data/studio";
 import { specialDataAllowed } from "@/lib/privacy";
 import { activeClient, useStudio } from "@/lib/studio-store";
+import { studioToday } from "@/lib/minsk-time";
 import { inputClass, SectionLabel, Surface } from "@/components/app/bits";
 import { FormView } from "@/components/app/form-view";
-import { weightChangeWeek } from "@/lib/weight-trend";
+import { weightChangeWeek, weightSeries, type WeightRange } from "@/lib/weight-trend";
+
+const RANGES: { value: WeightRange; label: string }[] = [
+  { value: 7, label: "7 дней" },
+  { value: 30, label: "30 дней" },
+  { value: 0, label: "Всё" },
+];
+
+/**
+ * График веса: один главный показатель и его динамика. Период переключается, точки берутся из истории.
+ * Для графика нужны хотя бы две точки в выбранном периоде.
+ */
+function WeightChart({ history }: { history: Client["weightHistory"] }) {
+  const [range, setRange] = useState<WeightRange>(30);
+  const [ready, setReady] = useState(false);
+  // как на тренерском экране: контейнер измеряется только после первого кадра (иначе график схлопывается в WebView)
+  useEffect(() => setReady(true), []);
+  const series = weightSeries(history, range, studioToday());
+  return (
+    <div className="mt-4">
+      <div role="group" aria-label="Период графика веса" className="flex gap-1.5">
+        {RANGES.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            aria-pressed={range === item.value}
+            onClick={() => setRange(item.value)}
+            className={`pressable h-9 rounded-lg px-3 text-xs ${
+              range === item.value ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 h-44">
+        {ready && series.length > 1 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(value) => formatDayMonth(String(value))}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={24}
+              />
+              <YAxis
+                domain={["dataMin - 0.5", "dataMax + 0.5"]}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+                tickFormatter={(value) => String(Math.round(Number(value) * 10) / 10).replace(".", ",")}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--color-popover)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 10,
+                  fontSize: 12,
+                  color: "var(--color-foreground)",
+                }}
+                formatter={(value) => [`${String(value).replace(".", ",")} кг`, "вес"]}
+                labelFormatter={(label) => formatDayMonth(String(label))}
+              />
+              <Line type="monotone" dataKey="kg" stroke="var(--color-ok)" strokeWidth={2} dot={{ r: 3, fill: "var(--color-ok)" }} isAnimationActive />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="grid h-full place-items-center text-center text-sm text-muted-foreground">
+            Для графика нужны две записи веса за период. Запишите вес — точка появится здесь.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** Ввод веса клиентом: сохраняет за сегодня, повторный ввод заменяет запись за этот день. */
 function WeightEntry({ current }: { current: number }) {
@@ -80,6 +161,7 @@ export function ProgressView() {
         ) : (
           <p className="text-sm text-muted-foreground">Вес ещё не записан.</p>
         )}
+        <WeightChart history={me.weightHistory} />
       </Surface>
       <WeightEntry current={me.weight} />
       <SectionLabel>Самочувствие и замеры</SectionLabel>
