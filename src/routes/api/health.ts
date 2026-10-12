@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/health")({
         if (!/^[a-z0-9]{20,64}$/.test(token)) {
           return Response.json({ ok: false }, { status: 404 });
         }
-        const { loadStudioState, saveStudioState } = await import("@/lib/studio-sync");
+        const { loadStudioState, updateStudioState } = await import("@/lib/studio-sync");
         const payload = await loadStudioState();
         const client = payload.clients.find(
           (row) => (row.healthToken || "").toLowerCase() === token,
@@ -54,11 +54,16 @@ export const Route = createFileRoute("/api/health")({
         const body = await readBody(request);
         const days = healthDays(body);
         if (!days.size) return Response.json({ ok: true, updated: 0 });
-        const applied = applyHealthDays(payload.dayChecks ?? [], client.id, days);
-        if (applied.updated) {
-          await saveStudioState({ ...payload, dayChecks: applied.dayChecks });
-        }
-        return Response.json({ ok: true, updated: applied.updated });
+        let updated = 0;
+        // запись с повтором при гонке: дневные отметки не теряются и не пишутся поверх чужих
+        const outcome = await updateStudioState((current) => {
+          const applied = applyHealthDays(current.dayChecks ?? [], client.id, days);
+          updated = applied.updated;
+          if (!applied.updated) return null;
+          return { ...current, dayChecks: applied.dayChecks };
+        });
+        if (outcome === "conflict") return Response.json({ ok: false, reason: "busy" }, { status: 409 });
+        return Response.json({ ok: true, updated });
       },
     },
   },
