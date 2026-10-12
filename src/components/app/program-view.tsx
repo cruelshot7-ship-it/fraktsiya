@@ -34,6 +34,8 @@ import {
 } from "@/lib/program-blocks";
 import { mapsUrl } from "@/lib/studio-repeat";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { Fold } from "@/components/app/fold";
+import { specialDataAllowed } from "@/lib/privacy";
 import { cn } from "@/lib/utils";
 import { detectPRs, e1rm, e1rmTrend, isReliable } from "@/lib/athlete-metrics";
 import { activeLogFor, canUndoWorkout } from "@/lib/workout-undo";
@@ -397,21 +399,22 @@ export function ProgramView() {
             Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
           </p>
           <div className="mt-4 border-t border-hairline pt-3">
-            <SectionLabel>Сожжено</SectionLabel>
-            <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
-              {todayWorkout ? todayWorkout.kcal : isTrainer ? 0 : liveKcal}
-              <span className="text-base font-sans font-normal text-muted-foreground">ккал</span>
-              <Flame className="size-4 text-alert-text" />
-            </p>
-            <p className="mt-1 text-tiny text-muted-foreground">
-              {todayWorkout
-                ? `${todayWorkout.minutes} мин${todayWorkout.startedAt ? ` · ${clock(Date.parse(todayWorkout.startedAt))}–${clock(Date.parse(todayWorkout.at))}` : ""}`
-                : startedAt
-                  ? `${clock(startedAt)} · ${String(Math.floor(elapsedSec / 60)).padStart(2, "0")}:${String(elapsedSec % 60).padStart(2, "0")}`
-                  : isTrainer
-                    ? "Клиент ещё не начал тренировку"
-                    : "Нажмите «Начать», время пойдёт в калории"}
-            </p>
+            <Fold title={`Сожжено · ${todayWorkout ? todayWorkout.kcal : isTrainer ? 0 : liveKcal} ккал`}>
+              <p className="font-display mt-1 flex items-baseline gap-2 text-3xl tabular-nums">
+                {todayWorkout ? todayWorkout.kcal : isTrainer ? 0 : liveKcal}
+                <span className="text-base font-sans font-normal text-muted-foreground">ккал</span>
+                <Flame className="size-4 text-alert-text" />
+              </p>
+              <p className="mt-1 text-tiny text-muted-foreground">
+                {todayWorkout
+                  ? `${todayWorkout.minutes} мин${todayWorkout.startedAt ? ` · ${clock(Date.parse(todayWorkout.startedAt))}–${clock(Date.parse(todayWorkout.at))}` : ""}`
+                  : startedAt
+                    ? `${clock(startedAt)} · ${String(Math.floor(elapsedSec / 60)).padStart(2, "0")}:${String(elapsedSec % 60).padStart(2, "0")}`
+                    : isTrainer
+                      ? "Клиент ещё не начал тренировку"
+                      : "Нажмите «Начать», время пойдёт в калории"}
+              </p>
+            </Fold>
           </div>
           {todayWorkout ? (
             <div className="mt-3">
@@ -496,8 +499,8 @@ export function ProgramView() {
       )}
 
       {client.sessions.length > 1 ? (
+        <Fold title={`Цикл программы · ${client.sessions.length} дн.`}>
         <div className="flex flex-col gap-2">
-          <SectionLabel>Цикл · по порядку занятий</SectionLabel>
           {client.sessions.map((day, i) => {
             const active = shown?.id === day.id;
             return (
@@ -512,25 +515,38 @@ export function ProgramView() {
             );
           })}
         </div>
+        </Fold>
       ) : null}
 
-      <Surface>
-        <KbjuMeters
-          title={`КБЖУ · ${t.calories > 0 ? "ваша цель" : "сегодня"}`}
-          eaten={eaten}
-          target={t}
-        />
-        <p className="mt-3 text-xs text-muted-foreground">
-          {t.calories > 0
-            ? `Сегодня: ${eaten.calories} из ${t.calories} ккал. Цель от тренера.`
-            : eaten.calories > 0
-              ? `Сегодня: ${eaten.calories} ккал по вашим записям. Цель тренер ещё не задал.`
-              : "Добавьте еду во вкладке «Еда» — цифры появятся здесь."}
-        </p>
-      </Surface>
+      {specialDataAllowed(client.consent) ? (
+        <Fold title={`КБЖУ · ${t.calories > 0 ? `${eaten.calories} из ${t.calories} ккал` : `${eaten.calories} ккал`}`}>
+        <Surface>
+          <KbjuMeters
+            title={`КБЖУ · ${t.calories > 0 ? "ваша цель" : "сегодня"}`}
+            eaten={eaten}
+            target={t}
+          />
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t.calories > 0
+              ? `Сегодня: ${eaten.calories} из ${t.calories} ккал. Цель от тренера.`
+              : eaten.calories > 0
+                ? `Сегодня: ${eaten.calories} ккал по вашим записям. Цель тренер ещё не задал.`
+                : "Добавьте еду во вкладке «Еда» — цифры появятся здесь."}
+          </p>
+        </Surface>
+        </Fold>
+      ) : (
+        <Surface>
+          <p className="text-tiny text-muted-foreground">
+            {isTrainer
+              ? "Питание клиента скрыто: клиент не дал согласия на данные о здоровье."
+              : "Питание — с вашего согласия. Дать его можно в «Профиль» → «Мои данные»."}
+          </p>
+        </Surface>
+      )}
 
+      <Fold title="Повторный максимум">
       <Surface>
-        <SectionLabel>Повторный максимум</SectionLabel>
         <p className="mt-1 text-tiny text-muted-foreground">Считается по весу, повторам и запасу (сколько повторов осталось в баке). Подходы дальше 10 повторов до отказа не учитываются: там формула врёт.</p>
         <div className="mt-3 flex flex-wrap gap-1">
           {options.map((item) => (
@@ -633,6 +649,7 @@ export function ProgramView() {
           </button>
         </div>
       </Surface>
+      </Fold>
     </div>
   );
 }
