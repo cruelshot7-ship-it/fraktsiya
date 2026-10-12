@@ -12,6 +12,7 @@ import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/progr
 import { mergeWeightHistory, weightNow } from "@/lib/weight-history";
 import { mergeMeasures } from "@/lib/body-measures";
 import { coachTierLine } from "@/lib/coach-tier";
+import { retryUpdate, type RetryOutcome } from "@/lib/state-retry";
 import { anonymizedIdentity, appendConsentLog, consentLogAfter, erasureNotice, PRIVACY_VERSION, stampConsent } from "@/lib/privacy";
 import { guardBodyFields, guardRows, healthWriteAllowed } from "@/lib/health-write-gate";
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
@@ -817,6 +818,24 @@ export class StateConflictError extends Error {
  * Writes the state, then pings due reminders. The write comes first: a reminder is sent only once its
  * mark is committed, so a conflict or a retry here never sends the same reminder twice.
  */
+/**
+ * Записывает изменение состояния с повтором при гонке: читает свежую копию, применяет `mutate`
+ * и пишет условно по ревизии. `mutate` возвращает null, если менять нечего.
+ * Итог: "saved" — записано, "unchanged" — менять нечего, "conflict" — три попытки не удались.
+ */
+export async function updateStudioState(
+  mutate: (current: StudioPayload) => StudioPayload | null,
+): Promise<RetryOutcome> {
+  return retryUpdate({
+    load: loadStudioState,
+    save: async (next) => {
+      await saveStudioState(next);
+    },
+    mutate,
+    isConflict: (err) => err instanceof StateConflictError,
+  });
+}
+
 export async function saveStudioState(payload: StudioPayload) {
   const stored = await commitStudioState(payload);
   try {
@@ -1062,14 +1081,20 @@ export const addCoachFn = createServerFn({ method: "POST" })
     const username = data.username.replace(/^@/, "").trim().toLowerCase();
     const firstName = data.firstName.trim();
     if (!username || !firstName) return { ok: false };
-    const current = await loadStudioState();
-    if ((current.coaches ?? []).some((c) => sameHandle(c.username, username))) return { ok: true, coaches: current.coaches };
-    const code = Math.random().toString(36).slice(2, 8);
-    const coaches = [
-      ...(current.coaches ?? []),
-      { telegramId: null, username, firstName, lastName: "", code, addedAt: new Date().toISOString(), paidUntil: null },
-    ];
-    await saveStudioState({ ...current, coaches });
+    let coaches: Coach[] | undefined;
+    const outcome = await updateStudioState((current) => {
+      if ((current.coaches ?? []).some((c) => sameHandle(c.username, username))) {
+        coaches = current.coaches;
+        return null;
+      }
+      const code = Math.random().toString(36).slice(2, 8);
+      coaches = [
+        ...(current.coaches ?? []),
+        { telegramId: null, username, firstName, lastName: "", code, addedAt: new Date().toISOString(), paidUntil: null },
+      ];
+      return { ...current, coaches };
+    });
+    if (outcome === "conflict") return { ok: false };
     return { ok: true, coaches };
   });
 
@@ -1079,38 +1104,41 @@ export const removeCoachFn = createServerFn({ method: "POST" })
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
     if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
-    const current = await loadStudioState();
-    const before = current.coaches ?? [];
-    const coaches = before.filter((c) => {
-      if (data.telegramId && c.telegramId === data.telegramId) return false;
-      if (data.code && c.code && c.code === data.code) return false;
-      if (data.username && sameHandle(c.username, data.username)) return false;
-      return true;
+    let coaches: Coach[] = [];
+    const outcome = await updateStudioState((current) => {
+      const before = current.coaches ?? [];
+      coaches = before.filter((c) => {
+        if (data.telegramId && c.telegramId === data.telegramId) return false;
+        if (data.code && c.code && c.code === data.code) return false;
+        if (data.username && sameHandle(c.username, data.username)) return false;
+        return true;
+      });
+      if (!before.length || coaches.length === before.length) return null;
+      const droppedIds = new Set(
+        before
+          .filter((c) => !coaches.some((left) => left === c || (left.code && left.code === c.code) || (left.telegramId && left.telegramId === c.telegramId)))
+          .map((c) => c.telegramId)
+          .filter((id): id is string => Boolean(id)),
+      );
+      const goneClients = current.clients.filter((c) => c.coachId && droppedIds.has(c.coachId));
+      const goneIds = new Set(goneClients.map((c) => c.id));
+      const dropRow = <T extends { clientId: string }>(rows: T[]) => rows.filter((row) => !goneIds.has(row.clientId));
+      return {
+        ...current,
+        coaches,
+        clients: current.clients.filter((c) => !goneIds.has(c.id)),
+        bookings: dropRow(current.bookings),
+        food: dropRow(current.food),
+        dayChecks: dropRow(current.dayChecks ?? []),
+        lifts: dropRow(current.lifts),
+        workoutLogs: dropRow(current.workoutLogs),
+        waitlist: dropRow(current.waitlist),
+        notices: current.notices.filter((n) => !n.clientId || !goneIds.has(n.clientId)),
+        joinRequests: (current.joinRequests ?? []).filter((r) => !r.coachId || !droppedIds.has(r.coachId)),
+        removedClientIds: [...new Set([...(current.removedClientIds ?? []), ...goneClients.flatMap((c) => tombstonesFor(c))])],
+      };
     });
-    if (!before.length || coaches.length === before.length) return { ok: false };
-    const droppedIds = new Set(
-      before
-        .filter((c) => !coaches.some((left) => left === c || (left.code && left.code === c.code) || (left.telegramId && left.telegramId === c.telegramId)))
-        .map((c) => c.telegramId)
-        .filter((id): id is string => Boolean(id)),
-    );
-    const goneClients = current.clients.filter((c) => c.coachId && droppedIds.has(c.coachId));
-    const goneIds = new Set(goneClients.map((c) => c.id));
-    const dropRow = <T extends { clientId: string }>(rows: T[]) => rows.filter((row) => !goneIds.has(row.clientId));
-    await saveStudioState({
-      ...current,
-      coaches,
-      clients: current.clients.filter((c) => !goneIds.has(c.id)),
-      bookings: dropRow(current.bookings),
-      food: dropRow(current.food),
-      dayChecks: dropRow(current.dayChecks ?? []),
-      lifts: dropRow(current.lifts),
-      workoutLogs: dropRow(current.workoutLogs),
-      waitlist: dropRow(current.waitlist),
-      notices: current.notices.filter((n) => !n.clientId || !goneIds.has(n.clientId)),
-      joinRequests: (current.joinRequests ?? []).filter((r) => !r.coachId || !droppedIds.has(r.coachId)),
-      removedClientIds: [...new Set([...(current.removedClientIds ?? []), ...goneClients.flatMap((c) => tombstonesFor(c))])],
-    });
+    if (outcome !== "saved") return { ok: false };
     return { ok: true, coaches };
   });
 
@@ -1120,21 +1148,25 @@ export const payCoachFn = createServerFn({ method: "POST" })
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
     if (!session || session.user.id !== String(TRAINER_TG_ID)) return { ok: false };
-    const current = await loadStudioState();
-    const idx = (current.coaches ?? []).findIndex(
-      (c) =>
-        (data.telegramId && c.telegramId === data.telegramId) ||
-        (data.code && c.code === data.code) ||
-        (data.username && sameHandle(c.username, data.username)),
-    );
-    if (idx < 0) return { ok: false };
-    const row = current.coaches[idx];
-    const base = Math.max(Date.now(), row.paidUntil ? Date.parse(row.paidUntil) || 0 : 0);
-    const coaches = current.coaches.slice();
-    coaches[idx] = { ...row, paidUntil: new Date(base + COACH_PAID_DAYS * 86_400_000).toISOString() };
-    await saveStudioState({ ...current, coaches });
-    // the amount follows the coach's own client count, which only the server sees in full
-    const load = row.telegramId ? current.clients.filter((c) => clientCoach(c) === String(row.telegramId)).length : 0;
+    let coaches: Coach[] = [];
+    let load = 0;
+    const outcome = await updateStudioState((current) => {
+      const idx = (current.coaches ?? []).findIndex(
+        (c) =>
+          (data.telegramId && c.telegramId === data.telegramId) ||
+          (data.code && c.code === data.code) ||
+          (data.username && sameHandle(c.username, data.username)),
+      );
+      if (idx < 0) return null;
+      const row = current.coaches[idx];
+      const base = Math.max(Date.now(), row.paidUntil ? Date.parse(row.paidUntil) || 0 : 0);
+      coaches = current.coaches.slice();
+      coaches[idx] = { ...row, paidUntil: new Date(base + COACH_PAID_DAYS * 86_400_000).toISOString() };
+      // the amount follows the coach's own client count, which only the server sees in full
+      load = row.telegramId ? current.clients.filter((c) => clientCoach(c) === String(row.telegramId)).length : 0;
+      return { ...current, coaches };
+    });
+    if (outcome !== "saved") return { ok: false };
     return { ok: true, coaches, tierLine: coachTierLine(load) };
   });
 
