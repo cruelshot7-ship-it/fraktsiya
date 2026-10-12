@@ -6,6 +6,8 @@ import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
+import { pickHealthToken } from "@/lib/health-token";
+import { applyCoachNotices, coachNoticeText, dueCoachNotices, type CoachNotice } from "@/lib/coach-notice";
 import { withoutTrainerMoney } from "@/lib/payments";
 import { programFor } from "@/lib/program-import";
 import { mergeCoachTemplates, type ProgramTemplate } from "@/lib/templates/program-template";
@@ -443,7 +445,15 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
           sameHandle(c.username, next.username),
       );
       if (!prevRow) return next;
-      return { ...prevRow, ...next, addedAt: next.addedAt || prevRow.addedAt, paidUntil: next.paidUntil ?? prevRow.paidUntil, code: next.code || prevRow.code };
+      return {
+        ...prevRow,
+        ...next,
+        addedAt: next.addedAt || prevRow.addedAt,
+        paidUntil: next.paidUntil ?? prevRow.paidUntil,
+        code: next.code || prevRow.code,
+        // отметка уведомлений ведётся сервером: копия тренера не должна вернуть старую
+        lastNotice: prevRow.lastNotice ?? null,
+      };
     });
   return ensureApprovedClients({
     ...current,
@@ -654,7 +664,14 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     consentLog: consentLogAfter(mine, incomingSelf.consent, now),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
-    healthToken: incomingSelf.healthToken || mine.healthToken || null,
+    // токен ingest: свой сохраняем, присланный принимаем только свободный, иначе выдаём новый
+    healthToken: pickHealthToken({
+      own: mine.healthToken,
+      proposed: incomingSelf.healthToken,
+      usedByOthers: new Set(
+        current.clients.filter((c) => c.id !== id && c.healthToken).map((c) => (c.healthToken ?? "").toLowerCase()),
+      ),
+    }),
     ...(balance ?? {}),
   };
   return {
@@ -890,6 +907,35 @@ export async function commitStudioState(payload: StudioPayload) {
   return next;
 }
 
+/**
+ * Уведомления о доступе тренеров. Отметка записывается условно (с повтором), и только после неё
+ * уходят сообщения в бот: повторное открытие приложения не отправит то же самое дважды.
+ * Неотправленное сообщение не повторяется — сигнал владельцу в кабинете остаётся.
+ */
+async function notifyCoachAccess(payload: StudioPayload): Promise<StudioPayload | null> {
+  if (!dueCoachNotices(payload.coaches ?? [], Date.now()).length) return null;
+  let due: CoachNotice[] = [];
+  const outcome = await updateStudioState((current) => {
+    const applied = applyCoachNotices(current, Date.now());
+    due = applied?.due ?? [];
+    return applied?.next ?? null;
+  });
+  if (outcome !== "saved") return null;
+  try {
+    const bot = await import("@/lib/telegram-bot.server");
+    for (const n of due) {
+      try {
+        await bot.sendBotLink(n.telegramId, coachNoticeText(n));
+      } catch (err) {
+        console.error("[coach-notice]", err);
+      }
+    }
+  } catch (err) {
+    console.error("[coach-notice]", err);
+  }
+  return loadStudioState();
+}
+
 export const pullStudio = createServerFn({ method: "POST" })
   .validator(PullInput)
   .handler(async ({ data }): Promise<{ ok: boolean; role?: "trainer" | "client"; payload?: StudioPayload; created?: boolean; blocked?: boolean; reason?: string }> => {
@@ -909,6 +955,12 @@ export const pullStudio = createServerFn({ method: "POST" })
     if (bound !== payload) {
       payload = bound;
       await saveStudioState(payload);
+    }
+    // уведомления о доступе: при ошибке кабинет открывается без них
+    try {
+      payload = (await notifyCoachAccess(payload)) ?? payload;
+    } catch (err) {
+      console.error("[coach-notice]", err);
     }
     const trainer = isCoachUser(payload, session.user);
     const created = false;

@@ -21,6 +21,12 @@ test("keepClientOwned: новый клиент от тренера не полу
   assert.deepEqual(result.consentLog, []);
 });
 
+test("keepClientOwned: токен ingest берётся с сервера, копия тренера его не сбрасывает", () => {
+  const server = { ...base, healthToken: "abcdef0123456789abcdef0123456789" } as Client;
+  const sent = { ...base, healthToken: null } as Client;
+  assert.equal(keepClientOwned(server, sent).healthToken, "abcdef0123456789abcdef0123456789");
+});
+
 test("keepClientOwned: у существующего клиента согласие берётся с сервера", () => {
   const server = { ...base, consent: { version: PRIVACY_VERSION, acceptedAt: "2026-10-11T10:00:00Z" } } as Client;
   const sent = { ...base, consent: null } as Client;
