@@ -142,3 +142,50 @@ test("phases are the three fixed keys with Russian labels", () => {
   assert.equal(PHASE_LABEL.peak, "пик");
   assert.equal(PHASE_LABEL.deload, "разгрузка");
 });
+
+test("setCount: sets for both sides, at least one set for a block without a scheme", async () => {
+  const { setCount } = await import("./program-blocks.ts");
+  const base = { id: "b1", exercise: "Выпады", reps: "8", load: "20", rest: 90, side: null, group: null } as ProgramBlock;
+  assert.equal(setCount({ ...base, sets: 3 }), 3);
+  assert.equal(setCount({ ...base, sets: 3, side: "ногу" }), 6);
+  assert.equal(setCount({ ...base, sets: 0 }), 1);
+});
+
+test("nextSet: walks the sets of one exercise, then moves on; a finished block is skipped", async () => {
+  const { nextSet, setMark } = await import("./program-blocks.ts");
+  const a = { id: "a", exercise: "A", sets: 3, reps: "8", load: "", rest: 90, side: null, group: null } as ProgramBlock;
+  const b = { id: "b", exercise: "B", sets: 2, reps: "10", load: "", rest: 60, side: null, group: null } as ProgramBlock;
+  assert.deepEqual(nextSet([a, b], [], []), { block: a, index: 0, total: 3 });
+  assert.deepEqual(nextSet([a, b], [], [setMark("a", 0), setMark("a", 1)]), { block: a, index: 2, total: 3 });
+  // блок a отмечен целиком: переход к b
+  assert.deepEqual(nextSet([a, b], ["a"], []), { block: b, index: 0, total: 2 });
+  assert.equal(nextSet([a, b], ["a", "b"], []), null);
+});
+
+test("setsDone: a block checked as a whole (older marks) counts all its sets", async () => {
+  const { setsDone, setMark } = await import("./program-blocks.ts");
+  const a = { id: "a", exercise: "A", sets: 3, reps: "8", load: "", rest: 90, side: null, group: null } as ProgramBlock;
+  assert.equal(setsDone(a, [setMark("a", 0)], false), 1);
+  assert.equal(setsDone(a, [], true), 3);
+});
+
+test("applySetMark: the block is done only when its last set is marked; unmarking any set undoes it", async () => {
+  const { applySetMark, setMark } = await import("./program-blocks.ts");
+  let r = applySetMark([], [], "a", 0, 3, true);
+  assert.deepEqual(r.marks, [setMark("a", 0)]);
+  assert.deepEqual(r.checked, []);
+  r = applySetMark(r.marks, r.checked, "a", 1, 3, true);
+  r = applySetMark(r.marks, r.checked, "a", 2, 3, true);
+  assert.deepEqual(r.checked, ["a"]);
+  // снятие одного подхода снимает блок целиком
+  r = applySetMark(r.marks, r.checked, "a", 1, 3, false);
+  assert.deepEqual(r.checked, []);
+  assert.equal(r.marks.includes(setMark("a", 1)), false);
+});
+
+test("applySetMark: marking the same set twice does not duplicate marks", async () => {
+  const { applySetMark, setMark } = await import("./program-blocks.ts");
+  const once = applySetMark([], [], "a", 0, 2, true);
+  const twice = applySetMark(once.marks, once.checked, "a", 0, 2, true);
+  assert.deepEqual(twice.marks, [setMark("a", 0)]);
+});

@@ -23,13 +23,18 @@ import {
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { exerciseOptions, sameExercise } from "@/lib/exercises";
 import {
+  applySetMark,
   legacyMarkMap,
+  nextSet,
   PHASE_HINT,
   PHASE_LABEL,
   planTotalsFromBlocks,
   rewriteFacts,
   rewriteMarks,
   sessionPlan,
+  setCount,
+  setMark,
+  setsDone,
   type ProgramBlock,
 } from "@/lib/program-blocks";
 import { mapsUrl } from "@/lib/studio-repeat";
@@ -52,7 +57,7 @@ export function ProgramView() {
   const addLift = useStudio((s) => s.addLift);
   const arrive = useStudio((s) => s.arrive);
   const visits = useStudio((s) => s.visits);
-  const toggleCheck = useStudio((s) => s.toggleCheck);
+  const markSet = useStudio((s) => s.markSet);
   const completeWorkout = useStudio((s) => s.completeWorkout);
   const undoWorkout = useStudio((s) => s.undoWorkout);
   const checks = useStudio((s) => s.checks);
@@ -176,8 +181,20 @@ export function ProgramView() {
     : plan.blocks.filter((b) => !checked.includes(b.id) || b.id === justDone);
   const itemCount = plan.blocks.length;
   const restLeft = restSecondsLeft(restUntil, now);
-  // «Завершить подход»: первый невыполненный блок в порядке программы
-  const nextBlock = plan.blocks.find((b) => !checked.includes(b.id)) ?? null;
+  // подходы: отметки на каждый подход; блок выполнен, когда отмечены все его подходы
+  const setMarks = checks[`${client.id}:${today}:sets`] ?? [];
+  const nextSetInfo = nextSet(plan.blocks, checked, setMarks);
+  const setsTotalAll = plan.blocks.reduce((sum, b) => sum + setCount(b), 0);
+  const setsDoneAll = plan.blocks.reduce((sum, b) => sum + setsDone(b, setMarks, checked.includes(b.id)), 0);
+  // отмена или отметка подхода: отдых только после отмеченного подхода, если впереди ещё есть подходы
+  const onSetMark = (b: ProgramBlock, index: number, on: boolean) => {
+    const total = setCount(b);
+    markSet(b.id, index, total, on);
+    if (!on) return;
+    setJustDone(b.id);
+    const after = applySetMark(setMarks, checked, b.id, index, total, true);
+    if (b.rest && nextSet(plan.blocks, after.checked, after.marks)) setRestUntil(Date.now() + b.rest * 1000);
+  };
   const lastResult = (exercise: string) => {
     const prev = previousLift(lifts, client.id, exercise, today);
     return prev ? liftLabel(prev) : null;
@@ -314,7 +331,9 @@ export function ProgramView() {
             </div>
           ) : null}
           <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span className="tabular-nums">Выполнено {doneCount} из {plan.blocks.length}</span>
+            <span className="tabular-nums">
+              Упражнений {doneCount} из {plan.blocks.length} · подходов {setsDoneAll} из {setsTotalAll}
+            </span>
             {doneCount > 0 ? (
               <button
                 type="button"
@@ -360,16 +379,12 @@ export function ProgramView() {
                     key={b.id}
                     block={b}
                     on={checked.includes(b.id)}
+                    setMarks={Array.from({ length: setCount(b) }, (_, i) => checked.includes(b.id) || setMarks.includes(setMark(b.id, i)))}
+                    currentSet={nextSetInfo && nextSetInfo.block.id === b.id ? nextSetInfo.index : null}
                     fact={factsById[b.id] ?? ""}
                     last={lastResult(b.exercise)}
                     readOnly={isTrainer}
-                    onToggle={() => {
-                      if (!checked.includes(b.id)) {
-                        setJustDone(b.id);
-                        if (b.rest) setRestUntil(Date.now() + b.rest * 1000);
-                      }
-                      toggleCheck(b.id, legacy);
-                    }}
+                    onSet={(index, on) => onSetMark(b, index, on)}
                     onFact={(value) => {
                       const next = { ...factsById, [b.id]: value };
                       setFacts(next);
@@ -380,19 +395,16 @@ export function ProgramView() {
               </li>
             ))}
           </ul>
-          {!isTrainer && nextBlock ? (
+          {!isTrainer && nextSetInfo ? (
             <button
               type="button"
-              onClick={() => {
-                const b = nextBlock;
-                setJustDone(b.id);
-                if (b.rest) setRestUntil(Date.now() + b.rest * 1000);
-                toggleCheck(b.id, legacy);
-              }}
+              onClick={() => onSetMark(nextSetInfo.block, nextSetInfo.index, true)}
               className="pressable mt-3 flex h-12 w-full items-center justify-between rounded-xl bg-primary px-4 text-left text-primary-foreground shadow-glow-alert"
             >
-              <span className="text-sm font-medium">Завершить подход</span>
-              <span className="max-w-[55%] truncate text-tiny">{nextBlock.exercise}</span>
+              <span className="text-sm font-medium">
+                Завершить подход {nextSetInfo.index + 1} из {nextSetInfo.total}
+              </span>
+              <span className="max-w-[45%] truncate text-tiny">{nextSetInfo.block.exercise}</span>
             </button>
           ) : null}
           <p className="mt-3 text-xs text-muted-foreground">
@@ -682,19 +694,26 @@ function cardsOf(blocks: ProgramBlock[]): ProgramBlock[][] {
 function BlockRow({
   block,
   on,
+  setMarks,
+  currentSet,
   fact,
   readOnly,
   last,
-  onToggle,
+  onSet,
   onFact,
 }: {
   block: ProgramBlock;
+  /** упражнение выполнено целиком */
   on: boolean;
+  /** отметка каждого подхода */
+  setMarks: boolean[];
+  /** индекс следующего подхода этого упражнения, null когда он не текущий */
+  currentSet: number | null;
   fact: string;
   readOnly: boolean;
   /** the client's latest result for this exercise, before today */
   last: string | null;
-  onToggle: () => void;
+  onSet: (index: number, on: boolean) => void;
   onFact: (value: string) => void;
 }) {
   const meta = [
@@ -705,38 +724,47 @@ function BlockRow({
   ]
     .filter(Boolean)
     .join(" · ");
+  const doneCount = setMarks.filter(Boolean).length;
   return (
     <>
-      <div className={cn("flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm")}>
-        <span className="min-w-0 flex-1">
+      <div className="rounded-lg px-2 py-2.5 text-sm">
+        <span className="block min-w-0">
           <span className={cn("block font-medium", on && "line-through text-muted-foreground")}>{block.exercise}</span>
           {meta ? <span className="mt-0.5 block text-tiny text-muted-foreground">{meta}</span> : null}
           {last ? <span className="mt-0.5 block text-tiny tabular-nums text-muted-foreground">в прошлый раз {last}</span> : null}
         </span>
-        {readOnly ? (
-          <span
-            aria-label={on ? `Выполнено: ${block.exercise}` : `Не выполнено: ${block.exercise}`}
-            className={cn(
-              "grid size-11 shrink-0 place-items-center rounded-full border-2",
-              on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
-            )}
-          >
-            <Check className="size-5" strokeWidth={on ? 3 : 2} />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {setMarks.map((filled, i) => {
+            const isNext = !readOnly && currentSet === i && !filled;
+            const cls = cn(
+              "grid size-11 shrink-0 place-items-center rounded-full border-2 text-xs tabular-nums transition-colors",
+              filled ? "border-ok bg-ok text-ok-foreground" : isNext ? "border-primary text-foreground" : "border-hairline text-muted-foreground",
+            );
+            const label = `Подход ${i + 1} из ${setMarks.length}: ${block.exercise}`;
+            if (readOnly) {
+              return (
+                <span key={i} aria-label={filled ? `Выполнено: ${label}` : `Не выполнено: ${label}`} className={cls}>
+                  {filled ? <Check className="size-5" strokeWidth={3} /> : i + 1}
+                </span>
+              );
+            }
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onSet(i, !filled)}
+                aria-pressed={filled}
+                aria-label={filled ? `Снять отметку: ${label}` : `Отметить: ${label}`}
+                className={cn("pressable", cls)}
+              >
+                {filled ? <Check className="size-5" strokeWidth={3} /> : i + 1}
+              </button>
+            );
+          })}
+          <span className="ml-1 text-tiny tabular-nums text-muted-foreground">
+            {doneCount}/{setMarks.length}
           </span>
-        ) : (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-pressed={on}
-            aria-label={on ? `Снять отметку: ${block.exercise}` : `Отметить выполненным: ${block.exercise}`}
-            className={cn(
-              "pressable grid size-11 shrink-0 place-items-center rounded-full border-2 transition-colors",
-              on ? "border-ok bg-ok text-ok-foreground" : "border-hairline text-muted-foreground",
-            )}
-          >
-            <Check className="size-5" strokeWidth={on ? 3 : 2} />
-          </button>
-        )}
+        </div>
       </div>
       {readOnly && on && fact ? (
         <p className="mt-1 mb-2 ml-2 text-tiny text-muted-foreground">Факт: {fact} кг</p>
