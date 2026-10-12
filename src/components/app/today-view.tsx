@@ -39,6 +39,7 @@ export function TodayView() {
   const setTab = useStudio((s) => s.setTab);
   const trainerUsername = useStudio((s) => s.trainerUsername);
   const setClientFilter = useStudio((s) => s.setClientFilter);
+  const openClientSheet = useStudio((s) => s.openClientSheet);
   const checkIn = useStudio((s) => s.checkIn);
   const markNoShow = useStudio((s) => s.markNoShow);
   const setActiveClient = useStudio((s) => s.setActiveClient);
@@ -219,10 +220,7 @@ export function TodayView() {
                   key={c.id}
                   type="button"
                   className="pressable w-full text-left"
-                  onClick={() => {
-                    setClientFilter("attention");
-                    setTab("clients");
-                  }}
+                  onClick={() => openClientSheet(c.id)}
                 >
                   <Surface>
                     <p className="text-sm font-medium">
@@ -272,22 +270,43 @@ export function TodayView() {
         <div className="space-y-2">
           <SectionLabel>Занятия</SectionLabel>
           <div className="apple-block grid grid-cols-3 divide-x divide-border">
-            <div className="p-4">
+            <button
+              type="button"
+              className="pressable p-4 text-left"
+              onClick={() => {
+                setClientFilter("all");
+                setTab("clients");
+              }}
+            >
               <p className="min-h-9 text-2xs text-muted-foreground">На балансе, всего</p>
               <p className="mt-1 font-display text-2xl tabular-nums leading-none">{balance.prepaid}</p>
-            </div>
-            <div className="p-4">
+            </button>
+            <button
+              type="button"
+              className="pressable p-4 text-left"
+              onClick={() => {
+                setClientFilter("packSoon");
+                setTab("clients");
+              }}
+            >
               <p className="min-h-9 text-2xs text-muted-foreground">Пакет до 7 дн.</p>
               <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.packsEndingSoon > 0 && "text-alert-text")}>
                 {balance.packsEndingSoon}
               </p>
-            </div>
-            <div className="p-4">
+            </button>
+            <button
+              type="button"
+              className="pressable p-4 text-left"
+              onClick={() => {
+                setClientFilter("empty");
+                setTab("clients");
+              }}
+            >
               <p className="min-h-9 text-2xs text-muted-foreground">Без занятий</p>
               <p className={cn("mt-1 font-display text-2xl tabular-nums leading-none", balance.empty > 0 && "text-alert-text")}>
                 {balance.empty}
               </p>
-            </div>
+            </button>
           </div>
           <div className="apple-block p-4">
             <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>

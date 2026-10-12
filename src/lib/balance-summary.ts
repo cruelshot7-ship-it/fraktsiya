@@ -34,12 +34,21 @@ export function balanceSummary(clients: BalanceClient[], today: string): Balance
   for (const c of clients) {
     const left = Math.max(0, c.sessionsLeft ?? 0);
     prepaid += left;
-    if (left === 0) empty += 1;
+    if (isEmptyClient(c)) empty += 1;
     else if (left <= 2) low += 1;
-    if (left > 0 && c.packExpiresAt) {
-      const days = daysUntil(c.packExpiresAt, today);
-      if (days >= 0 && days <= PACK_SOON_DAYS) packsEndingSoon += 1;
-    }
+    if (isPackSoon(c, today)) packsEndingSoon += 1;
   }
   return { prepaid, empty, low, packsEndingSoon };
+}
+
+/** Клиент без занятий на балансе (остаток 0). Тот же критерий, что счётчик «Без занятий». */
+export function isEmptyClient(c: BalanceClient): boolean {
+  return Math.max(0, c.sessionsLeft ?? 0) === 0;
+}
+
+/** Клиент с непустым пакетом, у которого срок заканчивается в ближайшие 7 дней. Тот же критерий, что счётчик. */
+export function isPackSoon(c: BalanceClient, today: string): boolean {
+  if (Math.max(0, c.sessionsLeft ?? 0) === 0 || !c.packExpiresAt) return false;
+  const days = daysUntil(c.packExpiresAt, today);
+  return days >= 0 && days <= PACK_SOON_DAYS;
 }

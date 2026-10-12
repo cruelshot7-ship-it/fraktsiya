@@ -34,3 +34,17 @@ test("daysUntil is calendar days, not hours", () => {
   assert.equal(daysUntil("2026-10-19", TODAY), 7);
   assert.equal(daysUntil("2026-10-11", TODAY), -1);
 });
+
+test("isEmptyClient и isPackSoon совпадают со счётчиками сводки", async () => {
+  const { isEmptyClient, isPackSoon } = await import("./balance-summary.ts");
+  assert.equal(isEmptyClient({ sessionsLeft: 0 }), true);
+  assert.equal(isEmptyClient({ sessionsLeft: null }), true);
+  assert.equal(isEmptyClient({ sessionsLeft: 1 }), false);
+  assert.equal(isPackSoon({ sessionsLeft: 3, packExpiresAt: "2026-10-15" }, TODAY), true);
+  assert.equal(isPackSoon({ sessionsLeft: 3, packExpiresAt: "2026-11-30" }, TODAY), false);
+  assert.equal(isPackSoon({ sessionsLeft: 0, packExpiresAt: "2026-10-15" }, TODAY), false);
+  assert.equal(isPackSoon({ sessionsLeft: 3, packExpiresAt: null }, TODAY), false);
+  const s = balanceSummary([{ sessionsLeft: 3, packExpiresAt: "2026-10-15" }, { sessionsLeft: 0 }], TODAY);
+  assert.equal(s.packsEndingSoon, 1);
+  assert.equal(s.empty, 1);
+});
