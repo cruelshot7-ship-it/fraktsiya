@@ -3,7 +3,8 @@ import { FORM_GOALS, isTrainDay, MOVE_KINDS, studioToday } from "@/data/studio";
 import { trainDayHints, type LoadHintTone } from "@/lib/day-load-hint";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
-import { inputClass, ProgressRail, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { Fold } from "@/components/app/fold";
+import { inputClass, ProgressRail, Surface, EmptyHint } from "@/components/app/bits";
 import { readiness, type ReadinessDay } from "@/lib/athlete-metrics";
 import { MeasuresCard } from "@/components/app/measures-card";
 
@@ -92,9 +93,9 @@ export function FormView() {
 
   return (
     <div className="flex flex-col gap-3">
+      <Fold title="Записать день">
       <Surface>
-        <SectionLabel>День</SectionLabel>
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <div>
             <label className="text-xs text-muted-foreground">Шаги</label>
             <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={String(FORM_GOALS.steps)} />
@@ -236,10 +237,11 @@ export function FormView() {
           Сохранить день
         </button>
       </Surface>
+      </Fold>
 
+      <Fold title="Внести еду из FatSecret">
       <Surface>
-        <SectionLabel>Еда из FatSecret</SectionLabel>
-        <p className="mt-1 text-xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
+        <p className="text-xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
         <div className="mt-3 grid grid-cols-4 gap-2">
           <input className={inputClass} inputMode="numeric" value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="ккал" />
           <input className={inputClass} inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Б" />
@@ -265,6 +267,7 @@ export function FormView() {
           Внести в еду
         </button>
       </Surface>
+      </Fold>
 
       <MeasuresCard client={client} />
 
