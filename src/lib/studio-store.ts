@@ -3,6 +3,7 @@ import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@
 import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
 import { applySetMark } from "@/lib/program-blocks";
+import { referralRewarded, referralRewardTxn, REFERRAL_REWARD } from "@/lib/referral";
 import { trainerSignalText } from "@/lib/day-load-hint";
 import { detectPRs } from "@/lib/athlete-metrics";
 import type { ProgramTemplate } from "@/lib/templates/program-template";
@@ -1271,7 +1272,7 @@ export const useStudio = create<State>((set, get) => ({
       next = next.map((c) => (c.id === clientId ? { ...c, packExpiresAt: until } : c));
     }
     const left = next.find((c) => c.id === clientId)?.sessionsLeft ?? 0;
-    const nextNotices = pushNotice(notices, {
+    let nextNotices = pushNotice(notices, {
       id: `nt_wal_${txn.id}`,
       audience: "client",
       clientId,
@@ -1280,6 +1281,21 @@ export const useStudio = create<State>((set, get) => ({
       body: `${amount > 0 ? "+" : ""}${amount} · сейчас ${left} ${sessionsRu(left)}`,
       at: new Date().toISOString(),
     });
+    // бонус приглашающему: за первый пакет приглашённого, отмеченный оплаченным; один раз (id события)
+    const referrer = amount > 0 && who.referredBy ? clients.find((c) => c.id === who.referredBy) : undefined;
+    if (referrer && referrer.coachId === who.coachId && !referralRewarded(who.id, referrer)) {
+      const reward = referralRewardTxn(referrer.id, who.id, new Date().toISOString());
+      next = withTxn(next, reward);
+      nextNotices = pushNotice(nextNotices, {
+        id: `nt_ref_${who.id}`,
+        audience: "client",
+        clientId: referrer.id,
+        kind: "wallet",
+        title: "Бонус за приглашение",
+        body: `+${REFERRAL_REWARD} ${sessionsRu(REFERRAL_REWARD)}: приглашённый оплатил пакет`,
+        at: reward.at,
+      });
+    }
     set({ clients: next, notices: nextNotices });
     persist(snap(get()));
     hapticNotify("success");

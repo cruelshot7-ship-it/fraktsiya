@@ -5,7 +5,9 @@ import { HallView } from "@/components/app/hall-view";
 import { MyDataPanel, PolicyText } from "@/components/app/privacy-panel";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { sessionsRu } from "@/data/studio";
+import { BOT_USERNAME, sessionsRu } from "@/data/studio";
+import { referralStart } from "@/lib/referral";
+import { inviteUrl } from "@/lib/telegram";
 
 type Sub = "menu" | "form" | "hall" | "privacy" | "policy";
 
@@ -17,7 +19,9 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
   const openNote = useStudio((s) => s.openNote);
+  const showToast = useStudio((s) => s.showToast);
   const me = activeClient({ clients, activeClientId });
+  const referralUrl = me?.referralCode ? inviteUrl(BOT_USERNAME, referralStart(me.referralCode)) : "";
 
   useEffect(() => {
     if (initial) setSub(initial);
@@ -135,6 +139,25 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
         </Surface>
       </button>
 
+
+      {referralUrl ? (
+        <Surface>
+          <p className="text-sm font-medium">Пригласить друга</p>
+          <p className="mt-0.5 text-tiny text-muted-foreground">
+            Когда друг оплатит первый пакет, тренер начислит вам занятие в подарок.
+          </p>
+          <button
+            type="button"
+            className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-sm"
+            onClick={() => {
+              void navigator.clipboard?.writeText(referralUrl);
+              showToast("Ссылка скопирована.");
+            }}
+          >
+            Скопировать ссылку
+          </button>
+        </Surface>
+      ) : null}
 
       <button type="button" className="pressable w-full text-left" onClick={() => openNote()}>
         <Surface className="flex items-center gap-3">

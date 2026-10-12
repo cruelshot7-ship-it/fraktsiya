@@ -7,6 +7,7 @@ import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
 import { pickHealthToken } from "@/lib/health-token";
+import { newReferralCode, referralCodeFromStart, referrerByCode } from "@/lib/referral";
 import { applyCoachNotices, coachNoticeText, dueCoachNotices, type CoachNotice } from "@/lib/coach-notice";
 import { withoutTrainerMoney } from "@/lib/payments";
 import { programFor } from "@/lib/program-import";
@@ -907,6 +908,31 @@ export async function commitStudioState(payload: StudioPayload) {
   return next;
 }
 
+/** Выдаёт клиенту код приглашения, если его ещё нет. Код уникален и не меняется. */
+async function ensureReferralCode(telegramId: string): Promise<StudioPayload | null> {
+  let issued = false;
+  const outcome = await updateStudioState((current) => {
+    const row = current.clients.find((c) => c.telegramId === telegramId);
+    if (!row || row.referralCode) return null;
+    const used = new Set(current.clients.map((c) => (c.referralCode ?? "").toLowerCase()));
+    let code = newReferralCode();
+    while (used.has(code)) code = newReferralCode();
+    issued = true;
+    return { ...current, clients: current.clients.map((c) => (c.id === row.id ? { ...c, referralCode: code } : c)) };
+  });
+  return outcome === "saved" && issued ? loadStudioState() : null;
+}
+
+/** Тренер приглашающего должен быть с действующим доступом; иначе приглашение не принимаем. */
+function coachForReferrer(referrer: Client, payload: StudioPayload): string {
+  const owner = referrer.coachId || String(TRAINER_TG_ID);
+  if (owner === String(TRAINER_TG_ID)) return owner;
+  const row = (payload.coaches ?? []).find((c) => c.telegramId === owner);
+  if (!row) return String(TRAINER_TG_ID);
+  const phase = coachPhase(row);
+  return phase === "trial" || phase === "paid" ? owner : "";
+}
+
 /**
  * Уведомления о доступе тренеров. Отметка записывается условно (с повтором), и только после неё
  * уходят сообщения в бот: повторное открытие приложения не отправит то же самое дважды.
@@ -978,6 +1004,11 @@ export const pullStudio = createServerFn({ method: "POST" })
           payload: scopePayload(payload, session.user.id),
         };
       }
+      try {
+        payload = (await ensureReferralCode(session.user.id)) ?? payload;
+      } catch (err) {
+        console.error("[referral-code]", err);
+      }
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
     }
 
@@ -1014,7 +1045,9 @@ export const requestJoin = createServerFn({ method: "POST" })
       await bot.ensureBotHook();
       return { ok: true };
     }
-    const coachId = coachFromStart(session.startParam, payload);
+    // приглашение клиентом (r_<код>) ведёт к тренеру пригласившего; иначе — обычный путь через тренера
+    const referrer = referrerByCode(referralCodeFromStart(session.startParam) ?? "", payload.clients);
+    const coachId = referrer ? coachForReferrer(referrer, payload) : coachFromStart(session.startParam, payload);
     if (!coachId) return { ok: false };
     // the request goes in only with the policy accepted in its current version; the record goes with it
     if (data.consentVersion !== PRIVACY_VERSION) return { ok: false };
@@ -1024,6 +1057,7 @@ export const requestJoin = createServerFn({ method: "POST" })
       goal: data.goal,
       pack: data.pack,
       coachId,
+      referrerId: referrer?.id ?? null,
       consent: { version: PRIVACY_VERSION, at: new Date().toISOString() },
     });
   });
