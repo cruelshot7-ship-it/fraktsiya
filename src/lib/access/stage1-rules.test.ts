@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canAccessClient,
   canDecideProgression,
+  canSuggestProgression,
   canManageSlot,
   canRecordSessionResult,
   progressionBlockedByDiscomfort,
@@ -62,5 +63,19 @@ describe("progressionBlockedByDiscomfort", () => {
   it("flags discomfort notes without diagnosing", () => {
     assert.equal(progressionBlockedByDiscomfort("лёгкий дискомфорт в плече"), true);
     assert.equal(progressionBlockedByDiscomfort("всё ок"), false);
+  });
+});
+
+describe("canSuggestProgression", () => {
+  it("главный тренер может по любому тренеру", () => {
+    assert.equal(canSuggestProgression({ isMainTrainer: true, actorId: "1", requestedCoachId: "2", coachActive: false }), true);
+  });
+  it("добавленный тренер — только по себе и с действующим доступом", () => {
+    assert.equal(canSuggestProgression({ isMainTrainer: false, actorId: "2", requestedCoachId: "2", coachActive: true }), true);
+    assert.equal(canSuggestProgression({ isMainTrainer: false, actorId: "2", requestedCoachId: "3", coachActive: true }), false);
+    assert.equal(canSuggestProgression({ isMainTrainer: false, actorId: "2", requestedCoachId: "2", coachActive: false }), false);
+  });
+  it("клиент, подставивший свой id как coachId, не проходит", () => {
+    assert.equal(canSuggestProgression({ isMainTrainer: false, actorId: "9", requestedCoachId: "9", coachActive: false }), false);
   });
 });

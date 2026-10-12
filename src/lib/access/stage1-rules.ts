@@ -73,3 +73,17 @@ export function progressionBlockedByDiscomfort(clientNote: string | null | undef
     t.includes("hurt")
   );
 }
+
+/**
+ * Подбор прогрессии: главный тренер — по любому тренеру; добавленный тренер — только
+ * по себе и только с действующим доступом (пробный или оплаченный). Клиент не может.
+ */
+export function canSuggestProgression(opts: {
+  isMainTrainer: boolean;
+  actorId: string;
+  requestedCoachId: string;
+  coachActive: boolean;
+}): boolean {
+  if (opts.isMainTrainer) return true;
+  return opts.actorId === opts.requestedCoachId && opts.coachActive;
+}
