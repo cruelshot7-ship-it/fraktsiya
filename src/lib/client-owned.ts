@@ -18,5 +18,8 @@ export function keepClientOwned(server: Client | undefined, incoming: Client): C
     consentLog: server.consentLog ?? [],
     // токен ingest выдаётся сервером и не должен теряться от копии тренера
     healthToken: server.healthToken ?? null,
+    // код приглашения и пригласивший выдаются сервером
+    referralCode: server.referralCode ?? null,
+    referredBy: server.referredBy ?? null,
   };
 }

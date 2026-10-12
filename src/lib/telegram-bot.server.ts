@@ -102,7 +102,15 @@ export async function registerJoin(
     lastName: string;
     username: string | null;
   },
-  offer?: { message: string; slotId?: string; goal?: string; pack?: string; coachId?: string; consent?: { version: string; at: string } },
+  offer?: {
+    message: string;
+    slotId?: string;
+    goal?: string;
+    pack?: string;
+    coachId?: string;
+    referrerId?: string | null;
+    consent?: { version: string; at: string };
+  },
 ) {
   const message = (offer?.message ?? "").trim().slice(0, 500);
   let payload = await loadStudioState();
@@ -138,6 +146,7 @@ export async function registerJoin(
     goal: offer?.goal,
     pack: offer?.pack,
     coachId,
+    referrerId: offer?.referrerId ?? null,
     consent: offer?.consent,
     at: hoursAgoIso(0),
     status: "pending",
@@ -182,6 +191,8 @@ export async function decideJoin(telegramId: string, approve: boolean) {
           telegramId,
           telegramUsername: req?.telegramUsername ?? null,
           coachId: req?.coachId || null,
+          // пригласивший — только если он ещё в зале (его id уже есть у клиентов)
+          referredBy: req?.referrerId && payload.clients.some((c) => c.id === req.referrerId) ? req.referrerId : null,
         };
     const clientId = fresh?.id ?? existing!.id;
     const withClient = fresh ? [...payload.clients, fresh] : payload.clients;

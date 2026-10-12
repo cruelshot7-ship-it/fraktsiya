@@ -601,6 +601,8 @@ export type JoinRequest = {
   goal?: string;
   pack?: string;
   coachId?: string | null;
+  /** id клиента, по чьей ссылке пришёл */
+  referrerId?: string | null;
   /** the policy version the person accepted when sending the request, and when */
   consent?: { version: string; at: string };
 };
@@ -668,6 +670,10 @@ export type Client = {
   phone?: string | null;
   coachId?: string | null;
   healthToken?: string | null;
+  /** код приглашения клиента (ссылка r_<код>); выдаёт сервер */
+  referralCode?: string | null;
+  /** id клиента, который привёл этого клиента; ставит сервер при одобрении заявки */
+  referredBy?: string | null;
   sessionByDate?: Record<string, string> | null;
 };
 

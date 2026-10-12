@@ -32,3 +32,11 @@ test("keepClientOwned: у существующего клиента соглас
   const sent = { ...base, consent: null } as Client;
   assert.equal(keepClientOwned(server, sent).consent?.acceptedAt, "2026-10-11T10:00:00Z");
 });
+
+test("keepClientOwned: код приглашения и пригласивший остаются от сервера", () => {
+  const server = { ...base, referralCode: "0123456789ab", referredBy: "c_parent" } as Client;
+  const sent = { ...base, referralCode: null, referredBy: null } as Client;
+  const kept = keepClientOwned(server, sent);
+  assert.equal(kept.referralCode, "0123456789ab");
+  assert.equal(kept.referredBy, "c_parent");
+});
