@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
 import { suggestProgression, type SessionResultInput } from "./engine";
+import { canSuggestProgression } from "@/lib/access/stage1-rules";
 
 const SuggestInput = z.object({
   initData: z.string().optional(),
@@ -15,7 +16,18 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const session = verifyTelegramInitData(data.initData);
     if (!session) return { ok: false as const, reason: "no-telegram" };
-    if (session.role !== "trainer" && session.user.id !== data.coachId) {
+    // права решаются по сессии и состоянию тренера, а не по coachId из тела запроса
+    const isMainTrainer = session.role === "trainer";
+    let coachActive = false;
+    if (!isMainTrainer) {
+      const { loadStudioState } = await import("@/lib/studio-sync");
+      const { coachPhase } = await import("@/data/studio");
+      const state = await loadStudioState();
+      const row = (state.coaches ?? []).find((c) => c.telegramId === session.user.id);
+      const phase = row ? coachPhase(row) : "expired";
+      coachActive = phase === "trial" || phase === "paid";
+    }
+    if (!canSuggestProgression({ isMainTrainer, actorId: session.user.id, requestedCoachId: data.coachId, coachActive })) {
       return { ok: false as const, reason: "forbidden" };
     }
 
