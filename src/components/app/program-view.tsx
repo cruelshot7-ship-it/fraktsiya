@@ -12,6 +12,7 @@ import {
   isFrozen,
   motiveFor,
   nextTrainDate,
+  programFinished,
   programWeek,
   sumFood,
   sessionsRu,
@@ -29,6 +30,7 @@ import {
   PHASE_HINT,
   PHASE_LABEL,
   planTotalsFromBlocks,
+  rirLabel,
   rewriteFacts,
   rewriteMarks,
   sessionPlan,
@@ -147,15 +149,16 @@ export function ProgramView() {
   if (!client) {
     return <EmptyHint>Программа появится после того, как тренер добавит вас и назначит дни.</EmptyHint>;
   }
-  const session = visitSession(client, today, bookings);
+  const session = visitSession(client, today, bookings, visits);
   const week = programWeek(client, today);
-  const phase = client.programPhases?.[String(week)];
+  const finished = programFinished(client, today);
+  const phase = finished ? undefined : client.programPhases?.[String(week)];
   const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
   const weekLoad = bookings.filter((b) => b.clientId === client.id && b.date >= isoDate(new Date(Date.now() - 6 * 86400000))).length;
   const weekVisits = weekVisitCount(bookings, client.id);
   const next = nextTrainDate(client);
-  const nextSession = visitSession(client, next, bookings);
+  const nextSession = visitSession(client, next, bookings, visits);
   const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
 
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
@@ -247,7 +250,7 @@ export function ProgramView() {
       <Surface glow={client.sessionsLeft <= 2 ? "alert" : session ? "ok" : undefined}>
         <div className="flex items-start justify-between gap-3">
           <SectionLabel>
-            {client.programTitle} · нед. {week}/{client.programWeeks}
+            {client.programTitle} · {finished ? `завершена, ${client.programWeeks} нед.` : `нед. ${week}/${client.programWeeks}`}
             {phase ? ` · ${PHASE_LABEL[phase]}` : ""}
           </SectionLabel>
           <p className="text-tiny text-muted-foreground tabular-nums">
@@ -720,7 +723,7 @@ function BlockRow({
     block.sets > 0 && block.reps ? `${block.sets}×${block.reps}${block.side ? ` на каждую ${block.side}` : ""}` : "",
     block.load ? `${block.load} кг` : "",
     block.rest != null ? `отдых ${block.rest} с` : "",
-    block.rir != null ? `RIR ${block.rir}` : "",
+    block.rir != null ? rirLabel(block.rir) : "",
   ]
     .filter(Boolean)
     .join(" · ");
