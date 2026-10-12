@@ -83,20 +83,6 @@ export function HallView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
-      {mapsUrl(notifyPrefs.address || "") ? (
-        <Surface>
-          <SectionLabel>Как добраться</SectionLabel>
-          <p className="mt-2 text-sm">{notifyPrefs.address}</p>
-          <a
-            href={mapsUrl(notifyPrefs.address)}
-            target="_blank"
-            rel="noreferrer"
-            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-          >
-            Маршрут
-          </a>
-        </Surface>
-      ) : null}
       <Surface glow="soft">
         <SectionLabel>Зал</SectionLabel>
         <h2 className="font-display mt-1 text-xl">Наклейка на стойке</h2>
@@ -122,6 +108,20 @@ export function HallView() {
           }}
         />
       </Surface>
+      {mapsUrl(notifyPrefs.address || "") ? (
+        <Surface>
+          <SectionLabel>Как добраться</SectionLabel>
+          <p className="mt-2 text-sm">{notifyPrefs.address}</p>
+          <a
+            href={mapsUrl(notifyPrefs.address)}
+            target="_blank"
+            rel="noreferrer"
+            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-secondary text-sm font-medium text-foreground"
+          >
+            Маршрут
+          </a>
+        </Surface>
+      ) : null}
       <SectionLabel>Нет наклейки</SectionLabel>
       <div className="grid grid-cols-2 gap-2">
         {MACHINES.map((item) => (
