@@ -1,0 +1,4 @@
+
+> ruksha-discipline@0.3.1 typecheck
+> tsc --noEmit
+
