@@ -1,11 +1,6 @@
 M  diag/install.txt
-M  diag/lock-exists.txt
 M  diag/ls-router.txt
 M  diag/ls.txt
 M  diag/status.txt
  M diag/status2.txt
-M  diag/test-exit.txt
 M  diag/test.txt
-M  diag/typecheck-exit.txt
-M  diag/typecheck.txt
-A  package-lock.json
