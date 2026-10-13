@@ -812,6 +812,7 @@ export async function maybeDailyBackup(payload: StudioPayload) {
           bookings: payload.bookings,
           visits: payload.visits,
           food: payload.food,
+          notices: payload.notices,
           today,
           absentDays: payload.notifyPrefs.absentDays || 10,
         }),
