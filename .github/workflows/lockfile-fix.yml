@@ -36,7 +36,9 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add -f package.json package-lock.json diag
+          ls package-lock.json > diag/lock-exists.txt 2>&1 || true
+          git add -f diag
+          git add -f package.json package-lock.json || true
           git status --short > diag/status2.txt
           git add -f diag/status2.txt
           git commit -m "chore(deps): package-lock.json и диагностика" > diag/commit.txt 2>&1
