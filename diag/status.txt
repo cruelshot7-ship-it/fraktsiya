@@ -3,3 +3,6 @@
  M diag/ls.txt
  M diag/status.txt
  M diag/test.txt
+ M diag/typecheck-exit.txt
+ M diag/typecheck.txt
+ M package-lock.json
