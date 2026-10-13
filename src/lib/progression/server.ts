@@ -3,6 +3,8 @@ import { z } from "zod";
 import { verifyTelegramInitData } from "@/lib/telegram-auth.server";
 import { suggestProgression, type SessionResultInput } from "./engine";
 import { canDecideProgression, canSuggestProgression, type Role } from "@/lib/access/stage1-rules";
+import { applyPainBlock, painBlocksProgression } from "./pain-block.ts";
+import { studioToday } from "@/lib/minsk-time";
 
 const SuggestInput = z.object({
   initData: z.string().optional(),
@@ -18,11 +20,11 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
     if (!session) return { ok: false as const, reason: "no-telegram" };
     // права решаются по сессии и состоянию тренера, а не по coachId из тела запроса
     const isMainTrainer = session.role === "trainer";
+    const { loadStudioState } = await import("@/lib/studio-sync");
+    const state = await loadStudioState();
     let coachActive = false;
     if (!isMainTrainer) {
-      const { loadStudioState } = await import("@/lib/studio-sync");
       const { coachPhase } = await import("@/data/studio");
-      const state = await loadStudioState();
       const row = (state.coaches ?? []).find((c) => c.telegramId === session.user.id);
       const phase = row ? coachPhase(row) : "expired";
       coachActive = phase === "trial" || phase === "paid";
@@ -54,7 +56,9 @@ export const suggestProgressionFn = createServerFn({ method: "POST" })
       rpe: r.rpe,
     }));
 
-    const suggestion = suggestProgression(results);
+    // боль в чек-ине за последние 7 дней блокирует повышение нагрузки
+    const checks = (state.dayChecks ?? []).filter((c) => c.clientId === data.clientId);
+    const suggestion = applyPainBlock(suggestProgression(results), painBlocksProgression(checks, studioToday()));
     const id = `psug_${data.programId}_${Date.now()}`;
 
     await sql.query(
@@ -120,11 +124,11 @@ export const decideProgressionFn = createServerFn({ method: "POST" })
     if (!row[0]) return { ok: false as const, reason: "missing" };
     // право решить — по правилу stage1: главный тренер — по любому предложению, добавленный — только своему
     const isMainTrainer = session.role === "trainer";
+    const { loadStudioState } = await import("@/lib/studio-sync");
+    const state = await loadStudioState();
     let coachActive = true;
     if (!isMainTrainer) {
-      const { loadStudioState } = await import("@/lib/studio-sync");
       const { coachPhase } = await import("@/data/studio");
-      const state = await loadStudioState();
       const coach = (state.coaches ?? []).find((c) => c.telegramId === session.user.id);
       const phase = coach ? coachPhase(coach) : "expired";
       coachActive = phase === "trial" || phase === "paid";
