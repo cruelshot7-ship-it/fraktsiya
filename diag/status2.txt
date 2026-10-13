@@ -1,9 +1,0 @@
-M  diag/install.txt
-M  diag/ls-router.txt
-M  diag/ls.txt
-M  diag/status.txt
- M diag/status2.txt
-M  diag/test.txt
-M  diag/typecheck-exit.txt
-M  diag/typecheck.txt
-M  package-lock.json
