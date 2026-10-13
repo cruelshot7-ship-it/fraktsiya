@@ -8,9 +8,9 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  lock:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,26 +18,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: npm info
+      - name: install and verify
         run: |
           mkdir -p diag
-          {
-            echo "== react-start 1.168.60 deps"
-            npm view @tanstack/react-start@1.168.60 dependencies --json
-            echo "== react-router 1.168.x versions"
-            npm view @tanstack/react-router versions --json | grep -o '"1\.168\.[0-9]*"' | tr '\n' ' '
-            echo
-            echo "== router-plugin 1.168.x versions"
-            npm view @tanstack/router-plugin versions --json | grep -o '"1\.168\.[0-9]*"' | tr '\n' ' '
-            echo
-            echo "== react-router latest 1.17x versions"
-            npm view @tanstack/react-router versions --json | grep -o '"1\.1[6-7][0-9]\.[0-9]*"' | tail -5 | tr '\n' ' '
-            echo
-          } > diag/npm-info.txt 2>&1 || true
-      - name: commit diag
+          npm install --no-audit --no-fund > diag/install.txt 2>&1 || echo "install-exit=$?" >> diag/install.txt
+          npm ls @tanstack/react-router > diag/ls-router.txt 2>&1 || true
+          npm run typecheck > diag/typecheck.txt 2>&1; echo "exit=$?" > diag/typecheck-exit.txt
+          npm test > diag/test.txt 2>&1; echo "exit=$?" > diag/test-exit.txt
+      - name: commit lockfile and diagnostics
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add diag
-          git commit -m "diag: npm info" || exit 0
+          git add package.json package-lock.json diag
+          git commit -m "chore(deps): package-lock.json и точный пин @tanstack/react-router 1.170.41" || exit 0
           git push
