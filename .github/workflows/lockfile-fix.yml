@@ -41,7 +41,4 @@ jobs:
           git add -f diag/status2.txt
           git commit -m "chore(deps): package-lock.json и диагностика" > diag/commit.txt 2>&1
           echo "commit-exit=$?" >> diag/commit.txt
-          git add -f diag/commit.txt
-          git commit --amend --no-edit -q || true
-          git push origin HEAD:fix/lockfile > diag/push.txt 2>&1
-          echo "push-exit=$?" >> diag/push.txt
+          git push origin HEAD:fix/lockfile
