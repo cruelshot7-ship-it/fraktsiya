@@ -1,0 +1,8 @@
+?? diag/install.txt
+?? diag/ls-router.txt
+?? diag/ls.txt
+?? diag/status.txt
+?? diag/test-exit.txt
+?? diag/test.txt
+?? diag/typecheck-exit.txt
+?? diag/typecheck.txt

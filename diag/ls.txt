@@ -1,0 +1,27 @@
+total 144
+drwxr-xr-x 12 runner runner  4096 Oct 13 16:51 .
+drwxr-xr-x  3 runner runner  4096 Oct 13 16:51 ..
+-rw-r--r--  1 runner runner   131 Oct 13 16:51 .dockerignore
+-rw-r--r--  1 runner runner   717 Oct 13 16:51 .env.example
+drwxr-xr-x  7 runner runner  4096 Oct 13 16:51 .git
+drwxr-xr-x  3 runner runner  4096 Oct 13 16:51 .github
+-rw-r--r--  1 runner runner    89 Oct 13 16:51 .gitignore
+-rw-r--r--  1 runner runner    90 Oct 13 16:51 .prettierrc
+drwxr-xr-x  2 runner runner  4096 Oct 13 16:51 AUDIT
+-rw-r--r--  1 runner runner  1146 Oct 13 16:51 Dockerfile
+-rw-r--r--  1 runner runner 25380 Oct 13 16:51 PLAN.md
+-rw-r--r--  1 runner runner  8658 Oct 13 16:51 README.md
+drwxr-xr-x  2 runner runner  4096 Oct 13 16:52 diag
+drwxr-xr-x  2 runner runner  4096 Oct 13 16:51 docs
+-rw-r--r--  1 runner runner  1277 Oct 13 16:51 eslint.config.mjs
+drwxr-xr-x  3 runner runner  4096 Oct 13 16:51 migrations
+-rw-r--r--  1 runner runner  4357 Oct 13 16:51 package.json
+drwxr-xr-x  3 runner runner  4096 Oct 13 16:51 public
+-rw-r--r--  1 runner runner   309 Oct 13 16:51 railway.toml
+drwxr-xr-x  2 runner runner  4096 Oct 13 16:51 scripts
+drwxr-xr-x  3 runner runner  4096 Oct 13 16:51 server
+drwxr-xr-x  7 runner runner  4096 Oct 13 16:51 src
+-rw-r--r--  1 runner runner   272 Oct 13 16:51 startup.sh
+-rw-r--r--  1 runner runner   809 Oct 13 16:51 tsconfig.json
+-rw-r--r--  1 runner runner   216 Oct 13 16:51 vercel.json
+-rw-r--r--  1 runner runner  6750 Oct 13 16:51 vite.config.ts

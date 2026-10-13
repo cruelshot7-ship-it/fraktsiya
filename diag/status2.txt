@@ -1,0 +1,10 @@
+A  diag/install.txt
+A  diag/lock-exists.txt
+A  diag/ls-router.txt
+A  diag/ls.txt
+A  diag/status.txt
+A  diag/test-exit.txt
+A  diag/test.txt
+A  diag/typecheck-exit.txt
+A  diag/typecheck.txt
+?? diag/status2.txt

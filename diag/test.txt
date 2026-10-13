@@ -1,0 +1,34 @@
+
+> ruksha-discipline@0.3.1 test
+> node scripts/check-test-list.mjs && node --test 'scripts/**/*.test.mjs' && tsx --test src/lib/access/binding-rules.test.ts src/lib/health-write-gate.test.ts src/lib/client-owned.test.ts src/lib/weight-trend.test.ts src/lib/booking/core.test.ts src/lib/access/stage1-rules.test.ts src/lib/db-adapters.test.ts src/lib/booking/core.integration.test.ts src/lib/csv-import/apply-local.test.ts src/lib/csv-import/duplicates.test.ts src/lib/csv-import/preview.test.ts src/lib/maps-link.test.ts src/lib/notify/outbox.test.ts src/lib/program-history.test.ts src/lib/templates/copy-session.test.ts src/lib/templates/program-template.test.ts src/lib/studio-backup.test.ts src/lib/studio-merge.test.ts src/lib/studio-scope.test.ts src/lib/studio-visits.test.ts src/lib/studio-digest.test.ts src/lib/studio-week.test.ts src/lib/studio-remind.test.ts src/lib/studio-repeat.test.ts src/lib/progression/engine.test.ts src/lib/booking/concurrent.test.ts src/lib/action-items.test.ts src/lib/booking/overlap-rules.test.ts src/lib/next-slot.test.ts src/lib/calendar-ics.test.ts src/lib/athlete-metrics.test.ts src/lib/body-measures.test.ts src/lib/privacy.test.ts src/lib/balance.test.ts src/lib/client-owned.test.ts src/lib/exercises.test.ts src/lib/program-blocks.test.ts src/lib/program-status.test.ts src/lib/state-retry.test.ts src/lib/coach-notice.test.ts src/lib/health-token.test.ts src/lib/referral.test.ts src/lib/lapsed.test.ts src/lib/balance-summary.test.ts src/lib/payments.test.ts src/lib/program-import.test.ts src/lib/weight-history.test.ts src/lib/workout-undo.test.ts src/lib/client-program.test.ts src/lib/join-confirm.test.ts src/lib/coach-tier.test.ts src/lib/templates/session-template.test.ts src/lib/studio-revision.test.ts src/lib/food-catalog.test.ts src/lib/menu-plan.test.ts src/lib/menu-scope.test.ts src/data/dish-recipes.test.ts src/lib/gtin.test.ts src/lib/ean-decode.test.ts src/lib/food-sanity.test.ts src/lib/notify/flush-rules.test.ts src/lib/day-load-hint.test.ts src/lib/minsk-time.test.ts src/lib/auth/init-freshness.test.ts
+
+[check-test-list] ok — 63 listed test files exist.
+TAP version 13
+# Subtest: 0005 notify outbox is marked as needing explicit approval
+ok 1 - 0005 notify outbox is marked as needing explicit approval
+  ---
+  duration_ms: 5.285641
+  type: 'test'
+  ...
+# Subtest: ordinary migrations do not need approval
+ok 2 - ordinary migrations do not need approval
+  ---
+  duration_ms: 1.778148
+  type: 'test'
+  ...
+# Subtest: pending migrations skip applied ones, keep order and ignore subdirectories
+ok 3 - pending migrations skip applied ones, keep order and ignore subdirectories
+  ---
+  duration_ms: 8.347026
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 86.316587
+sh: 1: tsx: not found

@@ -1,0 +1,12 @@
+
+> ruksha-discipline@0.3.1 typecheck
+> tsc --noEmit
+
+error TS2688: Cannot find type definition file for 'node'.
+  The file is in the program because:
+    Entry point of type library 'node' specified in compilerOptions
+error TS2688: Cannot find type definition file for 'vite/client'.
+  The file is in the program because:
+    Entry point of type library 'vite/client' specified in compilerOptions
+tsconfig.json(22,5): error TS5102: Option 'baseUrl' has been removed. Please remove it from your configuration.
+  Use '"paths": {"*": ["./*"]}' instead.
