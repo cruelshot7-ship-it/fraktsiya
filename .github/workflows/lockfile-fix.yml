@@ -1,0 +1,43 @@
+name: lockfile-fix
+
+on:
+  push:
+    branches: [fix/lockfile]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/lockfile
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm info
+        run: |
+          mkdir -p diag
+          {
+            echo "== react-start 1.168.60 deps"
+            npm view @tanstack/react-start@1.168.60 dependencies --json
+            echo "== react-router 1.168.x versions"
+            npm view @tanstack/react-router versions --json | grep -o '"1\.168\.[0-9]*"' | tr '\n' ' '
+            echo
+            echo "== router-plugin 1.168.x versions"
+            npm view @tanstack/router-plugin versions --json | grep -o '"1\.168\.[0-9]*"' | tr '\n' ' '
+            echo
+            echo "== react-router latest 1.17x versions"
+            npm view @tanstack/react-router versions --json | grep -o '"1\.1[6-7][0-9]\.[0-9]*"' | tail -5 | tr '\n' ' '
+            echo
+          } > diag/npm-info.txt 2>&1 || true
+      - name: commit diag
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add diag
+          git commit -m "diag: npm info" || exit 0
+          git push
