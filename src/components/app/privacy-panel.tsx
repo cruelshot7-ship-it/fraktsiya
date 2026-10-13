@@ -1,8 +1,28 @@
 import { useState } from "react";
 import { PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
 import { POLICY_CHANGE_NOTICE, POLICY_SECTIONS } from "@/lib/privacy-text";
+import { buildOfferSections, offerReady } from "@/lib/offer-text";
 import { useStudio, activeClient } from "@/lib/studio-store";
 import { SectionLabel, Surface } from "@/components/app/bits";
+
+/** Оферта и пользовательское соглашение. Не выводится, пока реквизиты не заполнены (см. offer-text.ts). */
+export function OfferText() {
+  if (!offerReady()) return null;
+  return (
+    <div className="flex flex-col gap-4">
+      {buildOfferSections().map((section) => (
+        <div key={section.title}>
+          <SectionLabel>{section.title}</SectionLabel>
+          <div className="mt-2 flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
+            {section.body.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function PolicyText() {
   return (
@@ -143,6 +163,7 @@ export function MyDataPanel() {
         )}
       </Surface>
       <PolicyText />
+      <OfferText />
     </div>
   );
 }
