@@ -2,11 +2,9 @@
 > ruksha-discipline@0.3.1 typecheck
 > tsc --noEmit
 
-error TS2688: Cannot find type definition file for 'node'.
-  The file is in the program because:
-    Entry point of type library 'node' specified in compilerOptions
-error TS2688: Cannot find type definition file for 'vite/client'.
-  The file is in the program because:
-    Entry point of type library 'vite/client' specified in compilerOptions
-tsconfig.json(22,5): error TS5102: Option 'baseUrl' has been removed. Please remove it from your configuration.
-  Use '"paths": {"*": ["./*"]}' instead.
+src/routes/api/db-status.ts(6,3): error TS2353: Object literal may only specify known properties, and 'server' does not exist in type 'ParamsOptions<"/" | "/api/health" | "/api/telegram", ResolveParams<"/" | "/api/health" | "/api/telegram">> & FilebaseRouteOptionsInterface<Register, RootRoute<...>, ... 12 more ..., undefined> & UpdatableRouteOptions<...>'.
+src/routes/api/health.ts(23,3): error TS2353: Object literal may only specify known properties, and 'server' does not exist in type 'ParamsOptions<"/api/health", ResolveParams<"/api/health">> & FilebaseRouteOptionsInterface<Register, RootRoute<Register, undefined, {}, AnyContext, ... 7 more ..., undefined>, ... 12 more ..., undefined> & UpdatableRouteOptions<...>'.
+src/routes/api/health.ts(25,21): error TS7031: Binding element 'request' implicitly has an 'any' type.
+src/routes/api/health.ts(38,22): error TS7031: Binding element 'request' implicitly has an 'any' type.
+src/routes/api/telegram.ts(4,3): error TS2353: Object literal may only specify known properties, and 'server' does not exist in type 'ParamsOptions<"/api/telegram", ResolveParams<"/api/telegram">> & FilebaseRouteOptionsInterface<Register, RootRoute<Register, undefined, {}, AnyContext, ... 7 more ..., undefined>, ... 12 more ..., undefined> & UpdatableRouteOptions<...>'.
+src/routes/api/telegram.ts(11,22): error TS7031: Binding element 'request' implicitly has an 'any' type.

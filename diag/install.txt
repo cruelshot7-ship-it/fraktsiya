@@ -1,28 +1,5 @@
-npm error code ERESOLVE
-npm error ERESOLVE could not resolve
-npm error
-npm error While resolving: @tanstack/router-plugin@1.168.45
-npm error Found: @tanstack/react-router@1.170.41
-npm error node_modules/@tanstack/react-router
-npm error   @tanstack/react-router@"1.170.41" from the root project
-npm error
-npm error Could not resolve dependency:
-npm error peerOptional @tanstack/react-router@"^1.170.44" from @tanstack/router-plugin@1.168.45
-npm error node_modules/@tanstack/router-plugin
-npm error   @tanstack/router-plugin@"^1.168.0" from the root project
-npm error
-npm error Conflicting peer dependency: @tanstack/react-router@1.170.44
-npm error node_modules/@tanstack/react-router
-npm error   peerOptional @tanstack/react-router@"^1.170.44" from @tanstack/router-plugin@1.168.45
-npm error   node_modules/@tanstack/router-plugin
-npm error     @tanstack/router-plugin@"^1.168.0" from the root project
-npm error
-npm error Fix the upstream dependency conflict, or retry
-npm error this command with --force or --legacy-peer-deps
-npm error to accept an incorrect (and potentially broken) dependency resolution.
-npm error
-npm error
-npm error For a full report see:
-npm error /home/runner/.npm/_logs/2026-10-13T16_51_37_708Z-eresolve-report.txt
-npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-10-13T16_51_37_708Z-debug-0.log
-install-exit=1
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 400 packages in 23s
+install-exit=0
