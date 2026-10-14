@@ -34,15 +34,15 @@ function ReferenceItem({ row }: { row: ReferenceRow }) {
   const note = QUALITY_NOTE[row.quality];
   const stateUnknown = row.state === "unknown";
   return (
-    <li className="space-y-1 border-b border-border py-3 last:border-b-0">
-      <p className="text-sm font-medium text-foreground">{row.name}</p>
-      <p className="text-xs text-muted-foreground">
+    <li className="min-w-0 space-y-1 border-b border-border py-3 last:border-b-0">
+      <p className="break-words text-sm font-medium text-foreground">{row.name}</p>
+      <p className="break-words text-xs text-muted-foreground">
         {stateUnknown ? "состояние не указано — в расчёт не войдёт" : STATE_LABEL[row.state]}
         {" · "}
         {row.per100.kcal ?? "—"} ккал · Б {row.per100.protein ?? "—"} · Ж {row.per100.fat ?? "—"} · У {row.per100.carbs ?? "—"}
         {" на 100 г"}
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p className="break-words text-xs text-muted-foreground">
         {sourceLine(row)}
         {note ? <span className="text-destructive"> · {note}</span> : null}
       </p>
@@ -116,21 +116,21 @@ function AddForm({ onAdded }: { onAdded: (row: ReferenceRow) => void }) {
           ))}
         </select>
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3">
         <Field label="Калории, на 100 г">
-          <input className={inputClass} inputMode="decimal" value={values.kcal} onChange={setValue("kcal")} required />
+          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.kcal} onChange={setValue("kcal")} required />
         </Field>
         <Field label="Белки, г">
-          <input className={inputClass} inputMode="decimal" value={values.protein} onChange={setValue("protein")} required />
+          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.protein} onChange={setValue("protein")} required />
         </Field>
         <Field label="Жиры, г">
-          <input className={inputClass} inputMode="decimal" value={values.fat} onChange={setValue("fat")} required />
+          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.fat} onChange={setValue("fat")} required />
         </Field>
         <Field label="Углеводы, г">
-          <input className={inputClass} inputMode="decimal" value={values.carbs} onChange={setValue("carbs")} required />
+          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.carbs} onChange={setValue("carbs")} required />
         </Field>
         <Field label="Клетчатка, г (если известна)">
-          <input className={inputClass} inputMode="decimal" value={values.fiber} onChange={setValue("fiber")} />
+          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.fiber} onChange={setValue("fiber")} />
         </Field>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -184,11 +184,11 @@ export function FoodReferencePanel() {
   }, [query]);
 
   return (
-    <Surface className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <Surface className="min-w-0 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <SectionLabel>Справочник продуктов</SectionLabel>
         {isTrainer ? (
-          <button type="button" onClick={() => setAdding((v) => !v)} className="text-sm text-primary">
+          <button type="button" onClick={() => setAdding((v) => !v)} className="h-11 shrink-0 text-sm text-primary">
             {adding ? "Закрыть" : "Добавить продукт"}
           </button>
         ) : null}
@@ -196,7 +196,7 @@ export function FoodReferencePanel() {
 
       <Field label="Поиск по названию">
         <input
-          className={inputClass}
+          className={cn(inputClass, "min-w-0")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="например, творог"
@@ -204,7 +204,7 @@ export function FoodReferencePanel() {
         />
       </Field>
 
-      {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
+      {notice ? <p className="break-words text-sm text-muted-foreground">{notice}</p> : null}
 
       {status === "error" ? <EmptyHint>Не удалось загрузить справочник. Попробуйте позже.</EmptyHint> : null}
       {status === "loading" ? <EmptyHint>Ищу…</EmptyHint> : null}

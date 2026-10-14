@@ -277,7 +277,7 @@ function NutritionContent({ client }: { client: Client }) {
                 aria-selected={addTab === tab.id}
                 onClick={() => setAddTab(tab.id)}
                 className={cn(
-                  "pressable h-8 flex-1 rounded-full text-xs font-medium",
+                  "pressable h-8 min-w-0 flex-1 truncate rounded-full px-1 text-xs font-medium",
                   addTab === tab.id ? "bg-background text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -304,7 +304,7 @@ function NutritionContent({ client }: { client: Client }) {
                 ))}
               </div>
               <input className={inputClass} placeholder="Найти блюдо" value={query} onChange={(e) => setQuery(e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2">
                 {suggestions.length === 0 ? (
                   <p className="col-span-2 py-4 text-sm text-muted-foreground">Ничего не нашли. Смените приём или поиск.</p>
                 ) : (
@@ -315,7 +315,7 @@ function NutritionContent({ client }: { client: Client }) {
                         key={meal.id}
                         type="button"
                         onClick={() => pick(meal.id)}
-                        className={cn("pressable flex flex-col gap-1 rounded-xl bg-card px-2.5 py-2.5 text-left shadow-border", fits ? "" : "opacity-70")}
+                        className={cn("pressable flex min-w-0 flex-col gap-1 rounded-xl bg-card px-2.5 py-2.5 text-left shadow-border", fits ? "" : "opacity-70")}
                       >
                         <span className="line-clamp-2 text-xs font-medium leading-snug">{meal.name}</span>
                         <span className="text-2xs tabular-nums text-muted-foreground">
@@ -349,7 +349,7 @@ function NutritionContent({ client }: { client: Client }) {
               <Field label="Название">
                 <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Гречка с фаршем" />
               </Field>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
                 <Field label="ккал">
                   <input className={inputClass} inputMode="numeric" value={cal} onChange={(e) => setCal(e.target.value)} />
                 </Field>
