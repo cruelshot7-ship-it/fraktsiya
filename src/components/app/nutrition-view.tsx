@@ -7,6 +7,7 @@ import { specialDataAllowed } from "@/lib/privacy";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { MenuDay } from "@/components/app/menu-day";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
+import { FoodReferencePanel } from "@/components/app/food-reference-panel";
 import { cn } from "@/lib/utils";
 
 type Slot = "all" | "breakfast" | "lunch" | "dinner" | "snack";
@@ -369,6 +370,8 @@ function NutritionContent({ client }: { client: Client }) {
           ) : null}
         </Surface>
       ) : null}
+
+      <FoodReferencePanel />
 
       {scanOpen ? (
         <div className="fixed inset-0 z-[80] bg-background">

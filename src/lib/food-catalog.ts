@@ -33,7 +33,7 @@ function rowToProduct(row: Row): SharedFood {
 }
 
 /** Only the trainer and the studio's own clients read or add products. Anyone else gets nothing. */
-async function knownSession(initData: string | undefined) {
+export async function knownSession(initData: string | undefined) {
   const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
   const session = verifyTelegramInitData(initData);
   if (!session) return null;
