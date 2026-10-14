@@ -1986,7 +1986,7 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast("Клиент добавлен. Назначьте пакет и программу.");
     pingClient(
       client.telegramId,
-      `Вас добавили в зал Ruksha Discipline.\nОткройте бота: https://t.me/${BOT_USERNAME}`,
+      `Вас добавили в зал Discipline.\nОткройте бота: https://t.me/${BOT_USERNAME}`,
     );
     return client.id;
   },

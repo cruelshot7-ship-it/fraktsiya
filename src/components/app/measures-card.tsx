@@ -6,6 +6,9 @@ import type { Client } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
 
+/** Русская запись дроби: 40.5 → "40,5". */
+const formatCm = (value: number) => String(value).replace(".", ",");
+
 /** Client side: enter today's measurements in cm. */
 export function MeasuresCard({ client }: { client: Client }) {
   const saveMeasure = useStudio((s) => s.saveMeasure);
@@ -36,14 +39,16 @@ export function MeasuresCard({ client }: { client: Client }) {
         {MEASURE_FIELDS.map((field) => {
           const last = latestValue(measures, field.key);
           return (
-            <Field key={field.key} label={last ? `${field.label} (${last.value})` : field.label}>
+            <Field key={field.key} label={last ? `${field.label} (${formatCm(last.value)})` : field.label}>
               <input
                 className={inputClass}
                 inputMode="decimal"
-                placeholder={todayRow?.[field.key] !== undefined ? String(todayRow[field.key]) : ""}
                 value={values[field.key] ?? ""}
                 onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
               />
+              {todayRow?.[field.key] !== undefined ? (
+                <span className="text-tiny text-muted-foreground">сегодня: {formatCm(todayRow[field.key] as number)}</span>
+              ) : null}
             </Field>
           );
         })}

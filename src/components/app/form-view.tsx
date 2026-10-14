@@ -272,7 +272,7 @@ export function FormView() {
       <MeasuresCard client={client} />
 
       <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setAutoOpen((open) => !open)}>
-        {autoOpen ? "Скрыть авто" : "Само с часов"}
+        {autoOpen ? "Скрыть импорт" : "Импорт с часов"}
       </button>
       {autoOpen ? (
         <Surface>

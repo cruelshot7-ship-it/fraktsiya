@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Ruksha Discipline";
+const APP_NAME = "Discipline";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,14 +13,14 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Ruksha Discipline — запись на тренировки, программа, КБЖУ и дисциплина зала.",
+        content: "Discipline — запись на тренировки, программа, КБЖУ и дисциплина зала.",
       },
       { name: "theme-color", content: "#15171b" },
       { name: "color-scheme", content: "dark" },
       { name: "application-name", content: APP_NAME },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Ruksha" },
+      { name: "apple-mobile-web-app-title", content: "Discipline" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "format-detection", content: "telephone=no" },
     ],
