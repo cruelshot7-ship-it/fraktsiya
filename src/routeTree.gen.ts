@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
+import { Route as ApiBotSweepRouteImport } from './routes/api/bot-sweep'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const ApiTelegramRoute = ApiTelegramRouteImport.update({
   path: '/api/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBotSweepRoute = ApiBotSweepRouteImport.update({
+  id: '/api/bot-sweep',
+  path: '/api/bot-sweep',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/api/bot-sweep': typeof ApiBotSweepRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/api/bot-sweep': typeof ApiBotSweepRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/api/bot-sweep': typeof ApiBotSweepRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/health' | '/api/telegram'
+  fullPaths: '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/api/telegram'
-  id: '__root__' | '/' | '/api/health' | '/api/telegram'
+  to: '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep'
+  id: '__root__' | '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiTelegramRoute: typeof ApiTelegramRoute
+  ApiBotSweepRoute: typeof ApiBotSweepRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bot-sweep': {
+      id: '/api/bot-sweep'
+      path: '/api/bot-sweep'
+      fullPath: '/api/bot-sweep'
+      preLoaderRoute: typeof ApiBotSweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiTelegramRoute: ApiTelegramRoute,
+  ApiBotSweepRoute: ApiBotSweepRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

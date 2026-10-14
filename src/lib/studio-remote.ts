@@ -124,6 +124,8 @@ export async function sendMorningNote(text: string): Promise<boolean> {
       text: text.slice(0, 3500),
       protect_content: true,
     });
+    const { messageIdOf, recordBotMessage } = await import("@/lib/bot-retention.server");
+    await recordBotMessage(TRAINER_TG_ID, messageIdOf(sent), "digest");
     return Boolean(sent.ok);
   } catch {
     return false;

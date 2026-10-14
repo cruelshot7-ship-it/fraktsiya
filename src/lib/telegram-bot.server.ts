@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { claimReminders, dueReminders, findByToken, remindToken } from "@/lib/studio-remind";
+import { closeBotMessage, messageIdOf, recordBotMessage, sweepBotMessages } from "@/lib/bot-retention.server";
 import { commitStudioState, dropTombstones, emptyPayload, loadStudioState, saveStudioState, StateConflictError } from "@/lib/studio-sync";
 import {
   buildSessions,
@@ -326,11 +327,18 @@ export async function handleTelegramUpdate(update: TgUpdate) {
         await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Откройте слоты" });
       }
       if (cb.message) {
-        await tg("editMessageReplyMarkup", {
-          chat_id: cb.message.chat.id,
-          message_id: cb.message.message_id,
-          reply_markup: { inline_keyboard: [] },
-        });
+        // ответ на напоминание дан: само напоминание убираем из чата, журнал закрываем
+        const gone = await tg("deleteMessage", { chat_id: cb.message.chat.id, message_id: cb.message.message_id });
+        if (gone.ok) {
+          await closeBotMessage(cb.message.chat.id, cb.message.message_id);
+        } else {
+          // не удалилось (например, уже нет): хотя бы снимаем кнопки
+          await tg("editMessageReplyMarkup", {
+            chat_id: cb.message.chat.id,
+            message_id: cb.message.message_id,
+            reply_markup: { inline_keyboard: [] },
+          });
+        }
       }
       return;
     }
@@ -481,11 +489,14 @@ export async function sendTrainerNote(
 }
 
 export async function sendBotLink(telegramId: string, text: string) {
-  return tg("sendMessage", {
+  const sent = await tg("sendMessage", {
     chat_id: telegramId,
     text,
     reply_markup: webAppKeyboard("Открыть зал"),
   });
+  // уведомление живёт сутки: запоминаем, чтобы убрать (bot-retention)
+  await recordBotMessage(telegramId, messageIdOf(sent), "notify");
+  return sent;
 }
 
 let remindBusy = false;
@@ -499,6 +510,8 @@ let remindBusy = false;
  */
 export async function sendDueReminders(payload: import("@/lib/studio-sync").StudioPayload) {
   if (remindBusy) return payload;
+  // попутная уборка: ежедневный cron может опоздать, а Telegram не даёт удалять старше 48 часов
+  await sweepBotMessages(new Date(), 10).catch(() => undefined);
   const due = dueReminders(payload.bookings, Date.now()).filter((item) => {
     const booking = payload.bookings.find((row) => row.id === item.id);
     return Boolean(booking && payload.clients.find((row) => row.id === booking.clientId)?.telegramId);
@@ -538,6 +551,7 @@ export async function sendDueReminders(payload: import("@/lib/studio-sync").Stud
           },
         });
         if (!sent.ok) console.error("[reminder] not delivered", booking.id, item.kind);
+        await recordBotMessage(client.telegramId, messageIdOf(sent), "reminder");
       } catch (err) {
         console.error("[reminder] send failed", booking.id, item.kind, err);
       }
