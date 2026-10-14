@@ -43,6 +43,21 @@ export async function recordBotMessage(chatId: string | number, messageId: numbe
   }
 }
 
+/** Закрывает запись, если сообщение удалено раньше срока (например, ответом на кнопку напоминания). */
+export async function closeBotMessage(chatId: string | number, messageId: number, now = new Date()) {
+  try {
+    const sql = await durableSql();
+    if (!sql) return;
+    await sql.query(
+      `update bot_messages set deleted_at = $3
+        where chat_id = $1 and message_id = $2 and deleted_at is null`,
+      [String(chatId), messageId, now.toISOString()],
+    );
+  } catch (err) {
+    console.error("[bot-retention] close failed", err);
+  }
+}
+
 async function deleteInTelegram(chatId: string, messageId: number): Promise<DeleteOutcome> {
   const { env } = await import("@/lib/env.server");
   const tok = env("BOT_TOKEN");
