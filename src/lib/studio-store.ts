@@ -1351,7 +1351,7 @@ export const useStudio = create<State>((set, get) => ({
     if (!booking) return;
     // место освобождаем и в Neon; при отказе сервера пользователь увидит предупреждение
     void import("@/lib/booking/cancel-dual-write").then(({ scheduleCancelDualWrite }) =>
-      scheduleCancelDualWrite(booking.slotId, booking.clientId, () =>
+      scheduleCancelDualWrite(booking.slotId, booking.clientId, booking.serverRev ?? null, () =>
         get().showToast("Отмена не сохранилась на сервере. Сообщите тренеру, чтобы место освободили."),
       ),
     );

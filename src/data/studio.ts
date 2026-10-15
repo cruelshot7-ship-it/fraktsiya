@@ -196,6 +196,8 @@ export type Booking = {
   date: string;
   time: string;
   duration: number;
+  /** Версия записи в Neon из ответа при записи; нужна, чтобы отмена не задела повторную запись. */
+  serverRev?: string;
   held?: boolean;
   /** id of the session hold ledger entry that paid for this booking */
   holdId?: string;

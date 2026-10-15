@@ -23,7 +23,7 @@ const BookInput = z.object({
 });
 
 export type BookSlotResponse =
-  | { ok: true; bookingId: string }
+  | { ok: true; bookingId: string; rev: string }
   | { ok: false; reason: string };
 
 /** Тренер-coach на паузе или истёк: записывать на его слоты нельзя. */
@@ -115,10 +115,12 @@ const CancelInput = z.object({
   initData: z.string().min(1),
   slotId: z.string().min(1).max(120),
   clientId: z.string().min(1).max(120),
+  /** Версия записи из ответа bookSlotFn. Без неё отмена безусловная (старые записи). */
+  rev: z.string().min(1).max(40).optional(),
 });
 
 export type CancelBookingResponse =
-  | { ok: true; cancelled: boolean }
+  | { ok: true; cancelled: boolean; stale?: boolean }
   | { ok: false; reason: string };
 
 /** Отмена записи в Neon. Права — canCancelBooking: клиент — своя запись, тренер — запись на его слот. */
@@ -142,9 +144,14 @@ export const cancelBookingFn = createServerFn({ method: "POST" })
         ownerCoachId: owner,
       });
       if (!allowed) return { ok: false, reason: "forbidden" };
-      const res = await cancelBookingCore(sql, { slotId: data.slotId, clientId: data.clientId, actorId: session.user.id });
+      const res = await cancelBookingCore(sql, {
+        slotId: data.slotId,
+        clientId: data.clientId,
+        actorId: session.user.id,
+        expectedRev: data.rev ?? null,
+      });
       if (!res.ok) return { ok: false, reason: res.reason };
-      return { ok: true, cancelled: res.cancelled };
+      return { ok: true, cancelled: res.cancelled, ...(res.stale ? { stale: true } : {}) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[cancel] failed:", msg);

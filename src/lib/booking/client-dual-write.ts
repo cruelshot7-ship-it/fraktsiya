@@ -39,10 +39,11 @@ export function scheduleBookDualWrite(
       }
       if (res.ok && res.bookingId) {
         const serverId = res.bookingId;
+        const serverRev = res.rev;
         const s = useStudio.getState();
         const bookings = s.bookings.map((b) => {
-          if (b.slotId === slot.id && b.clientId === clientId && b.id !== serverId) {
-            return { ...b, id: serverId };
+          if (b.slotId === slot.id && b.clientId === clientId) {
+            return { ...b, id: serverId, serverRev };
           }
           return b;
         });

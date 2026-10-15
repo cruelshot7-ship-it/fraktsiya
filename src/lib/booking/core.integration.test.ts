@@ -110,6 +110,25 @@ describe("bookSlotCore on Postgres", { skip: DB_URL ? false : "TEST_DATABASE_URL
     assert.equal((await bookSlotCore(sql, { slotId, clientId: "tg_cancel_b" })).ok, true);
   });
 
+  it("stale cancel after a rebook does not cancel the new seat", async () => {
+    const slotId = await newSlot(1);
+    const first = await bookSlotCore(sql, { slotId, clientId: "tg_rebook" });
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    // клиент отменил (версия первой записи), потом записался заново
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_rebook", expectedRev: first.rev }), { ok: true, cancelled: true });
+    const second = await bookSlotCore(sql, { slotId, clientId: "tg_rebook" });
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.notEqual(second.rev, first.rev);
+    // повтор старой отмены приходит уже после новой записи
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_rebook", expectedRev: first.rev }), { ok: true, cancelled: false, stale: true });
+    const rows = await sql.query<{ status: string }>("select status from slot_bookings where slot_id = $1 and client_id = $2", [slotId, "tg_rebook"]);
+    assert.equal(rows[0]?.status, "confirmed");
+    // отмена с актуальной версией работает
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_rebook", expectedRev: second.rev }), { ok: true, cancelled: true });
+  });
+
   it("attended booking cannot be cancelled", async () => {
     const slotId = await newSlot(1);
     assert.equal((await bookSlotCore(sql, { slotId, clientId: "tg_att" })).ok, true);
