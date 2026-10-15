@@ -67,6 +67,7 @@ import { mergeBookingFlags, unionIds } from "@/lib/studio-merge";
 import { COACH_TIERS_TEXT } from "@/lib/coach-tier";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
+import { mergeChecks } from "@/lib/checks-merge";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "today" | "schedule" | "program" | "programs" | "progress" | "more" | "slots" | "bookings" | "food" | "form" | "hall" | "clients" | "signals";
@@ -442,10 +443,7 @@ function mergeClientCloudPayload(
     for (const r of loc) map.set(r.id, r);
     return [...map.values()];
   };
-  const checks: Record<string, string[]> = { ...(payload.checks ?? {}) };
-  for (const [k, v] of Object.entries(local.checks ?? {})) {
-    if (v?.length) checks[k] = v;
-  }
+  const checks = mergeChecks(local.checks ?? {}, payload.checks ?? {});
   const bookingMap = new Map((payload.bookings ?? []).map((b) => [b.id, b]));
   for (const b of local.bookings) {
     const prev = bookingMap.get(b.id);
@@ -1561,9 +1559,8 @@ export const useStudio = create<State>((set, get) => ({
       clientId: get().activeClientId,
     };
     const food = [...get().food, entry];
-    const clients = get().clients.map((c) =>
-      c.id === entry.clientId ? { ...c, lastReportAt: todayIso(), streak: c.streak + (c.lastReportAt === todayIso() ? 0 : 1) } : c,
-    );
+    // серия считается от визитов (clientStreak), запись еды её не двигает
+    const clients = get().clients.map((c) => (c.id === entry.clientId ? { ...c, lastReportAt: todayIso() } : c));
     set({ food, clients });
     persist(snap(get()));
   },
@@ -1578,9 +1575,7 @@ export const useStudio = create<State>((set, get) => ({
     };
     const food = [...get().food, entry];
     const clients = get().clients.map((c) =>
-      c.id === entry.clientId
-        ? { ...c, lastReportAt: todayIso(), streak: c.streak + (c.lastReportAt === todayIso() ? 0 : 1) }
-        : c,
+      c.id === entry.clientId ? { ...c, lastReportAt: todayIso() } : c,
     );
     set({ food, clients });
     persist(snap(get()));
@@ -1698,7 +1693,7 @@ export const useStudio = create<State>((set, get) => ({
     const key = `${id}:${todayIso()}`;
     const current = [...new Set((get().checks[key] ?? []).map((m) => rewrite?.[m] ?? m))];
     const next = current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
-    set({ checks: { ...get().checks, [key]: next } });
+    set({ checks: { ...get().checks, [key]: next, [`${key}:at`]: [String(Date.now())] } });
     persist(snap(get()));
   },
 
@@ -1708,7 +1703,8 @@ export const useStudio = create<State>((set, get) => ({
     const setKey = `${id}:${today}:sets`;
     const blockKey = `${id}:${today}`;
     const next = applySetMark(get().checks[setKey] ?? [], get().checks[blockKey] ?? [], blockId, index, total, on);
-    set({ checks: { ...get().checks, [setKey]: next.marks, [blockKey]: next.checked } });
+    // метка правки: слияние с копией тренера или клиента берёт более свежий день целиком (checks-merge.ts)
+    set({ checks: { ...get().checks, [setKey]: next.marks, [blockKey]: next.checked, [`${blockKey}:at`]: [String(Date.now())] } });
     persist(snap(get()));
   },
 
@@ -1750,9 +1746,7 @@ export const useStudio = create<State>((set, get) => ({
     };
     const nextLogs = [log, ...workoutLogs.filter((w) => !(w.clientId === client.id && w.date === today))].slice(0, 60);
     const nextClients = clients.map((c) =>
-      c.id === client.id
-        ? { ...c, lastReportAt: today, streak: c.streak + (c.lastReportAt === today ? 0 : 1) }
-        : c,
+      c.id === client.id ? { ...c, lastReportAt: today } : c,
     );
     const nextBookings = booking && !booking.checkedIn
       ? get().bookings.map((b) => (b.id === booking.id ? { ...b, checkedIn: true, noShow: false } : b))

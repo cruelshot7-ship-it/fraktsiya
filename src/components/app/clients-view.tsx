@@ -31,6 +31,7 @@ import {
   shortName,
   startOfWeek,
   visitDatesOf,
+  clientStreak,
   visitSession,
   type Client,
 } from "@/data/studio";
@@ -348,7 +349,7 @@ export function ClientsView() {
                     tone={flag.tone === "alert" ? "alert" : "ok"}
                   />
                   <p className="mt-1 text-tiny text-muted-foreground">
-                    {flag.eaten.calories} из {dayKbju(client, today, bookings).kbju.calories} ккал · серия {client.streak}
+                    {flag.eaten.calories} из {dayKbju(client, today, bookings).kbju.calories} ккал · серия {clientStreak(client, bookings, visits, today)}
                   </p>
                 </div>
               </div>

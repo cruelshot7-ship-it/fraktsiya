@@ -21,6 +21,7 @@ import { guardBodyFields, guardRows, healthWriteAllowed } from "@/lib/health-wri
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
 import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
+import { dropCheckIds, mergeChecks } from "@/lib/checks-merge";
 import {
   clientCoach,
   coachKey,
@@ -475,10 +476,8 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
       current.notices.filter((n) => !n.clientId || !oldIds.has(n.clientId)),
       (incoming.notices ?? []).filter((n) => n.clientId && myIds.has(n.clientId)),
     ).slice(0, 40),
-    checks: {
-      ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => ![...oldIds].some((id) => k.startsWith(`${id}:`)))),
-      ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => [...myIds].some((id) => k.startsWith(`${id}:`)))),
-    },
+    // отметки дня: побеждает более свежая правка (checks-merge.ts), а не копия тренера целиком
+    checks: mergeChecks(dropCheckIds(current.checks, new Set([...oldIds].filter((id) => !myIds.has(id)))), incoming.checks ?? {}, myIds),
     joinRequests: mergeById(
       (current.joinRequests ?? []).filter((r) => coachKey(r.coachId) !== mine),
       (incoming.joinRequests ?? [])
@@ -705,10 +704,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...current.workoutLogs.filter((w) => w.clientId !== id),
       ...incoming.workoutLogs.filter((w) => w.clientId === id),
     ],
-    checks: {
-      ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => !k.startsWith(`${id}:`))),
-      ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => k.startsWith(`${id}:`))),
-    },
+    checks: mergeChecks(current.checks, incoming.checks ?? {}, new Set([id])),
     visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([id])),
     dismissedSignalIds: ownDismissed(
       current.dismissedSignalIds ?? [],

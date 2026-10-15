@@ -6,6 +6,7 @@ export { studioToday };
 import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 import { blocksFromItems, type ProgramBlock, type ProgramPhase } from "@/lib/program-blocks";
 import { programProgress, visitsBefore } from "@/lib/program-status";
+import { currentStreak, nextVisitIso, slotInLabel } from "@/lib/program-screen";
 export type { ProgramBlock } from "@/lib/program-blocks";
 export const TRAINER_TG_ID = "8144320404";
 
@@ -908,12 +909,6 @@ export function countdownLabel(date: string, time: string) {
   return `через ${days} ${daysRu(days)}`;
 }
 
-export function weekVisitCount(bookings: Booking[], clientId: string, from = new Date()) {
-  const start = isoDate(startOfWeek(from));
-  const end = isoDate(addDays(startOfWeek(from), 7));
-  return bookings.filter((b) => b.clientId === clientId && b.date >= start && b.date < end).length;
-}
-
 export function scaleKbju(per100: Kbju, grams: number): Kbju {
   const k = Math.max(1, grams) / 100;
   const n = (v: number) => Math.round(v * k * 10) / 10;
@@ -947,66 +942,94 @@ export type MotiveCtx = {
   checks: number;
   totalItems: number;
   frozen: boolean;
+  streak: number;
+  /** тексты для клиента обращены на «ты», для тренера — нейтральные */
+  viewer: "client" | "trainer";
 };
 
 export function motiveFor(ctx: MotiveCtx): Motive {
-  const { client, trainDay, checkedIn, hoursToSession, foodCount, workout, checks, totalItems, frozen } = ctx;
+  const { trainDay, checkedIn, hoursToSession, foodCount, workout, checks, totalItems, frozen, streak } = ctx;
+  const you = ctx.viewer === "trainer";
   if (frozen) {
-    return { kicker: "Пауза", line: "Заморозка по правилам. Ритм не сломан — он стоит на паузе." };
+    return {
+      kicker: "Пауза",
+      line: you ? "Заморозка по правилам. Программа на паузе." : "Заморозка по правилам. Ритм не сломан — он стоит на паузе.",
+    };
   }
   if (workout) {
     return {
       kicker: "Смена закрыта",
-      line: `${workout.kcal} ккал за работу. Дальше еда и сон — это тоже тренировка.`,
+      line: you
+        ? `${workout.kcal} ккал за работу.`
+        : `${workout.kcal} ккал за работу. Дальше еда и сон — это тоже тренировка.`,
     };
   }
   if (checkedIn && checks === 0) {
-    return { kicker: "Ты в зале", line: "Первый подход закрывает день. Не торгуйся с разминкой." };
+    return {
+      kicker: you ? "В зале" : "Ты в зале",
+      line: you ? "Подходы ещё не отмечены." : "Первый подход закрывает день. Не торгуйся с разминкой.",
+    };
   }
   if (checks > 0 && checks < totalItems) {
     return {
       kicker: "В работе",
-      line: `Ещё ${totalItems - checks}. Не договаривайся с собой на «завтра доделаю».`,
+      line: you
+        ? `Отмечено ${checks} из ${totalItems}.`
+        : `Ещё ${totalItems - checks}. Не договаривайся с собой на «завтра доделаю».`,
     };
   }
   if (trainDay && hoursToSession !== null && hoursToSession > 0 && hoursToSession < 3) {
-    return { kicker: "Скоро слот", line: "Через пару часов ты уже под грифом. Собери форму сейчас." };
+    const when = slotInLabel(hoursToSession);
+    return {
+      kicker: "Скоро слот",
+      line: you ? `Слот через ${when}. Явка пока не отмечена.` : `Слот через ${when}. Собери форму сейчас.`,
+    };
   }
   if (trainDay && !checkedIn) {
-    return { kicker: "День явки", line: "Слот стоит. Мотивация не нужна — нужна явка." };
+    return {
+      kicker: "День явки",
+      line: you ? "Слот на сегодня, явка не отмечена." : "Слот стоит. Мотивация не нужна — нужна явка.",
+    };
   }
   if (!trainDay) {
-    return { kicker: "Восстановление", line: "Сегодня не лень. Сегодня это заложено в программу." };
+    return {
+      kicker: "Восстановление",
+      line: you ? "День без тренировки по расписанию." : "Сегодня не лень. Сегодня это заложено в программу.",
+    };
   }
   if (foodCount === 0) {
-    return { kicker: "Дневник", line: "Один скан штрихкода — и день уже в плюсе. Курс держит дневник." };
+    return {
+      kicker: "Дневник",
+      line: you ? "Записей еды за сегодня нет." : "Один скан штрихкода — и день уже в плюсе. Курс держит дневник.",
+    };
   }
-  if (client.streak >= 3) {
-    return { kicker: `Серия ${client.streak}`, line: "Ритм уже держит тебя. Не геройство — явка." };
+  if (streak >= 3) {
+    return {
+      kicker: `Серия ${streak}`,
+      line: you ? `${streak} визитов подряд.` : "Ритм уже держит тебя. Не геройство — явка.",
+    };
   }
-  return { kicker: "Дисциплина", line: "Серия начинается с явки, не с настроения." };
+  return {
+    kicker: "Дисциплина",
+    line: you ? "Серия идёт от визитов." : "Серия начинается с явки, не с настроения.",
+  };
 }
 
 export type DayRitual = {
-  hall: boolean;
+  /** визит: отметка «Я на месте» или отметка тренера; в день отдыха — сразу выполнено */
+  visit: boolean;
+  workout: boolean;
   food: boolean;
-  report: boolean;
   restDay: boolean;
   done: number;
 };
 
-export function dayRitual(opts: {
-  trainDay: boolean;
-  checkedIn: boolean;
-  workout: boolean;
-  foodCount: number;
-  reportedToday: boolean;
-}): DayRitual {
+export function dayRitual(opts: { trainDay: boolean; arrived: boolean; workout: boolean; foodCount: number }): DayRitual {
   const restDay = !opts.trainDay;
-  const hall = opts.checkedIn || opts.workout || restDay;
+  const visit = opts.arrived || restDay;
   const food = opts.foodCount > 0;
-  const report = opts.reportedToday || food || opts.workout;
-  return { hall, food, report, restDay, done: [hall, food, report].filter(Boolean).length };
+  const workout = opts.workout;
+  return { visit, workout, food, restDay, done: [visit, workout, food].filter(Boolean).length };
 }
 
 export function bookingIcs(booking: { date: string; time: string; duration: number }, title = "Тренировка · Ruksha") {
@@ -1226,13 +1249,14 @@ export function programFinished(client: Client, iso: string) {
   return programStatus(client, iso).finished;
 }
 
-export function nextTrainDate(client: Client, from = new Date()) {
-  for (let i = 0; i < 14; i += 1) {
-    const d = addDays(from, i);
-    const dow = (d.getDay() + 6) % 7;
-    if (client.trainDays.includes(dow)) return isoDate(d);
-  }
-  return isoDate(from);
+/** Ближайший тренировочный день клиента (по расписанию или по записи); null, если его нет в горизонте. */
+export function nextTrainDate(client: Client, bookings: Booking[] = [], from = isoDate(new Date())): string | null {
+  return nextVisitIso((iso) => isTrainDay(client, iso, bookings), from);
+}
+
+/** Серия клиента: подряд идущие тренировочные дни с визитом (см. program-screen.ts). */
+export function clientStreak(client: Client, bookings: Booking[], visits: Visit[], today: string): number {
+  return currentStreak(visitDatesOf(client.id, bookings, visits), (iso) => isTrainDay(client, iso, bookings), today);
 }
 
 export function emptyClient(): Client {
