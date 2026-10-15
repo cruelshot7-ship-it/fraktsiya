@@ -14,16 +14,22 @@ export function mapsRouteUrl(destination: string, provider: "yandex" | "google" 
 }
 
 export type MapAppLink = { label: string; url: string };
+export type Venue = { name: string; yandexOrgUrl?: string };
 
 /**
- * Кнопки маршрута для адреса зала: Яндекс и Google. Яндекс Навигатор отдельно не даём:
+ * Кнопки маршрута: Яндекс Карты и Google Maps. С известным залом (venue) Яндекс открывает его карточку,
+ * а Google ведёт до «название, адрес». Без зала — поиск по адресу. Яндекс Навигатор не даём:
  * схема yandexnavi:// для маршрута по тексту адреса не подтверждена документацией.
  */
-export function mapsAppLinks(address: string): MapAppLink[] {
-  const url = (provider: "yandex" | "google") => mapsRouteUrl(address, provider);
-  if (!address.trim()) return [];
+export function mapsAppLinks(address: string, venue?: Venue): MapAppLink[] {
+  const q = address.trim();
+  if (!q) return [];
+  const place = venue?.name ? `${venue.name}, ${q}` : q;
   return [
-    { label: "Яндекс Карты", url: url("yandex") },
-    { label: "Google Maps", url: url("google") },
+    {
+      label: "Яндекс Карты",
+      url: venue?.yandexOrgUrl ?? `https://yandex.ru/maps/?text=${encodeURIComponent(place)}`,
+    },
+    { label: "Google Maps", url: mapsRouteUrl(place, "google") },
   ];
 }

@@ -1,10 +1,13 @@
+import { DEFAULT_NOTIFY, STUDIO_VENUE } from "@/data/studio";
 import { mapsAppLinks } from "@/lib/maps-link";
 import { openTelegramUrl } from "@/lib/telegram";
 import { cn } from "@/lib/utils";
 
 /** Кнопки «Маршрут» в выбранное приложение карт. Пусто, если адреса нет. */
 export function MapRouteButtons({ address, variant = "secondary" }: { address: string; variant?: "primary" | "secondary" }) {
-  const links = mapsAppLinks(address);
+  // карточка зала — только для адреса самого зала; для другого адреса ищем по тексту
+  const venue = address.trim() === DEFAULT_NOTIFY.address ? STUDIO_VENUE : undefined;
+  const links = mapsAppLinks(address, venue);
   if (links.length === 0) return null;
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">

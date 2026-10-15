@@ -76,6 +76,13 @@ export const STUDIO = {
 };
 
 
+/** Зал: карточка в Яндекс Картах для кнопки маршрута. Адрес по умолчанию — DEFAULT_NOTIFY.address. */
+export const STUDIO_VENUE = {
+  name: "Titan",
+  address: "Гродно, Лидская 1",
+  yandexOrgUrl: "https://yandex.ru/maps/org/198928680684",
+};
+
 export const DOW = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"] as const;
 export const DOW_LONG = [
   "Понедельник",

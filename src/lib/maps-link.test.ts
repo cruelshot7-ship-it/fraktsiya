@@ -27,6 +27,12 @@ describe("mapsRouteUrl", () => {
     assert.ok(links.every((l) => l.url.includes(encodeURIComponent("Гродно, Лидская 1"))));
   });
 
+  it("known venue: yandex opens its card, google routes to name + address", () => {
+    const links = mapsAppLinks("Гродно, Лидская 1", { name: "Titan", yandexOrgUrl: "https://yandex.ru/maps/org/198928680684" });
+    assert.equal(links[0].url, "https://yandex.ru/maps/org/198928680684");
+    assert.ok(links[1].url.includes(encodeURIComponent("Titan, Гродно, Лидская 1")));
+  });
+
   it("no address → no buttons", () => {
     assert.deepEqual(mapsAppLinks("   "), []);
   });
