@@ -6,6 +6,7 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { MenuDay } from "@/components/app/menu-day";
+import { FEATURES } from "@/lib/features";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
 import { FoodReferencePanel } from "@/components/app/food-reference-panel";
 import { cn } from "@/lib/utils";
@@ -204,12 +205,12 @@ function NutritionContent({ client }: { client: Client }) {
         </p>
       </Surface>
 
-      {tomorrowReady ? (
+      {FEATURES.menuDay && tomorrowReady ? (
         <p className="px-1 text-tiny text-muted-foreground">Меню на завтра готово: листайте дату в блоке ниже ›</p>
       ) : null}
 
       {/* 2. Меню дня от тренера */}
-      <MenuDay client={client} bookings={bookings} />
+      {FEATURES.menuDay ? <MenuDay client={client} bookings={bookings} /> : null}
 
       {/* 3. Дневник по приёмам с подытогом */}
       <Surface>

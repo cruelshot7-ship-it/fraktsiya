@@ -8,6 +8,7 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { BOT_USERNAME, sessionsRu } from "@/data/studio";
 import { referralStart } from "@/lib/referral";
 import { inviteUrl } from "@/lib/telegram";
+import { FEATURES } from "@/lib/features";
 
 type Sub = "menu" | "form" | "hall" | "privacy" | "policy";
 
@@ -129,6 +130,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
         </Surface>
       </button>
 
+      {FEATURES.hall ? (
       <button type="button" className="pressable w-full text-left" onClick={() => setSub("hall")}>
         <Surface className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -138,6 +140,7 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </Surface>
       </button>
+      ) : null}
 
 
       {referralUrl ? (
