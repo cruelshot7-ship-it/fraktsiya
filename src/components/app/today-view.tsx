@@ -1,14 +1,11 @@
 import { cn } from "@/lib/utils";
-import { FEATURES } from "@/lib/features";
 import { confirmAction } from "@/lib/confirm";
 import { useMemo, useState } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
-import { PaymentsView } from "@/components/app/payments-view";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
 import { balanceSummary } from "@/lib/balance-summary";
-import { monthLabel, monthOf, revenueForMonth } from "@/lib/payments";
 import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
@@ -50,12 +47,9 @@ export function TodayView() {
   const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
-  const [showPayments, setShowPayments] = useState(false);
 
   /** занятия по клиентам тренера: остатки и пакеты, которые скоро закончатся */
   const balance = useMemo(() => balanceSummary(clients, today), [clients, today]);
-  /** оплаты тренера за текущий месяц, BYN */
-  const revenue = useMemo(() => revenueForMonth(clients, monthOf(today)), [clients, today]);
 
   const visit = useMemo(() => {
     if (!me) return null;
@@ -75,9 +69,6 @@ export function TodayView() {
     return { next, todayDone, eatenToday, gap };
   }, [me, bookings, food, today]);
 
-  if (role === "trainer" && showPayments) {
-    return <PaymentsView clients={clients} initialMonth={monthOf(today)} onBack={() => setShowPayments(false)} />;
-  }
 
   if (role === "trainer") {
     const todayRows = bookings
@@ -315,15 +306,6 @@ export function TodayView() {
               </p>
             </button>
           </div>
-          {FEATURES.payments ? (
-          <button type="button" className="apple-block pressable p-4 text-left" onClick={() => setShowPayments(true)}>
-            <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
-            <p className="mt-1 font-display text-2xl tabular-nums leading-none">
-              {revenue.sum.toLocaleString("ru-RU")} <span className="text-base font-sans text-muted-foreground">BYN</span>
-            </p>
-            <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
-          </button>
-          ) : null}
         </div>
       </div>
     );

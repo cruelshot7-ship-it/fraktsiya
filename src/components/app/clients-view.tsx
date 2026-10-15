@@ -44,7 +44,6 @@ import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
 import { Fold } from "@/components/app/fold";
 import { MenuDay } from "@/components/app/menu-day";
-import { PaymentPanel } from "@/components/app/payment-panel";
 import { FEATURES } from "@/lib/features";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { coachTierLine } from "@/lib/coach-tier";
@@ -959,7 +958,6 @@ function ClientSheetBody({
               )}
             </Surface>
 
-            {FEATURES.payments ? <PaymentPanel key={client.id} client={client} /> : null}
 
             {healthOk ? (
             <>
