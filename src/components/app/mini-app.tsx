@@ -19,6 +19,7 @@ import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { TemplatesPanel } from "@/components/app/templates-panel";
 import { JoinGate } from "@/components/app/join-gate";
 import { TrainerNote } from "@/components/app/trainer-note";
+import { ClientNoticeSheet } from "@/components/app/client-notice-sheet";
 import { GuestPreview } from "@/components/app/guest-preview";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
@@ -188,6 +189,7 @@ export function MiniApp() {
       <HapticLayer />
       <div className="ambient-glow app-frame relative flex w-full max-w-app flex-col overflow-hidden">
         <Toast message={toast} />
+        <ClientNoticeSheet />
 
         {sheetClientId ? null : (
         <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>

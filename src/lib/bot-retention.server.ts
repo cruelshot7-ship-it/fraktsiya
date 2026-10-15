@@ -58,6 +58,13 @@ export async function closeBotMessage(chatId: string | number, messageId: number
   }
 }
 
+/** Удаляет сообщение бота сейчас (например, после открытия одноразового уведомления) и закрывает его запись. */
+export async function deleteBotMessageNow(chatId: string | number, messageId: number, now = new Date()): Promise<boolean> {
+  const outcome = await deleteInTelegram(String(chatId), messageId);
+  if (outcome.ok) await closeBotMessage(chatId, messageId, now);
+  return outcome.ok;
+}
+
 async function deleteInTelegram(chatId: string, messageId: number): Promise<DeleteOutcome> {
   const { env } = await import("@/lib/env.server");
   const tok = env("BOT_TOKEN");

@@ -1119,7 +1119,7 @@ export const sendBotLinkFn = createServerFn({ method: "POST" })
     // F-08: только свои клиенты, не на паузе, только числовой id
     if (!session || !canSendBotLinkRule(current, session.user, data.telegramId)) return { ok: false };
     const bot = await import("@/lib/telegram-bot.server");
-    const res = await bot.sendBotLink(data.telegramId, data.text);
+    const res = await bot.sendClientNotice(data.telegramId, data.text);
     return { ok: Boolean(res.ok) };
   });
 
