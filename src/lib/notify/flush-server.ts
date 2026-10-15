@@ -36,7 +36,7 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<FlushResult> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const { checkFlushEvent } = await import("@/lib/notify/flush-rules");
-    const { sendBotLink } = await import("@/lib/telegram-bot.server");
+    const { sendClientNotice } = await import("@/lib/telegram-bot.server");
     const auth = verifyTelegramInitData(data.initData);
     const session = auth ? { role: auth.role, userId: auth.user.id } : null;
 
@@ -59,7 +59,7 @@ export const flushOutboxServerFn = createServerFn({ method: "POST" })
       let ok = false;
       let error: string | undefined;
       try {
-        const r = await sendBotLink(telegramId, text);
+        const r = await sendClientNotice(telegramId, text);
         ok = Boolean(r && (r as { ok?: boolean }).ok !== false);
         error = (r as { description?: string })?.description;
       } catch (err) {

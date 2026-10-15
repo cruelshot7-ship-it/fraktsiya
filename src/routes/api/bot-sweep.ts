@@ -19,7 +19,10 @@ export const Route = createFileRoute("/api/bot-sweep")({
         }
         const { sweepBotMessages } = await import("@/lib/bot-retention.server");
         const result = await sweepBotMessages(new Date(), 100);
-        return Response.json({ ok: true, ...result });
+        // неоткрытые уведомления после срока удаляются вместе с текстом
+        const { purgeExpiredNotices } = await import("@/lib/client-notices.server");
+        const purged = await purgeExpiredNotices(new Date());
+        return Response.json({ ok: true, ...result, purged });
       },
     },
   },

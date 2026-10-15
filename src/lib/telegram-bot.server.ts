@@ -499,6 +499,29 @@ export async function sendBotLink(telegramId: string, text: string) {
   return sent;
 }
 
+/**
+ * Уведомление клиенту: текст не попадает в чат. Сохраняем его, в чат уходит кнопка «Открыть сообщение».
+ * Открытие в приложении стирает текст и удаляет кнопку (client-notices.ts). Если сохранить не удалось, не отправляем.
+ */
+export async function sendClientNotice(telegramId: string, text: string) {
+  const { createClientNotice, setNoticeChatMessage } = await import("@/lib/client-notices.server");
+  const { noticeStartParam } = await import("@/lib/notice-rules");
+  const id = await createClientNotice(telegramId, text, new Date());
+  if (id === null) return { ok: false, description: "notice-store" };
+  const sent = await tg("sendMessage", {
+    chat_id: telegramId,
+    text: "У вас новое сообщение от тренера. Оно откроется в приложении один раз.",
+    reply_markup: {
+      inline_keyboard: [[{ text: "Открыть сообщение", web_app: { url: `${APP_URL}?startapp=${noticeStartParam(id)}` } }]],
+    },
+    protect_content: true,
+  });
+  const messageId = messageIdOf(sent);
+  if (messageId !== undefined) await setNoticeChatMessage(id, messageId);
+  await recordBotMessage(telegramId, messageId, "notify");
+  return sent;
+}
+
 let remindBusy = false;
 
 /**
