@@ -47,7 +47,7 @@ export const BARCODE_CATALOG: Record<string, Omit<ScanProduct, "source" | "barco
   },
   "2000000000012": {
     name: "Протеин-шейк студии",
-    brand: "Ruksha",
+    brand: "Discipline",
     per100: { calories: 80, protein: 10.7, fat: 1.3, carbs: 6 },
   },
 };
