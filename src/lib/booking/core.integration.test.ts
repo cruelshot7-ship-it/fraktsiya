@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Pool } from "pg";
 import { sqlFromPool, type Sql } from "../db-adapters.ts";
-import { bookSlotCore, clientCreateSpec, slotOwnerOf } from "./core.ts";
+import { bookSlotCore, cancelBookingCore, clientCreateSpec, slotOwnerOf } from "./core.ts";
 
 const DB_URL = process.env.TEST_DATABASE_URL?.trim() || "";
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "migrations");
@@ -93,12 +93,28 @@ describe("bookSlotCore on Postgres", { skip: DB_URL ? false : "TEST_DATABASE_URL
     const slotId = "2026-12-03_18:00";
     await sql.query("delete from slot_bookings where slot_id = $1", [slotId]);
     await sql.query("delete from training_slots where id = $1", [slotId]);
-    const create = clientCreateSpec({ slotId, trainerId: OWNER, clientCapacity: 1 });
+    const create = clientCreateSpec({ slotId, trainerId: OWNER });
     const res = await bookSlotCore(sql, { slotId, clientId: "tg_first", create });
     assert.equal(res.ok, true);
     assert.equal(await slotOwnerOf(sql, slotId), OWNER);
     const rows = await sql.query<{ starts_at: string }>("select starts_at::text from training_slots where id = $1", [slotId]);
     assert.match(rows[0].starts_at, /^2026-12-03 18:00:00/);
+  });
+
+  it("cancel frees the seat in Neon: the next client gets it; a repeat cancel is a no-op", async () => {
+    const slotId = await newSlot(1);
+    assert.equal((await bookSlotCore(sql, { slotId, clientId: "tg_cancel_a" })).ok, true);
+    assert.deepEqual(await bookSlotCore(sql, { slotId, clientId: "tg_cancel_b" }), { ok: false, reason: "full" });
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_cancel_a" }), { ok: true, cancelled: true });
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_cancel_a" }), { ok: true, cancelled: false });
+    assert.equal((await bookSlotCore(sql, { slotId, clientId: "tg_cancel_b" })).ok, true);
+  });
+
+  it("attended booking cannot be cancelled", async () => {
+    const slotId = await newSlot(1);
+    assert.equal((await bookSlotCore(sql, { slotId, clientId: "tg_att" })).ok, true);
+    await sql.query("update slot_bookings set status = 'attended' where slot_id = $1", [slotId]);
+    assert.deepEqual(await cancelBookingCore(sql, { slotId, clientId: "tg_att" }), { ok: false, reason: "already-attended" });
   });
 
   it("two seats: first two clients book, third gets full", async () => {

@@ -1349,6 +1349,12 @@ export const useStudio = create<State>((set, get) => ({
     const { bookings, clients, notices, role, notifyPrefs, waitlist, slots } = get();
     const booking = bookings.find((b) => b.id === id);
     if (!booking) return;
+    // место освобождаем и в Neon; при отказе сервера пользователь увидит предупреждение
+    void import("@/lib/booking/cancel-dual-write").then(({ scheduleCancelDualWrite }) =>
+      scheduleCancelDualWrite(booking.slotId, booking.clientId, () =>
+        get().showToast("Отмена не сохранилась на сервере. Сообщите тренеру, чтобы место освободили."),
+      ),
+    );
     const who = clients.find((c) => c.id === booking.clientId);
     const actor: Role = by ?? role;
     const hours = hoursUntilSlot(booking.date, booking.time);

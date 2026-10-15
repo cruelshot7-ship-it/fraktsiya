@@ -6,9 +6,11 @@
  * - расчёт мест идёт в одной транзакции на одном соединении (`sql.transaction`);
  * - `pg_advisory_xact_lock` по slotId сериализует конкурирующие записи на одно место;
  * - строку слота создаёт только `create`, а его собирает сервер (см. `clientCreateSpec`),
- *   а не произвольные поля из запроса клиента.
+ *   а не произвольные поля из запроса клиента;
+ * - отмена (`cancelBookingCore`) пишет статус в Neon под той же блокировкой, что и запись.
  */
 import type { Sql } from "../db-adapters";
+import { capacityFor } from "../slot-rules";
 
 export type CreateSpec = {
   ownerCoachId: string;
@@ -50,15 +52,14 @@ const clampInt = (value: number, min: number, max: number, fallback: number) => 
 /**
  * Какой слот клиент может создать при первой записи (слота в БД ещё нет).
  * - Дополнительный слот тренера (`extra`) — все поля берём из сохранённых данных тренера.
- * - Слот по умолчанию — владелец всегда тренер, дата и время из id. Ёмкость — от клиента
- *   (в пределах 1..100): расписание по умолчанию сервер не хранит. Это остаточный риск, см. PR.
+ * - Слот по умолчанию — владелец всегда тренер, дата и время из id. Ёмкость — по правилам
+ *   расписания (`capacityFor`), а не из запроса клиента.
  * - Всё остальное — null: клиент слот не создаёт.
  */
 export function clientCreateSpec(input: {
   slotId: string;
   trainerId: string;
   extra?: ExtraSlotRow | null;
-  clientCapacity?: number;
 }): CreateSpec | null {
   if (input.extra) {
     const e = input.extra;
@@ -74,7 +75,7 @@ export function clientCreateSpec(input: {
   }
   const m = DEFAULT_SLOT_ID.exec(input.slotId);
   if (!m) return null;
-  const capacity = clampInt(input.clientCapacity ?? 1, 1, 100, 1);
+  const capacity = capacityFor(m[2]);
   return {
     ownerCoachId: input.trainerId,
     startsAt: `${m[1]}T${m[2]}:00`,
@@ -168,3 +169,48 @@ async function insertSlot(sql: Sql, slotId: string, spec: CreateSpec): Promise<v
     ],
   );
 }
+
+/**
+ * Кто может отменить запись. Клиент — только свою (`selfIds`: как у записи на сервере).
+ * Тренер — запись на слот, владелец которого он сам (`ownerCoachId` из training_slots).
+ */
+export function canCancelBooking(input: {
+  role: "client" | "trainer";
+  selfIds: string[];
+  bookingClientId: string;
+  sessionUserId: string;
+  ownerCoachId: string | null;
+}): boolean {
+  if (input.role === "client") return input.selfIds.includes(input.bookingClientId);
+  return input.ownerCoachId !== null && input.ownerCoachId === input.sessionUserId;
+}
+
+export type CoreCancelResult =
+  | { ok: true; cancelled: boolean }
+  | { ok: false; reason: "already-attended" };
+
+/**
+ * Отмена записи в Neon. Без неё место остаётся занятым: подсчёт мест считает все не отменённые строки.
+ * Идемпотентна: повторная отмена и отмена записи, которой нет в Neon, — не ошибка.
+ * Блокировка по slotId та же, что у записи: отмена и запись на одно место не идут параллельно.
+ */
+export async function cancelBookingCore(
+  sql: Sql,
+  input: { slotId: string; clientId: string; actorId?: string | null },
+): Promise<CoreCancelResult> {
+  return sql.transaction(async (tx): Promise<CoreCancelResult> => {
+    await tx.query("select pg_advisory_xact_lock(hashtext($1))", [input.slotId]);
+    const bookingId = bookingIdFor(input.slotId, input.clientId);
+    const rows = await tx.query<{ status: string }>("select status from slot_bookings where id = $1", [bookingId]);
+    if (!rows[0]) return { ok: true, cancelled: false };
+    if (rows[0].status === "cancelled") return { ok: true, cancelled: false };
+    // пришёл или не пришёл — запись уже закрыта занятием, отменять её нельзя
+    if (rows[0].status === "attended" || rows[0].status === "no_show") return { ok: false, reason: "already-attended" };
+    await tx.query(
+      "update slot_bookings set status = 'cancelled', cancelled_at = now(), cancelled_by = $2, updated_at = now() where id = $1",
+      [bookingId, input.actorId ?? null],
+    );
+    return { ok: true, cancelled: true };
+  });
+}
+
