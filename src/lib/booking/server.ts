@@ -23,7 +23,7 @@ const BookInput = z.object({
 });
 
 export type BookSlotResponse =
-  | { ok: true; bookingId: string }
+  | { ok: true; bookingId: string; rev: string }
   | { ok: false; reason: string };
 
 /** Тренер-coach на паузе или истёк: записывать на его слоты нельзя. */
@@ -60,12 +60,7 @@ export const bookSlotFn = createServerFn({ method: "POST" })
           const { loadStudioState } = await import("@/lib/studio-sync");
           const payload = await loadStudioState();
           const extra = (payload.extraSlots ?? []).find((s) => s.id === data.slotId) ?? null;
-          create = clientCreateSpec({
-            slotId: data.slotId,
-            trainerId,
-            extra,
-            clientCapacity: data.capacity,
-          });
+          create = clientCreateSpec({ slotId: data.slotId, trainerId, extra });
           if (!create) return { ok: false, reason: "slot-missing" };
           owner = create.ownerCoachId;
         }
@@ -115,6 +110,54 @@ const ResultInput = z.object({
 export type RecordResultResponse =
   | { ok: true; resultId: string; created: boolean }
   | { ok: false; reason: "no-telegram" | "forbidden" | "booking-missing" | "client-mismatch" | "booking-cancelled" | "no-attendance" | "server-error" | string };
+
+const CancelInput = z.object({
+  initData: z.string().min(1),
+  slotId: z.string().min(1).max(120),
+  clientId: z.string().min(1).max(120),
+  /** Версия записи из ответа bookSlotFn. Без неё отмена безусловная (старые записи). */
+  rev: z.string().min(1).max(40).optional(),
+});
+
+export type CancelBookingResponse =
+  | { ok: true; cancelled: boolean; stale?: boolean }
+  | { ok: false; reason: string };
+
+/** Отмена записи в Neon. Права — canCancelBooking: клиент — своя запись, тренер — запись на его слот. */
+export const cancelBookingFn = createServerFn({ method: "POST" })
+  .validator(CancelInput)
+  .handler(async ({ data }): Promise<CancelBookingResponse> => {
+    const session = verifyTelegramInitData(data.initData);
+    if (!session) return { ok: false, reason: "no-telegram" };
+    try {
+      const { getSql } = await import("@/lib/db");
+      const { cancelBookingCore, canCancelBooking, slotOwnerOf } = await import("@/lib/booking/core");
+      const sql = await getSql();
+      const owner = await slotOwnerOf(sql, data.slotId);
+      // слота нет в Neon — и записи там нет, место занято не может быть
+      if (owner === null) return { ok: true, cancelled: false };
+      const allowed = canCancelBooking({
+        role: session.role === "client" ? "client" : "trainer",
+        selfIds: [`tg_${session.user.id}`, session.user.id],
+        bookingClientId: data.clientId,
+        sessionUserId: session.user.id,
+        ownerCoachId: owner,
+      });
+      if (!allowed) return { ok: false, reason: "forbidden" };
+      const res = await cancelBookingCore(sql, {
+        slotId: data.slotId,
+        clientId: data.clientId,
+        actorId: session.user.id,
+        expectedRev: data.rev ?? null,
+      });
+      if (!res.ok) return { ok: false, reason: res.reason };
+      return { ok: true, cancelled: res.cancelled, ...(res.stale ? { stale: true } : {}) };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[cancel] failed:", msg);
+      return { ok: false, reason: "server-error" };
+    }
+  });
 
 export const recordSessionResultFn = createServerFn({ method: "POST" })
   .validator(ResultInput)
