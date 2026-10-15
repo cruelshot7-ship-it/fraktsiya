@@ -12,8 +12,9 @@ import {
   sessionsRu,
   shortName,
   WEEK_GOAL,
-  weekVisitCount,
+  visitDatesOf,
 } from "@/data/studio";
+import { weekVisitDays } from "@/lib/program-screen";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { mapsUrl } from "@/lib/studio-repeat";
@@ -31,6 +32,7 @@ export function BookingsView() {
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const notifyPrefs = useStudio((s) => s.notifyPrefs);
+  const visits = useStudio((s) => s.visits);
   const me = activeClient({ clients, activeClientId });
   const bookings = role === "trainer" ? all : all.filter((b) => b.clientId === me?.id);
   const inbox = notices.filter((n) => n.audience === "client" && n.clientId === me?.id && !dismissed.includes(n.id));
@@ -42,9 +44,10 @@ export function BookingsView() {
     .filter((b) => isSlotPast(b.date, b.time))
     .sort((a, b) => `${b.date}_${b.time}`.localeCompare(`${a.date}_${a.time}`));
   const next = upcoming[0];
-  const weekVisits = weekVisitCount(all, me?.id ?? "");
   const hoursToNext = next ? hoursUntilSlot(next.date, next.time) : null;
   const today = isoDate(new Date());
+  // визиты, а не записи: будущие и неотмеченные записи в счётчик не входят
+  const weekVisits = weekVisitDays(visitDatesOf(me?.id ?? "", all, visits), today);
 
   if (role === "client" && !me) {
     return <EmptyHint>Записи появятся после того, как тренер добавит вас в зал.</EmptyHint>;

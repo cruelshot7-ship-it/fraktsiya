@@ -21,6 +21,7 @@ import { guardBodyFields, guardRows, healthWriteAllowed } from "@/lib/health-wri
 import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision";
 import { settleOwned, type Balance } from "@/lib/balance";
 import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
+import { dropCheckIds, mergeChecks } from "@/lib/checks-merge";
 import {
   clientCoach,
   coachKey,
@@ -475,10 +476,8 @@ export function mergeCoachPayload(current: StudioPayload, incoming: StudioPayloa
       current.notices.filter((n) => !n.clientId || !oldIds.has(n.clientId)),
       (incoming.notices ?? []).filter((n) => n.clientId && myIds.has(n.clientId)),
     ).slice(0, 40),
-    checks: {
-      ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => ![...oldIds].some((id) => k.startsWith(`${id}:`)))),
-      ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => [...myIds].some((id) => k.startsWith(`${id}:`)))),
-    },
+    // отметки дня: побеждает более свежая правка (checks-merge.ts), а не копия тренера целиком
+    checks: mergeChecks(dropCheckIds(current.checks, new Set([...oldIds].filter((id) => !myIds.has(id)))), incoming.checks ?? {}, myIds),
     joinRequests: mergeById(
       (current.joinRequests ?? []).filter((r) => coachKey(r.coachId) !== mine),
       (incoming.joinRequests ?? [])
@@ -705,10 +704,7 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
       ...current.workoutLogs.filter((w) => w.clientId !== id),
       ...incoming.workoutLogs.filter((w) => w.clientId === id),
     ],
-    checks: {
-      ...Object.fromEntries(Object.entries(current.checks).filter(([k]) => !k.startsWith(`${id}:`))),
-      ...Object.fromEntries(Object.entries(incoming.checks ?? {}).filter(([k]) => k.startsWith(`${id}:`))),
-    },
+    checks: mergeChecks(current.checks, incoming.checks ?? {}, new Set([id])),
     visits: mergeVisits(current.visits ?? [], incoming.visits ?? [], new Set([id])),
     dismissedSignalIds: ownDismissed(
       current.dismissedSignalIds ?? [],
@@ -791,34 +787,35 @@ async function writeBackupDay(day: string) {
       [BACKUP_ID, JSON.stringify({ day })],
     );
   } catch {
-    /* the marker is an optimization; the file is the copy */
+    /* the marker only avoids a repeat digest; losing it sends one extra summary at most */
   }
 }
 
-export async function maybeDailyBackup(payload: StudioPayload) {
+/**
+ * Раз в день тренеру уходит сводка. Копия базы в чат не отправляется: резервные копии — у Neon,
+ * а выгрузка — по кнопке в приложении (studio-export.ts). Маркер дня прежний, чтобы сводка не ушла дважды при выкладке.
+ */
+export async function maybeDailyDigest(payload: StudioPayload) {
   if (backupFlight) return backupFlight;
   backupFlight = (async () => {
     const { env } = await import("@/lib/env.server");
     if (!env("BOT_TOKEN")) return;
     const today = backupDay();
     if (!shouldSendBackup(await readBackupDay(), today)) return;
-    const { sendKeeperCopy, sendMorningNote } = await import("@/lib/studio-remote");
+    const { sendMorningNote } = await import("@/lib/studio-remote");
     const { morningSummary } = await import("@/lib/studio-digest");
-    const ok = await sendKeeperCopy(payload, today);
-    if (ok) {
-      await sendMorningNote(
-        morningSummary({
-          clients: payload.clients,
-          bookings: payload.bookings,
-          visits: payload.visits,
-          food: payload.food,
-          notices: payload.notices,
-          today,
-          absentDays: payload.notifyPrefs.absentDays || 10,
-        }),
-      );
-      await writeBackupDay(today);
-    }
+    const sent = await sendMorningNote(
+      morningSummary({
+        clients: payload.clients,
+        bookings: payload.bookings,
+        visits: payload.visits,
+        food: payload.food,
+        notices: payload.notices,
+        today,
+        absentDays: payload.notifyPrefs.absentDays || 10,
+      }),
+    );
+    if (sent) await writeBackupDay(today);
   })().finally(() => {
     backupFlight = null;
   });
@@ -901,7 +898,7 @@ export async function commitStudioState(payload: StudioPayload) {
     console.error("[studio-backup]", err);
   }
   try {
-    await maybeDailyBackup(next);
+    await maybeDailyDigest(next);
   } catch (err) {
     console.error("[studio-save]", err);
   }

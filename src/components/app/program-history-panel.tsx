@@ -11,19 +11,9 @@ export function ProgramHistoryPanel() {
   const client = activeClient({ clients, activeClientId });
   if (!client) return null;
 
+  // только записи об изменении программы (logProgramChange); прочие уведомления «alert» сюда не относятся
   const fromNotices: ProgramHistoryEntry[] = notices
-    .filter(
-      (n) =>
-        n.clientId === client.id &&
-        (n.title.toLowerCase().includes("програм") ||
-          n.title.toLowerCase().includes("план") ||
-          n.title.toLowerCase().includes("шаблон") ||
-          n.title.toLowerCase().includes("нагрузк") ||
-          n.title.toLowerCase().includes("прогресс") ||
-          n.title.toLowerCase().includes("решени") ||
-          n.kind === "reschedule" ||
-          n.kind === "alert"),
-    )
+    .filter((n) => n.clientId === client.id && n.title === "Программа обновлена")
     .map((n) => ({
       id: n.id,
       clientId: client.id,

@@ -16,11 +16,13 @@ import {
   programWeek,
   sumFood,
   sessionsRu,
+  clientStreak,
+  visitDatesOf,
   visitSession,
   WEEK_GOAL,
-  weekVisitCount,
   workoutKcal,
 } from "@/data/studio";
+import { recentVisitDays, weekVisitDays } from "@/lib/program-screen";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { exerciseOptions, sameExercise } from "@/lib/exercises";
 import {
@@ -153,12 +155,15 @@ export function ProgramView() {
   const week = programWeek(client, today);
   const finished = programFinished(client, today);
   const phase = finished ? undefined : client.programPhases?.[String(week)];
-  const visiting = bookings.some((b) => b.clientId === client.id && b.date === today);
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
-  const weekLoad = bookings.filter((b) => b.clientId === client.id && b.date >= isoDate(new Date(Date.now() - 6 * 86400000))).length;
-  const weekVisits = weekVisitCount(bookings, client.id);
-  const next = nextTrainDate(client);
-  const nextSession = visitSession(client, next, bookings, visits);
+  // визиты — состоявшиеся посещения (checkedIn или «Я на месте»); записи без прихода счётчики не двигают
+  const visitDates = visitDatesOf(client.id, bookings, visits);
+  const weekVisits = weekVisitDays(visitDates, today);
+  const recentVisits = recentVisitDays(visitDates, today);
+  const streak = clientStreak(client, bookings, visits, today);
+  const next = nextTrainDate(client, bookings, today);
+  const nextBook = next ? bookings.find((b) => b.clientId === client.id && b.date === next) : undefined;
+  const nextSession = next ? visitSession(client, next, bookings, visits) : null;
   const hoursToToday = todayBook ? hoursUntilSlot(todayBook.date, todayBook.time) : null;
 
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
@@ -216,11 +221,21 @@ export function ProgramView() {
   const foodCount = food.filter((f) => f.date === today && f.clientId === client.id).length;
   const ritual = dayRitual({
     trainDay,
-    checkedIn: Boolean(todayBook?.checkedIn),
+    arrived,
     workout: Boolean(todayWorkout),
     foodCount,
-    reportedToday: client.lastReportAt === today,
   });
+  const viewer = isTrainer ? "trainer" : "client";
+  // сегодняшний статус визита: записан / в зале; для тренера — без обращения на «вы»
+  const todayStatus = arrived
+    ? isTrainer
+      ? "клиент в зале"
+      : "вы в зале"
+    : todayBook
+      ? isTrainer
+        ? "записан на сегодня"
+        : "вы записаны на сегодня"
+      : "";
   const motive = motiveFor({
     client,
     today,
@@ -232,6 +247,8 @@ export function ProgramView() {
     checks: checked.length,
     totalItems: itemCount,
     frozen: isFrozen(client),
+    streak,
+    viewer,
   });
 
   return (
@@ -239,11 +256,11 @@ export function ProgramView() {
       <Surface glow="ok">
         <SectionLabel>{motive.kicker}</SectionLabel>
         <p className="font-display mt-2 text-xl leading-tight tracking-wide">{motive.line}</p>
-        <p className="mt-2 text-tiny text-muted-foreground">Серия {client.streak} · дисциплина дня {ritual.done}/3</p>
+        <p className="mt-2 text-tiny text-muted-foreground">Серия {streak} · дисциплина дня {ritual.done}/3</p>
         <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <RitualTick on={ritual.hall} label={ritual.restDay ? "отдых" : "зал"} />
+          <RitualTick on={ritual.visit} label={ritual.restDay ? "отдых" : "визит"} />
+          <RitualTick on={ritual.workout} label="тренировка" />
           <RitualTick on={ritual.food} label="еда" />
-          <RitualTick on={ritual.report} label="визит" />
         </div>
       </Surface>
 
@@ -262,24 +279,24 @@ export function ProgramView() {
           <>
             <h2 className="font-display mt-2 text-xl tracking-wide">{session.name}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              {session.focus}
-              {visiting ? " · вы сегодня в зале" : ` · день ${(client.sessions.indexOf(session) + 1)} из ${client.sessions.length}`}
+              {session.focus} · день {client.sessions.indexOf(session) + 1} из {client.sessions.length}
+              {todayStatus ? ` · ${todayStatus}` : ""}
             </p>
           </>
         ) : (
           <>
             <h2 className="font-display mt-2 text-xl tracking-wide">Сегодня не тренировочный</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Ближайший визит {formatDayMonth(next)}
+              {next ? `Ближайший визит ${formatDayMonth(next)}` : "Ближайший визит не назначен"}
               {nextSession ? ` · ${nextSession.name}` : ""}
             </p>
           </>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
           Дни: {client.trainDays.map((d) => DOW[d]).join(" · ") || "не назначены"} ·{" "}
-          {client.trainTimes.join(", ") || "время свободно"}
+          {todayBook?.time ?? nextBook?.time ?? (client.trainTimes.join(", ") || "время свободно")}
         </p>
-        {weekLoad >= 3 ? (
+        {recentVisits >= 3 ? (
           <p className="mt-2 text-tiny text-foreground">После этой — день восстановления. Сон и белок важнее ещё одного подхода.</p>
         ) : null}
         <div className="mt-3">
@@ -398,7 +415,7 @@ export function ProgramView() {
               </li>
             ))}
           </ul>
-          {!isTrainer && nextSetInfo ? (
+          {nextSetInfo ? (
             <button
               type="button"
               onClick={() => onSetMark(nextSetInfo.block, nextSetInfo.index, true)}
@@ -509,7 +526,11 @@ export function ProgramView() {
         </Surface>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Тренер ещё не назначил программу. Когда назначит — день сам подтянется к визиту.
+          {client.sessions.length === 0
+            ? "Тренер ещё не назначил программу. Когда назначит — день сам подтянется к визиту."
+            : isTrainer
+              ? "Дни тренировок не назначены. Добавьте их в расписание клиента."
+              : "Тренер ещё не назначил дни тренировок."}
         </p>
       )}
 
@@ -562,7 +583,7 @@ export function ProgramView() {
 
       <Fold title="Повторный максимум">
       <Surface>
-        <p className="mt-1 text-tiny text-muted-foreground">Считается по весу, повторам и запасу (сколько повторов осталось в баке). Подходы дальше 10 повторов до отказа не учитываются: там формула врёт.</p>
+        <p className="mt-1 text-tiny text-muted-foreground">Считается по весу, повторам и запасу (сколько повторов осталось в баке). Подходы, где повторы + запас больше 10, не учитываются: там формула врёт.</p>
         <div className="mt-3 flex flex-wrap gap-1">
           {options.map((item) => (
             <button
@@ -589,7 +610,7 @@ export function ProgramView() {
           {lastPr ? ` · Последний рекорд ${formatDayMonth(lastPr.date)}: ${lastPr.e1rm} кг (+${lastPr.gain})` : ""}
         </p>
         {unreliableOnly ? (
-          <p className="mt-1 text-xs text-muted-foreground">Все записи — длинные подходы, для ПМ они не годятся. Запишите подход на 1–8 повторов.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Все записи — длинные подходы, для ПМ они не годятся. Запишите подход, где повторы + запас не больше 10.</p>
         ) : null}
         <div className="mt-3 h-44">
           {chartReady && series.length > 1 ? (
@@ -713,6 +734,7 @@ function BlockRow({
   /** индекс следующего подхода этого упражнения, null когда он не текущий */
   currentSet: number | null;
   fact: string;
+  /** тренер видит факт веса, но не вводит его: факт — со стороны клиента */
   readOnly: boolean;
   /** the client's latest result for this exercise, before today */
   last: string | null;
@@ -738,19 +760,12 @@ function BlockRow({
         </span>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {setMarks.map((filled, i) => {
-            const isNext = !readOnly && currentSet === i && !filled;
+            const isNext = currentSet === i && !filled;
             const cls = cn(
               "grid size-11 shrink-0 place-items-center rounded-full border-2 text-xs tabular-nums transition-colors",
               filled ? "border-ok bg-ok text-ok-foreground" : isNext ? "border-primary text-foreground" : "border-hairline text-muted-foreground",
             );
             const label = `Подход ${i + 1} из ${setMarks.length}: ${block.exercise}`;
-            if (readOnly) {
-              return (
-                <span key={i} aria-label={filled ? `Выполнено: ${label}` : `Не выполнено: ${label}`} className={cls}>
-                  {filled ? <Check className="size-5" strokeWidth={3} /> : i + 1}
-                </span>
-              );
-            }
             return (
               <button
                 key={i}

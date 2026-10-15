@@ -5,6 +5,7 @@ import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
 import { useStudio } from "@/lib/studio-store";
 import { Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
 import { ActionCenter } from "@/components/app/action-center";
+import { BackupExportPanel } from "@/components/app/backup-export-panel";
 import { CsvImportPanel } from "@/components/app/csv-import-panel";
 import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
@@ -225,6 +226,7 @@ export function SignalsView() {
       {pane === "tools" ? (
         <>
           <CsvImportPanel />
+          <BackupExportPanel />
           <TrainerShareCard />
           <OutboxPanel />
           <SyncStatusChip />
