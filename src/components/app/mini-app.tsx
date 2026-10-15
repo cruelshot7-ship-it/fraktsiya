@@ -167,7 +167,7 @@ export function MiniApp() {
     if (tab === "today") return client ? `${client.firstName} · сегодня` : "Мой день";
     if (tab === "schedule" || tab === "slots" || tab === "bookings") return "Расписание";
     if (tab === "program") return client ? `${client.firstName} · программа` : TITLES.program;
-    return TITLES[tab] ?? "Ruksha";
+    return TITLES[tab] ?? "Discipline";
   }, [tab, client, role, inviteBlocked]);
 
   function readScroll() {

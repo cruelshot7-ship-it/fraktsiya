@@ -58,7 +58,7 @@ export function BackupExportPanel() {
     <Surface className="space-y-3">
       <SectionLabel>Копия базы</SectionLabel>
       <p className="break-words text-tiny text-muted-foreground">
-        Файл выгружается на ваше устройство. В Telegram и на сервере копия не сохраняется, резервные копии базы ведёт Neon.
+        Файл выгружается на ваше устройство. Резервные копии состояния хранятся на сервере и в Telegram; их автоматическая очистка пока не настроена.
       </p>
       <button
         type="button"

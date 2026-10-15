@@ -508,7 +508,7 @@ export function ClientsView() {
                 if (!addClient({ firstName, lastName, telegramUsername: tgUser, phone })) return;
                 const link = myLink;
                 openTelegramUrl(
-                  `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Привет! Зал Ruksha: ${link} — нажми Старт`)}`,
+                  `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`Привет! Зал Discipline: ${link} — нажми Старт`)}`,
                 );
                 setFirstName("");
                 setLastName("");

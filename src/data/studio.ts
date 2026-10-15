@@ -65,9 +65,9 @@ export const INVITE_CODE = "erjoin";
 export const BOT_USERNAME = "ruksha_discipline_bot";
 
 export const STUDIO = {
-  name: "Ruksha",
-  brand: "RUKSHA DISCIPLINE",
-  line: "Discipline",
+  name: "Discipline",
+  brand: "DISCIPLINE",
+  line: "Тренировки",
   est: "Est. 2026",
   city: "Гродно",
   address: "ул. Лидская, 1",
@@ -165,7 +165,7 @@ export const BARCODE_CATALOG: Record<string, Omit<ScanProduct, "source" | "barco
   },
   "2000000000012": {
     name: "Протеин-шейк студии",
-    brand: "Ruksha",
+    brand: "Discipline",
     per100: { calories: 80, protein: 10.7, fat: 1.3, carbs: 6 },
   },
 };
@@ -1041,7 +1041,7 @@ export function dayRitual(opts: { trainDay: boolean; arrived: boolean; workout: 
   return { visit, workout, food, restDay, done: [visit, workout, food].filter(Boolean).length };
 }
 
-export function bookingIcs(booking: { date: string; time: string; duration: number }, title = "Тренировка · Ruksha") {
+export function bookingIcs(booking: { date: string; time: string; duration: number }, title = "Тренировка · Discipline") {
   const start = new Date(slotStartMs(booking.date, booking.time));
   const end = new Date(start.getTime() + booking.duration * 60000);
   // UTC with Z: the calendar app converts to the phone's zone itself
