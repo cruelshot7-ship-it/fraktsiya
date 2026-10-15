@@ -45,6 +45,7 @@ import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor }
 import { Fold } from "@/components/app/fold";
 import { MenuDay } from "@/components/app/menu-day";
 import { PaymentPanel } from "@/components/app/payment-panel";
+import { FEATURES } from "@/lib/features";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { coachTierLine } from "@/lib/coach-tier";
 
@@ -958,7 +959,7 @@ function ClientSheetBody({
               )}
             </Surface>
 
-            <PaymentPanel key={client.id} client={client} />
+            {FEATURES.payments ? <PaymentPanel key={client.id} client={client} /> : null}
 
             {healthOk ? (
             <>
@@ -1062,7 +1063,7 @@ function ClientSheetBody({
                 setMode("view");
               }}
             />
-            <MenuDay client={client} bookings={bookings} />
+            {FEATURES.menuDay ? <MenuDay client={client} bookings={bookings} /> : null}
           </>
         ) : null}
         {mode === "measures" ? (

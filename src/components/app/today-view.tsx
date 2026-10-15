@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FEATURES } from "@/lib/features";
 import { confirmAction } from "@/lib/confirm";
 import { useMemo, useState } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
@@ -314,6 +315,7 @@ export function TodayView() {
               </p>
             </button>
           </div>
+          {FEATURES.payments ? (
           <button type="button" className="apple-block pressable p-4 text-left" onClick={() => setShowPayments(true)}>
             <p className="text-2xs text-muted-foreground">Оплаты · {monthLabel(monthOf(today))}</p>
             <p className="mt-1 font-display text-2xl tabular-nums leading-none">
@@ -321,6 +323,7 @@ export function TodayView() {
             </p>
             <p className="mt-1 text-tiny text-muted-foreground">{revenue.count} {revenue.count === 1 ? "оплата" : "оплат"} за месяц</p>
           </button>
+          ) : null}
         </div>
       </div>
     );
