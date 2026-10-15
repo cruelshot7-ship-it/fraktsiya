@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MACHINES, machineFromScan, type Machine, type MachineEx } from "@/data/studio";
 import { SectionLabel, Surface } from "@/components/app/bits";
-import { mapsUrl } from "@/lib/studio-repeat";
+import { MapRouteButtons } from "@/components/app/map-route-buttons";
 import { extractTelegramScan, getBarcodeDetector } from "@/lib/barcode";
 import { getStartParam } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
@@ -108,18 +108,11 @@ export function HallView() {
           }}
         />
       </Surface>
-      {mapsUrl(notifyPrefs.address || "") ? (
+      {notifyPrefs.address?.trim() ? (
         <Surface>
           <SectionLabel>Как добраться</SectionLabel>
           <p className="mt-2 text-sm">{notifyPrefs.address}</p>
-          <a
-            href={mapsUrl(notifyPrefs.address)}
-            target="_blank"
-            rel="noreferrer"
-            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-secondary text-sm font-medium text-foreground"
-          >
-            Маршрут
-          </a>
+          <MapRouteButtons address={notifyPrefs.address} />
         </Surface>
       ) : null}
       <SectionLabel>Нет наклейки</SectionLabel>

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mapsRouteUrl } from "./maps-link.ts";
+import { mapsAppLinks, mapsRouteUrl } from "./maps-link.ts";
 
 describe("mapsRouteUrl", () => {
   it("builds yandex route without origin (no geolocation)", () => {
@@ -17,5 +17,17 @@ describe("mapsRouteUrl", () => {
 
   it("empty destination → empty url", () => {
     assert.equal(mapsRouteUrl("  "), "");
+  });
+
+  it("address buttons: yandex and google, each a route to the address", () => {
+    const links = mapsAppLinks("Гродно, Лидская 1");
+    assert.deepEqual(links.map((l) => l.label), ["Яндекс Карты", "Google Maps"]);
+    assert.ok(links[0].url.startsWith("https://yandex.ru/maps/"));
+    assert.ok(links[1].url.includes("destination="));
+    assert.ok(links.every((l) => l.url.includes(encodeURIComponent("Гродно, Лидская 1"))));
+  });
+
+  it("no address → no buttons", () => {
+    assert.deepEqual(mapsAppLinks("   "), []);
   });
 });

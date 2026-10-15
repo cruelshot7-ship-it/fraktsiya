@@ -13,8 +13,17 @@ export function mapsRouteUrl(destination: string, provider: "yandex" | "google" 
   return `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
 }
 
-export function openMapsRoute(destination: string): void {
-  const url = mapsRouteUrl(destination);
-  if (!url || typeof window === "undefined") return;
-  window.open(url, "_blank", "noopener,noreferrer");
+export type MapAppLink = { label: string; url: string };
+
+/**
+ * Кнопки маршрута для адреса зала: Яндекс и Google. Яндекс Навигатор отдельно не даём:
+ * схема yandexnavi:// для маршрута по тексту адреса не подтверждена документацией.
+ */
+export function mapsAppLinks(address: string): MapAppLink[] {
+  const url = (provider: "yandex" | "google") => mapsRouteUrl(address, provider);
+  if (!address.trim()) return [];
+  return [
+    { label: "Яндекс Карты", url: url("yandex") },
+    { label: "Google Maps", url: url("google") },
+  ];
 }

@@ -17,7 +17,7 @@ import {
 import { weekVisitDays } from "@/lib/program-screen";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
-import { mapsUrl } from "@/lib/studio-repeat";
+import { MapRouteButtons } from "@/components/app/map-route-buttons";
 
 export function BookingsView() {
   const all = useStudio((s) => s.bookings);
@@ -88,15 +88,11 @@ export function BookingsView() {
           <p className="mt-1 text-tiny text-muted-foreground">
             {formatLongDate(next.date)} · {countdownLabel(next.date, next.time)}
           </p>
-          {mapsUrl(notifyPrefs.address || "") ? (
-            <a
-              href={mapsUrl(notifyPrefs.address)}
-              target="_blank"
-              rel="noreferrer"
-              className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-            >
-              Маршрут · {notifyPrefs.address}
-            </a>
+          {notifyPrefs.address?.trim() ? (
+            <>
+              <p className="mt-3 text-sm">{notifyPrefs.address}</p>
+              <MapRouteButtons address={notifyPrefs.address} variant="primary" />
+            </>
           ) : null}
         </Surface>
       ) : null}

@@ -31,8 +31,3 @@ export function repeatWeekSlots(extra: Slot[], closed: string[], weekStart: stri
   return { extra: copies, closed: closedCopies };
 }
 
-export function mapsUrl(address: string) {
-  const query = address.trim();
-  if (!query) return "";
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-}
