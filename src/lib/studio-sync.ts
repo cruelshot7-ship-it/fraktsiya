@@ -787,34 +787,35 @@ async function writeBackupDay(day: string) {
       [BACKUP_ID, JSON.stringify({ day })],
     );
   } catch {
-    /* the marker is an optimization; the file is the copy */
+    /* the marker only avoids a repeat digest; losing it sends one extra summary at most */
   }
 }
 
-export async function maybeDailyBackup(payload: StudioPayload) {
+/**
+ * Раз в день тренеру уходит сводка. Копия базы в чат не отправляется: резервные копии — у Neon,
+ * а выгрузка — по кнопке в приложении (studio-export.ts). Маркер дня прежний, чтобы сводка не ушла дважды при выкладке.
+ */
+export async function maybeDailyDigest(payload: StudioPayload) {
   if (backupFlight) return backupFlight;
   backupFlight = (async () => {
     const { env } = await import("@/lib/env.server");
     if (!env("BOT_TOKEN")) return;
     const today = backupDay();
     if (!shouldSendBackup(await readBackupDay(), today)) return;
-    const { sendKeeperCopy, sendMorningNote } = await import("@/lib/studio-remote");
+    const { sendMorningNote } = await import("@/lib/studio-remote");
     const { morningSummary } = await import("@/lib/studio-digest");
-    const ok = await sendKeeperCopy(payload, today);
-    if (ok) {
-      await sendMorningNote(
-        morningSummary({
-          clients: payload.clients,
-          bookings: payload.bookings,
-          visits: payload.visits,
-          food: payload.food,
-          notices: payload.notices,
-          today,
-          absentDays: payload.notifyPrefs.absentDays || 10,
-        }),
-      );
-      await writeBackupDay(today);
-    }
+    const sent = await sendMorningNote(
+      morningSummary({
+        clients: payload.clients,
+        bookings: payload.bookings,
+        visits: payload.visits,
+        food: payload.food,
+        notices: payload.notices,
+        today,
+        absentDays: payload.notifyPrefs.absentDays || 10,
+      }),
+    );
+    if (sent) await writeBackupDay(today);
   })().finally(() => {
     backupFlight = null;
   });
@@ -897,7 +898,7 @@ export async function commitStudioState(payload: StudioPayload) {
     console.error("[studio-backup]", err);
   }
   try {
-    await maybeDailyBackup(next);
+    await maybeDailyDigest(next);
   } catch (err) {
     console.error("[studio-save]", err);
   }
