@@ -42,6 +42,7 @@ import { Avatar, BottomSheet, Pill, ProgressRail, SectionLabel, Surface, Field, 
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
+import { Fold } from "@/components/app/fold";
 import { MenuDay } from "@/components/app/menu-day";
 import { PaymentPanel } from "@/components/app/payment-panel";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
@@ -763,6 +764,33 @@ function ClientSheetBody({
               )}
             </Surface>
 
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("program")}>
+                Назначить программу
+              </button>
+              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("food")}>
+                Изменить питание
+              </button>
+              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("measures")}>
+                Фото и замеры
+              </button>
+              <button
+                type="button"
+                className="pressable h-14 rounded-xl bg-secondary text-sm"
+                onClick={() => {
+                  if (client.telegramUsername) {
+                    openTrainerChat(client.telegramUsername);
+                    return;
+                  }
+                  if (openPhone(client.phone)) return;
+                  showToast("Нет телефона и @username — допишите в карточке.");
+                }}
+              >
+                Написать
+              </button>
+            </div>
+
+            <Fold title={`Баланс, программа на день и питание · ${client.sessionsLeft ?? 0} зан.`}>
             {client.sessions.length > 0 ? (
               <Surface>
                 <SectionLabel>Программа на день прихода</SectionLabel>
@@ -1006,32 +1034,8 @@ function ClientSheetBody({
               </p>
             </Surface>
             )}
+            </Fold>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("program")}>
-                Назначить программу
-              </button>
-              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("food")}>
-                Изменить питание
-              </button>
-              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("measures")}>
-                Фото и замеры
-              </button>
-              <button
-                type="button"
-                className="pressable h-14 rounded-xl bg-secondary text-sm"
-                onClick={() => {
-                  if (client.telegramUsername) {
-                    openTrainerChat(client.telegramUsername);
-                    return;
-                  }
-                  if (openPhone(client.phone)) return;
-                  showToast("Нет телефона и @username — допишите в карточке.");
-                }}
-              >
-                Написать
-              </button>
-            </div>
           </div>
         ) : null}
 
