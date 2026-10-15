@@ -41,7 +41,7 @@ import {
   setsDone,
   type ProgramBlock,
 } from "@/lib/program-blocks";
-import { mapsUrl } from "@/lib/studio-repeat";
+import { MapRouteButtons } from "@/components/app/map-route-buttons";
 import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
 import { Fold } from "@/components/app/fold";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -312,16 +312,7 @@ export function ProgramView() {
         {todayBook && hoursToToday !== null && hoursToToday > 0 && hoursToToday < 24 ? (
           <p className="mt-2 text-tiny text-foreground">Старт {countdownLabel(todayBook.date, todayBook.time)}</p>
         ) : null}
-        {todayBook && mapsUrl(notifyPrefs.address || "") ? (
-          <a
-            href={mapsUrl(notifyPrefs.address)}
-            target="_blank"
-            rel="noreferrer"
-            className="pressable mt-3 flex h-11 items-center justify-center rounded-lg bg-secondary text-sm"
-          >
-            Маршрут
-          </a>
-        ) : null}
+        {todayBook ? <MapRouteButtons address={notifyPrefs.address || ""} /> : null}
         {!isTrainer && (todayBook || trainDay) && !arrived ? (
           <button
             type="button"

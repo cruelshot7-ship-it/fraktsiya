@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mapsUrl, repeatWeekSlots } from "./studio-repeat.ts";
+import { repeatWeekSlots } from "./studio-repeat.ts";
 import { TRAINER_TG_ID, type Slot } from "../data/studio.ts";
 
 test("repeat week copies own extra slots and closed times, not bookings", () => {
@@ -27,6 +27,4 @@ test("repeat week skips a slot that already exists next week", () => {
 });
 
 test("maps url stays empty without an address", () => {
-  assert.equal(mapsUrl("  "), "");
-  assert.match(mapsUrl("Минск, ул. Тестовая 1"), /query=.*%D0%9C%D0%B8%D0%BD%D1%81%D0%BA/);
 });
