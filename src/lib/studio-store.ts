@@ -173,7 +173,6 @@ type State = {
   unfreezeClient: (clientId: string) => void;
   cancelBooking: (id: string, by?: Role) => void;
   cancelSlotBookings: (slotId: string) => void;
-  rescheduleBooking: (id: string, newSlotId: string) => boolean;
   saveMenu: (record: MenuRecord) => void;
   setMenuChoice: (clientId: string, date: string, slotId: string, dishId: string) => void;
   addFood: (mealId: string) => void;
@@ -1490,47 +1489,6 @@ export const useStudio = create<State>((set, get) => ({
         ? `Слот закрыт. ${ids.length} ${ids.length === 1 ? "клиент получил" : "клиентов получили"} уведомление.`
         : "Слот закрыт.",
     );
-  },
-
-  rescheduleBooking: (id, newSlotId) => {
-    const { bookings, slots, closedSlotIds, clients, notices } = get();
-    const booking = bookings.find((b) => b.id === id);
-    const slot = slots.find((s) => s.id === newSlotId);
-    if (!booking || !slot) return false;
-    if (closedSlotIds.includes(slot.id) || isSlotPast(slot.date, slot.time)) {
-      get().showToast("Этот слот недоступен.");
-      return false;
-    }
-    if (slotTaken(slot, bookings.filter((b) => b.id !== id)) >= slot.capacity) {
-      get().showToast("Слот занят.");
-      return false;
-    }
-    const who = clients.find((c) => c.id === booking.clientId);
-    const updated: Booking = {
-      ...booking,
-      slotId: slot.id,
-      date: slot.date,
-      time: slot.time,
-      duration: slot.duration,
-    };
-    const nextNotices = who
-      ? pushNotice(notices, {
-          id: `nt_move_${id}_${slot.id}`,
-          audience: "client",
-          clientId: who.id,
-          kind: "reschedule",
-          title: "Тренер перенёс запись",
-          body: `Было ${booking.time} · стало ${DOW[(parseISODate(slot.date).getDay() + 6) % 7]} ${slot.time}`,
-          at: new Date().toISOString(),
-        })
-      : notices;
-    set({
-      bookings: bookings.map((b) => (b.id === id ? updated : b)),
-      notices: nextNotices,
-    });
-    persist(snap(get()));
-    get().showToast("Перенос сохранён. Клиенту ушло уведомление.");
-    return true;
   },
 
   saveMenu: (record) => {
