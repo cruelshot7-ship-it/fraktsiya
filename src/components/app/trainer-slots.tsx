@@ -35,7 +35,6 @@ export function TrainerSlots() {
   const cancelBooking = useStudio((s) => s.cancelBooking);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  // Время и места выбираются колёсами: вводить с клавиатуры не нужно.
   const [time, setTime] = useState("18:00");
   const [cap, setCap] = useState(3);
   const [pickId, setPickId] = useState<string | null>(null);
@@ -78,7 +77,6 @@ export function TrainerSlots() {
         <p className="pb-3 text-xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
       )}
       <div className="flex gap-1 pt-1 pb-4">
-        {/* прошедшие дни не показываем: полоска начинается с сегодня */}
         {days.filter((d) => d.key >= todayKey).map((day) => {
           const selected = selectedDate === day.key;
           return (
@@ -286,6 +284,9 @@ export function TrainerSlots() {
           >
             Повторить неделю
           </button>
+          <p className="mt-1.5 text-center text-2xs text-muted-foreground">
+            Скопирует ваши слоты на +7 дней. Записи клиентов не переносятся.
+          </p>
         </>
       )}
     </div>
