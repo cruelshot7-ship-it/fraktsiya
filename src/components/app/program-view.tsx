@@ -29,6 +29,7 @@ import {
   applySetMark,
   legacyMarkMap,
   nextSet,
+  parseFactKg,
   PHASE_HINT,
   PHASE_LABEL,
   planTotalsFromBlocks,
@@ -776,16 +777,32 @@ function BlockRow({
         </div>
       </div>
       {readOnly && on && fact ? (
-        <p className="mt-1 mb-2 ml-2 text-tiny text-muted-foreground">Факт: {fact} кг</p>
+        <p className="mt-1 mb-2 ml-2 text-tiny text-muted-foreground">
+          {parseFactKg(fact) != null ? `Факт: ${parseFactKg(fact)} кг` : `Факт: ${fact}`}
+        </p>
       ) : null}
       {!readOnly && on && block.load ? (
-        <input
-          className={cn(inputClass, "mt-1 mb-2 ml-2")}
-          inputMode="decimal"
-          placeholder="факт, кг — если другой"
-          value={fact}
-          onChange={(e) => onFact(e.target.value)}
-        />
+        <div className="mt-1 mb-2 ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex items-center gap-2">
+            <input
+              className={cn(inputClass, "w-28 tabular-nums")}
+              inputMode="decimal"
+              enterKeyHint="done"
+              autoComplete="off"
+              aria-label={`Факт веса, кг: ${block.exercise}`}
+              aria-invalid={fact.trim() !== "" && parseFactKg(fact) == null}
+              placeholder={`${block.load}`}
+              value={fact}
+              onChange={(e) => onFact(e.target.value.replace(/[^\d.,\s]/g, ""))}
+            />
+            <span className="text-tiny text-muted-foreground">кг</span>
+          </div>
+          <span className="text-tiny text-muted-foreground">
+            {fact.trim() !== "" && parseFactKg(fact) == null
+              ? "Введите число, например 22,5"
+              : `план ${block.load} кг, если пусто`}
+          </span>
+        </div>
       ) : null}
     </>
   );
