@@ -24,7 +24,7 @@ import { GuestPreview } from "@/components/app/guest-preview";
 import { SignalsView } from "@/components/app/signals-view";
 import { cn } from "@/lib/utils";
 import { primeFoodDb } from "@/lib/barcode";
-import { initTelegram, getStartParam, getTelegramUser } from "@/lib/telegram";
+import { initTelegram, getTelegramUser } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 import { ensureBookDualWrite } from "@/lib/booking/patch-book-dual-write";
 import { TrainerProgramTools } from "@/components/app/trainer-program-tools";
@@ -98,11 +98,6 @@ export function MiniApp() {
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
-
-  useEffect(() => {
-    if (role === "trainer") return;
-    if (getStartParam().toLowerCase().startsWith("m_")) setTab("hall" as TabId);
-  }, [role, setTab]);
 
   useEffect(() => {
     ensureBookDualWrite();

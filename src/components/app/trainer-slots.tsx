@@ -45,6 +45,7 @@ export function TrainerSlots() {
   const minWeek = isoDate(startOfWeek(new Date()));
   const canPrev = weekStart > minWeek;
   const tomorrowKey = isoDate(addDays(new Date(), 1));
+  const todayKey = isoDate(new Date());
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
     const key = isoDate(date);
@@ -78,7 +79,8 @@ export function TrainerSlots() {
         <p className="pb-3 text-xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
       )}
       <div className="flex gap-1 pt-1 pb-4">
-        {days.map((day, i) => {
+        {/* прошедшие дни не показываем: полоска начинается с сегодня */}
+        {days.filter((d) => d.key >= todayKey).map((day) => {
           const selected = selectedDate === day.key;
           return (
             <button
@@ -94,7 +96,7 @@ export function TrainerSlots() {
               )}
             >
               <span className="block text-2xs tracking-wide text-muted-foreground">
-                {day.key === tomorrowKey ? "завт" : DOW[i]}
+                {day.key === tomorrowKey ? "завт" : DOW[(day.date.getDay() + 6) % 7]}
               </span>
               <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
               <span className="mt-0.5 block text-3xs text-muted-foreground">{day.total === 0 ? "—" : `${day.booked} зап.`}</span>
