@@ -10,11 +10,8 @@ import { cn } from "@/lib/utils";
 
 const GOALS = ["Похудеть", "Сила", "Форма"] as const;
 
-const OFFERS = [
-  { id: "trial", title: "Пробная", price: "0", unit: "BYN", note: "час в зале" },
-  { id: "8", title: "8 занятий", price: "200", unit: "BYN", note: "25 за тренировку" },
-  { id: "12", title: "12 занятий", price: "265", unit: "BYN", note: "22 за тренировку" },
-] as const;
+/** Единственное предложение на входе: пробный час. Цены и пакеты здесь не показываем. */
+const TRIAL_LABEL = "Пробный час";
 
 export function OfferLanding({ live }: { live: boolean }) {
   const close = useStudio((s) => s.closeGuestPreview);
@@ -37,7 +34,6 @@ export function OfferLanding({ live }: { live: boolean }) {
   );
 
   const [step, setStep] = useState<"intro" | "time">("intro");
-  const [packId, setPackId] = useState<(typeof OFFERS)[number]["id"]>("trial");
   const [slotId, setSlotId] = useState("");
   const [goal, setGoal] = useState<(typeof GOALS)[number]>("Форма");
   const [busy, setBusy] = useState(false);
@@ -45,7 +41,6 @@ export function OfferLanding({ live }: { live: boolean }) {
   // the request sends the name, @username and the chosen time: the trainer sees them only after this consent
   const [agreed, setAgreed] = useState(false);
 
-  const pack = OFFERS.find((o) => o.id === packId) ?? OFFERS[0];
   const picked = openings.find((s) => s.id === slotId);
   const waiting = live && (sent || Boolean(pending));
 
@@ -54,21 +49,21 @@ export function OfferLanding({ live }: { live: boolean }) {
       showToast("Выберите время.");
       return;
     }
-    const offer = [`${pack.title} · ${pack.price} ${pack.unit}`, picked.label, `Цель: ${goal}`].join("\n");
+    const offer = [TRIAL_LABEL, picked.label, `Цель: ${goal}`].join("\n");
     if (!live) {
       setSent(true);
       showToast("Это показ. Заявка не ушла.");
       return;
     }
     setBusy(true);
-    sendJoinRequest(offer, { slotId: picked.id, goal, pack: `${pack.title} · ${pack.price} ${pack.unit}` });
+    sendJoinRequest(offer, { slotId: picked.id, goal, pack: TRIAL_LABEL });
     const res = await requestJoin({
       data: {
         initData: getTelegramInitData(),
         offer,
         slotId: picked.id,
         goal,
-        pack: pack.title,
+        pack: TRIAL_LABEL,
         consentVersion: PRIVACY_VERSION,
       },
     }).catch(() => ({ ok: false }));
@@ -116,37 +111,31 @@ export function OfferLanding({ live }: { live: boolean }) {
         {step === "intro" ? (
           <>
             <h1 className="font-display text-4xl leading-[0.95] tracking-wide text-foreground drop-shadow-sm">
-              Первая
+              Один час.
               <br />
-              бесплатно
+              Без обязательств.
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {STUDIO.trainer}, {STUDIO.gym} — место силы. Час в зале: техника и понятно, ваш ли это формат. Возьмите форму, воду и кроссовки.
+              Тренер покажет технику в зале и подскажет, какой формат подойдёт именно вам. Если захотите продолжить — подберём программу под вашу цель.
             </p>
             <p className="mt-2 text-tiny text-muted-foreground">
               {STUDIO.city}, {STUDIO.address}
             </p>
             <div className="mt-5 grid grid-cols-3 gap-2">
-              {OFFERS.map((offer) => (
-                <button
-                  key={offer.id}
-                  type="button"
-                  onClick={() => setPackId(offer.id)}
-                  className={cn(
-                    "pressable rounded-xl px-2 py-3 text-center shadow-border",
-                    offer.id === pack.id ? "glow-ok bg-ok-dim" : "bg-card",
-                  )}
-                >
-                  <p className="text-3xs tracking-wide text-muted-foreground ">{offer.title}</p>
-                  <p className="font-display mt-1 text-2xl leading-none">
-                    {offer.price}
-                    <span className="ml-0.5 text-xs">{offer.unit}</span>
-                  </p>
-                  <p className="mt-1.5 text-3xs leading-snug text-muted-foreground">{offer.note}</p>
-                </button>
-              ))}
+              <div className="rounded-xl bg-card px-2 py-3 text-center shadow-border">
+                <p className="font-display text-2xl leading-none">60</p>
+                <p className="mt-1.5 text-3xs leading-snug text-muted-foreground">минут в зале</p>
+              </div>
+              <div className="rounded-xl bg-card px-2 py-3 text-center shadow-border">
+                <p className="font-display text-2xl leading-none">1</p>
+                <p className="mt-1.5 text-3xs leading-snug text-muted-foreground">тренер</p>
+              </div>
+              <div className="rounded-xl bg-card px-2 py-3 text-center shadow-border">
+                <p className="font-display text-2xl leading-none">{STUDIO.gym}</p>
+                <p className="mt-1.5 text-3xs leading-snug text-muted-foreground">Лидская, 1</p>
+              </div>
             </div>
-            <p className="mt-2 text-tiny text-muted-foreground">12 занятий выгоднее на 35 BYN.</p>
+            <p className="mt-4 text-tiny text-muted-foreground">Возьмите форму, воду и кроссовки.</p>
             <button
               type="button"
               className="pressable mt-6 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
@@ -161,7 +150,7 @@ export function OfferLanding({ live }: { live: boolean }) {
               Назад
             </button>
             <h1 className="font-display mt-3 text-4xl leading-none tracking-wide">Время</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{pack.title} · {pack.price} {pack.unit}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{TRIAL_LABEL} · 60 минут</p>
             {openings.length === 0 ? (
               <>
                 <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Свободных окон сейчас нет. Напишите тренеру — он откроет время.</p>
