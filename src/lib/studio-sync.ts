@@ -22,6 +22,7 @@ import { isRevisioned, nextRevision, readRevision } from "@/lib/studio-revision"
 import { settleOwned, type Balance } from "@/lib/balance";
 import { applyClientChoices, checkMenus, menusForClient, mergeMenus, type MenuRecord } from "@/lib/menu-scope";
 import { dropCheckIds, mergeChecks } from "@/lib/checks-merge";
+import { coachTokenFromStart } from "@/lib/invite-start";
 import {
   clientCoach,
   coachKey,
@@ -257,11 +258,9 @@ function coachRow(payload: StudioPayload, user: { id: string; username: string |
 }
 
 export function coachFromStart(start: string, payload: StudioPayload) {
-  const raw = (start ?? "").trim();
-  const match = /^c_([a-z0-9]+)$/i.exec(raw);
-  // No deep-link (opened Mini App / bot without c_CODE) → main trainer (Ruksha).
-  if (!match) return String(TRAINER_TG_ID);
-  const token = match[1];
+  const token = coachTokenFromStart(start);
+  // No deep-link (opened Mini App / bot without c_CODE / coach_CODE) → main trainer (Ruksha).
+  if (!token) return String(TRAINER_TG_ID);
   if (token === String(TRAINER_TG_ID)) return String(TRAINER_TG_ID);
   const coach = (payload.coaches ?? []).find((c) => c.code === token || c.telegramId === token);
   if (!coach?.telegramId) return String(TRAINER_TG_ID);

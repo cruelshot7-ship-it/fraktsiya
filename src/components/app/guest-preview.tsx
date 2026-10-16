@@ -11,6 +11,7 @@ const GOALS = ["Похудеть", "Сила", "Форма"] as const;
 
 /** Единственное предложение на входе: пробный час. Цены и пакеты здесь не показываем. */
 const TRIAL_LABEL = "Пробный час";
+const ANY_TIME_LABEL = "Время: согласуем с тренером";
 
 const OSWALD = "Oswald, 'Arial Narrow', sans-serif";
 
@@ -67,28 +68,31 @@ export function OfferLanding({ live }: { live: boolean }) {
   const [sent, setSent] = useState(false);
   // the request sends the name, @username and the chosen time: the trainer sees them only after this consent
   const [agreed, setAgreed] = useState(false);
+  // Заявка без времени: тренер согласует время сам (если свободных окон нет или ни одно не подходит).
+  const [anyTime, setAnyTime] = useState(false);
 
   const picked = openings.find((s) => s.id === slotId);
+  const timeChosen = Boolean(picked) || anyTime;
   const waiting = live && (sent || Boolean(pending));
 
   async function submit() {
-    if (!picked) {
-      showToast("Выберите время.");
+    if (!timeChosen) {
+      showToast("Выберите время или «Согласуем с тренером».");
       return;
     }
-    const offer = [TRIAL_LABEL, picked.label, `Цель: ${goal}`].join("\n");
+    const offer = [TRIAL_LABEL, picked ? picked.label : ANY_TIME_LABEL, `Цель: ${goal}`].join("\n");
     if (!live) {
       setSent(true);
       showToast("Это показ. Заявка не ушла.");
       return;
     }
     setBusy(true);
-    sendJoinRequest(offer, { slotId: picked.id, goal, pack: TRIAL_LABEL });
+    sendJoinRequest(offer, { slotId: picked?.id, goal, pack: TRIAL_LABEL });
     const res = await requestJoin({
       data: {
         initData: getTelegramInitData(),
         offer,
-        slotId: picked.id,
+        slotId: picked?.id,
         goal,
         pack: TRIAL_LABEL,
         consentVersion: PRIVACY_VERSION,
@@ -195,24 +199,18 @@ export function OfferLanding({ live }: { live: boolean }) {
             <h1 className="font-display mt-3 text-4xl leading-none tracking-wide">Время</h1>
             <p className="mt-2 text-sm text-muted-foreground">{TRIAL_LABEL} · 60 минут</p>
             {openings.length === 0 ? (
-              <>
-                <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Свободных окон сейчас нет. Напишите тренеру — он откроет время.</p>
-                <button
-                  type="button"
-                  className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={() => openNote()}
-                >
-                  Написать тренеру
-                </button>
-              </>
-            ) : (
-              <>
+              <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Свободных окон сейчас нет. Отправьте заявку без времени: тренер предложит своё.</p>
+            ) : null}
+            <>
                 <div className="mt-4 flex flex-col gap-2">
                   {openings.map((slot) => (
                     <button
                       key={slot.id}
                       type="button"
-                      onClick={() => setSlotId(slot.id)}
+                      onClick={() => {
+                        setSlotId(slot.id);
+                        setAnyTime(false);
+                      }}
                       className={cn(
                         "pressable rounded-xl px-4 py-3 text-left text-sm shadow-border",
                         slot.id === slotId ? "glow-ok bg-ok-dim" : "bg-card",
@@ -222,6 +220,19 @@ export function OfferLanding({ live }: { live: boolean }) {
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnyTime(true);
+                    setSlotId("");
+                  }}
+                  className={cn(
+                    "pressable mt-2 w-full rounded-xl px-4 py-3 text-left text-sm shadow-border",
+                    anyTime ? "glow-ok bg-ok-dim" : "bg-card",
+                  )}
+                >
+                  Согласуем время с тренером
+                </button>
                 <div className="mt-5">
                   <SectionLabel>Цель</SectionLabel>
                   <div className="mt-2 flex gap-1.5">
@@ -254,17 +265,19 @@ export function OfferLanding({ live }: { live: boolean }) {
                 </label>
                 <button
                   type="button"
-                  disabled={busy || !picked || !agreed}
+                  disabled={busy || !timeChosen || !agreed}
                   className="pressable mt-5 h-12 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
                   onClick={() => void submit()}
                 >
                   {busy ? "…" : "Отправить заявку"}
                 </button>
                 <p className="mt-3 text-tiny text-muted-foreground">
-                  Заявка уходит тренеру: имя, @username и выбранное время. Как мы обращаемся с данными — в «Профиль» → «Политика конфиденциальности». Замеры и самочувствие собираются только с вашего отдельного согласия.
+                  Заявка уходит тренеру: имя, @username и выбранное время или «согласуем». Как мы обращаемся с данными — в «Профиль» → «Политика конфиденциальности». Замеры и самочувствие собираются только с вашего отдельного согласия.
                 </p>
-              </>
-            )}
+                <button type="button" className="mt-3 h-11 w-full text-sm text-muted-foreground" onClick={() => openNote()}>
+                  Написать тренеру
+                </button>
+            </>
           </>
         )}
       </div>
