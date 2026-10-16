@@ -286,6 +286,9 @@ export function TrainerSlots() {
           >
             Повторить неделю
           </button>
+          <p className="mt-1.5 text-center text-2xs text-muted-foreground">
+            Скопирует ваши слоты на +7 дней. Записи клиентов не переносятся.
+          </p>
         </>
       )}
     </div>
