@@ -10,8 +10,10 @@ import {
   relativeDayLabel,
   shortName,
   startOfWeek,
+  coachKey,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
+import { repeatWeekSlots, weekSourceCounts } from "@/lib/studio-repeat";
 import { PlacesWheel, TimeWheel } from "@/components/app/wheel-picker";
 import { cn } from "@/lib/utils";
 import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
@@ -23,6 +25,7 @@ export function TrainerSlots() {
   const slots = useStudio((s) => s.slots);
   const bookings = useStudio((s) => s.bookings);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
+  const extraSlots = useStudio((s) => s.extraSlots);
   const clients = useStudio((s) => s.clients);
   const shiftWeek = useStudio((s) => s.shiftWeek);
   const selectDay = useStudio((s) => s.selectDay);
@@ -281,11 +284,27 @@ export function TrainerSlots() {
           </button>
           <button
             type="button"
-            onClick={() => repeatWeek()}
+            onClick={() => {
+              const me = coachKey(String(getTelegramUser()?.id || TRAINER_TG_ID));
+              const source = weekSourceCounts(extraSlots, closedSlotIds, weekStart, me);
+              const preview = repeatWeekSlots(extraSlots, closedSlotIds, weekStart, me);
+              if (!preview.extra.length && !preview.closed.length) {
+                if (!source.extra && !source.closed) {
+                  showToast("На этой неделе нет ваших слотов для копирования. Добавьте слоты и повторите.");
+                } else {
+                  showToast("На следующей неделе эти слоты уже есть.");
+                }
+                return;
+              }
+              repeatWeek();
+            }}
             className="pressable mt-2 h-12 w-full rounded-xl bg-card text-sm shadow-border"
           >
             Повторить неделю
           </button>
+          <p className="mt-1.5 text-center text-2xs text-muted-foreground">
+            Скопирует ваши слоты на +7 дней. Записи клиентов не переносятся.
+          </p>
         </>
       )}
     </div>
