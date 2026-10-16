@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { BottomSheet, inputClass } from "@/components/app/bits";
 
@@ -257,7 +258,8 @@ export function WheelField({
         <span className={value ? "" : "text-muted-foreground"}>{value || placeholder || "—"}</span>
         {unit && value ? <span className="ml-2 shrink-0 text-xs text-muted-foreground">{unit}</span> : null}
       </button>
-      {open ? (
+      {open ? createPortal(
+        // В body, а не внутри родительской шторки: родитель с анимацией и overflow-hidden иначе перекрывает или прячет эту шторку.
         <BottomSheet compact onClose={() => setOpen(false)}>
           <div className="flex flex-col px-5 pt-3 pb-4">
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -305,7 +307,8 @@ export function WheelField({
               </button>
             </div>
           </div>
-        </BottomSheet>
+        </BottomSheet>,
+        document.body,
       ) : null}
     </>
   );
