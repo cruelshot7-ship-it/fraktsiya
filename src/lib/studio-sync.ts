@@ -1025,6 +1025,9 @@ export const pullStudio = createServerFn({ method: "POST" })
     return { ok: true, role: "trainer", payload: scopeCoach(payload, session.user.id) };
   });
 
+/** Причина отказа видна клиенту: по ней он понимает, что делать (перезапуск, открыть из бота). */
+export type JoinResult = { ok: boolean; already?: boolean; reason?: "session" | "coach" | "consent" };
+
 export const requestJoin = createServerFn({ method: "POST" })
   .validator(
     z.object({
@@ -1036,10 +1039,10 @@ export const requestJoin = createServerFn({ method: "POST" })
       consentVersion: z.string().optional(),
     }),
   )
-  .handler(async ({ data }): Promise<{ ok: boolean; already?: boolean }> => {
+  .handler(async ({ data }): Promise<JoinResult> => {
     const { verifyTelegramInitData } = await import("@/lib/telegram-auth.server");
     const session = verifyTelegramInitData(data.initData);
-    if (!session) return { ok: false };
+    if (!session) return { ok: false, reason: "session" };
     const bot = await import("@/lib/telegram-bot.server");
     const payload = await loadStudioState();
     if (isCoachUser(payload, session.user)) {
@@ -1049,9 +1052,10 @@ export const requestJoin = createServerFn({ method: "POST" })
     // приглашение клиентом (r_<код>) ведёт к тренеру пригласившего; иначе — обычный путь через тренера
     const referrer = referrerByCode(referralCodeFromStart(session.startParam) ?? "", payload.clients);
     const coachId = referrer ? coachForReferrer(referrer, payload) : coachFromStart(session.startParam, payload);
-    if (!coachId) return { ok: false };
+    if (!coachId) return { ok: false, reason: "coach" };
     // the request goes in only with the policy accepted in its current version; the record goes with it
-    if (data.consentVersion !== PRIVACY_VERSION) return { ok: false };
+    // старая сборка приложения шлёт другую версию согласия: просим перезапустить, а не молчим
+    if (data.consentVersion !== PRIVACY_VERSION) return { ok: false, reason: "consent" };
     return bot.registerJoin(session.user, {
       message: data.offer ?? "",
       slotId: data.slotId,
