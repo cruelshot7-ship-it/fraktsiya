@@ -9,6 +9,14 @@ const ITEM_H = 44;
 const VISIBLE = 5;
 const PAD = ((VISIBLE - 1) / 2) * ITEM_H;
 
+/** Как в iOS: выбранная строка яркая, соседние тают и уменьшаются по мере удаления от центра. */
+function falloff(dist: number): { opacity: number; scale: number } {
+  if (dist === 0) return { opacity: 1, scale: 1 };
+  if (dist === 1) return { opacity: 0.5, scale: 0.92 };
+  if (dist === 2) return { opacity: 0.25, scale: 0.85 };
+  return { opacity: 0.1, scale: 0.8 };
+}
+
 /**
  * Одна колонка-барабан: прокрутка с привязкой к строке (scroll-snap), как выбор времени в системных часах.
  * Значение — индекс в `items`. Выбор фиксируется, когда прокрутка остановилась; тап по строке тоже выбирает.
@@ -82,6 +90,9 @@ export function WheelColumn({
           paddingTop: PAD,
           paddingBottom: PAD,
           touchAction: "pan-y",
+          // затухание к краям барабана, как у системного выбора
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 36%, #000 64%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, transparent 0, #000 36%, #000 64%, transparent 100%)",
         }}
       >
         {items.map((text, i) => (
@@ -92,10 +103,15 @@ export function WheelColumn({
             aria-selected={i === value}
             onClick={() => pick(i)}
             className={cn(
-              "flex w-full items-center justify-center font-display text-xl font-semibold tabular-nums transition-colors",
-              i === active ? "text-foreground" : "text-muted-foreground/60",
+              "flex w-full items-center justify-center font-display text-xl font-semibold tabular-nums transition-[opacity,transform] duration-150",
+              i === active ? "text-foreground" : "text-muted-foreground",
             )}
-            style={{ height: ITEM_H, scrollSnapAlign: "center" }}
+            style={{
+              height: ITEM_H,
+              scrollSnapAlign: "center",
+              opacity: falloff(Math.abs(i - active)).opacity,
+              transform: `scale(${falloff(Math.abs(i - active)).scale})`,
+            }}
           >
             {text}
           </button>
