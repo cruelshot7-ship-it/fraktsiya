@@ -1001,10 +1001,14 @@ export const pullStudio = createServerFn({ method: "POST" })
           payload: scopePayload(payload, session.user.id),
         };
       }
-      try {
-        payload = (await ensureReferralCode(session.user.id)) ?? payload;
-      } catch (err) {
-        console.error("[referral-code]", err);
+      // Код уже выдан — ничего не читаем и не пишем лишний раз на каждом обновлении.
+      const mine = payload.clients.find((c) => c.telegramId === session.user.id);
+      if (mine && !mine.referralCode) {
+        try {
+          payload = (await ensureReferralCode(session.user.id)) ?? payload;
+        } catch (err) {
+          console.error("[referral-code]", err);
+        }
       }
       return { ok: true, role: "client", created, payload: scopePayload(payload, session.user.id) };
     }

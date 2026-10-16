@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COACH_TRIAL_CAP, emptyClient, formatLongDate, hoursAgoIso, TRAINER_TG_ID, type JoinRequest } from "@/data/studio";
 import { claimReminders, dueReminders, findByToken, remindToken } from "@/lib/studio-remind";
 import { closeBotMessage, messageIdOf, recordBotMessage, sweepBotMessages } from "@/lib/bot-retention.server";
+import { sweepDue } from "@/lib/bot-sweep-throttle";
 import { commitStudioState, dropTombstones, emptyPayload, loadStudioState, saveStudioState, StateConflictError } from "@/lib/studio-sync";
 import {
   buildSessions,
@@ -531,10 +532,17 @@ let remindBusy = false;
  * 2. send: only the claimed reminders go out. A failed send is not retried, so a reminder goes out at most once.
  * Returns the state as stored, with the marks.
  */
+let lastSweepAt = 0;
+const SWEEP_EVERY_MS = 10 * 60_000;
+
 export async function sendDueReminders(payload: import("@/lib/studio-sync").StudioPayload) {
   if (remindBusy) return payload;
-  // попутная уборка: ежедневный cron может опоздать, а Telegram не даёт удалять старше 48 часов
-  await sweepBotMessages(new Date(), 10).catch(() => undefined);
+  // попутная уборка не чаще раза в 10 минут: её вызывают обновления открытых приложений; cron тоже убирает
+  const now = Date.now();
+  if (sweepDue(now, lastSweepAt, SWEEP_EVERY_MS)) {
+    lastSweepAt = now;
+    await sweepBotMessages(new Date(now), 10).catch(() => undefined);
+  }
   const due = dueReminders(payload.bookings, Date.now()).filter((item) => {
     const booking = payload.bookings.find((row) => row.id === item.id);
     return Boolean(booking && payload.clients.find((row) => row.id === booking.clientId)?.telegramId);
