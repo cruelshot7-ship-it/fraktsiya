@@ -1,4 +1,5 @@
 import { specialDataAllowed } from "@/lib/privacy";
+import { WheelField } from "@/components/app/wheel-picker";
 import { useState } from "react";
 import { isoDate } from "@/data/studio";
 import { changeSinceFirst, latestValue, MEASURE_FIELDS, type MeasureInput } from "@/lib/body-measures";
@@ -40,11 +41,16 @@ export function MeasuresCard({ client }: { client: Client }) {
           const last = latestValue(measures, field.key);
           return (
             <Field key={field.key} label={last ? `${field.label} (${formatCm(last.value)})` : field.label}>
-              <input
-                className={inputClass}
-                inputMode="decimal"
+              <WheelField
+                label={field.label}
+                kind="dec"
+                unit="см"
+                min={20}
+                max={200}
+                start={last ? last.value : 80}
                 value={values[field.key] ?? ""}
-                onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                onChange={(v) => setValues((prev) => ({ ...prev, [field.key]: v }))}
+                allowEmpty
               />
               {todayRow?.[field.key] !== undefined ? (
                 <span className="text-tiny text-muted-foreground">сегодня: {formatCm(todayRow[field.key] as number)}</span>

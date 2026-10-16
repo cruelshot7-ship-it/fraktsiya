@@ -1,3 +1,4 @@
+import { WheelField } from "@/components/app/wheel-picker";
 import { useEffect, useState } from "react";
 import { FORM_GOALS, isTrainDay, MOVE_KINDS, studioToday } from "@/data/studio";
 import { trainDayHints, type LoadHintTone } from "@/lib/day-load-hint";
@@ -98,18 +99,18 @@ export function FormView() {
         <div className="space-y-3">
           <div>
             <label className="text-xs text-muted-foreground">Шаги</label>
-            <input className={inputClass} inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder={String(FORM_GOALS.steps)} />
+            <WheelField label="Шаги" value={steps} onChange={setSteps} max={40000} step={100} start={FORM_GOALS.steps} placeholder={String(FORM_GOALS.steps)} allowEmpty />
             <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Сон, ч</label>
-            <input className={inputClass} inputMode="decimal" value={sleep} onChange={(e) => setSleep(e.target.value)} placeholder={String(FORM_GOALS.sleep)} />
+            <WheelField label="Сон, часы" kind="dec" unit="ч" value={sleep} onChange={setSleep} max={16} start={FORM_GOALS.sleep} placeholder={String(FORM_GOALS.sleep)} allowEmpty />
             <ProgressRail value={Number(sleep.replace(",", ".")) || 0} max={FORM_GOALS.sleep} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Вода, мл</label>
             <div className="flex gap-1.5">
-              <input className={inputClass} inputMode="numeric" value={water} onChange={(e) => setWater(e.target.value)} placeholder={String(FORM_GOALS.water)} />
+              <WheelField label="Вода, мл" unit="мл" value={water} onChange={setWater} max={5000} step={50} start={FORM_GOALS.water} placeholder={String(FORM_GOALS.water)} allowEmpty className="flex-1" />
               {[250, 500].map((add) => (
                 <button
                   key={add}
@@ -125,7 +126,7 @@ export function FormView() {
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Движение, мин</label>
-            <input className={inputClass} inputMode="numeric" value={move} onChange={(e) => setMove(e.target.value)} placeholder={String(FORM_GOALS.move)} />
+            <WheelField label="Движение, мин" unit="мин" value={move} onChange={setMove} max={300} step={5} start={FORM_GOALS.move} placeholder={String(FORM_GOALS.move)} allowEmpty />
           </div>
           <div className="flex flex-wrap gap-1.5">
             {MOVE_KINDS.map((item) => (
@@ -243,10 +244,10 @@ export function FormView() {
       <Surface>
         <p className="text-xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
         <div className="mt-3 grid grid-cols-4 gap-2">
-          <input className={inputClass} inputMode="numeric" value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="ккал" />
-          <input className={inputClass} inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Б" />
-          <input className={inputClass} inputMode="numeric" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Ж" />
-          <input className={inputClass} inputMode="numeric" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="У" />
+          <WheelField label="Калории, ккал" value={kcal} onChange={setKcal} max={5000} step={10} start={2000} placeholder="ккал" allowEmpty />
+          <WheelField label="Белки, г" value={protein} onChange={setProtein} unit="г" max={500} start={100} placeholder="Б" allowEmpty />
+          <WheelField label="Жиры, г" value={fat} onChange={setFat} unit="г" max={300} start={70} placeholder="Ж" allowEmpty />
+          <WheelField label="Углеводы, г" value={carbs} onChange={setCarbs} unit="г" max={600} start={200} placeholder="У" allowEmpty />
         </div>
         <button
           type="button"

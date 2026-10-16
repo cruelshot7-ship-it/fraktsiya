@@ -1,4 +1,5 @@
 import { confirmAction } from "@/lib/confirm";
+import { WheelField } from "@/components/app/wheel-picker";
 import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
 import { isLapsed, lastActivityDate, retentionExpired } from "@/lib/lapsed";
 import { weightChangeWeek } from "@/lib/weight-trend";
@@ -907,12 +908,15 @@ function ClientSheetBody({
                 </button>
               </div>
               <div className="mt-2 flex gap-1.5">
-                <input
-                  className={inputClass}
-                  inputMode="numeric"
+                <WheelField
+                  label="Своё количество занятий"
+                  unit="зан."
+                  max={100}
+                  start={10}
                   value={customAmt}
-                  onChange={(e) => setCustomAmt(e.target.value.replace(/[^\d]/g, ""))}
-                  aria-label="Своё количество"
+                  onChange={setCustomAmt}
+                  allowEmpty
+                  className="min-w-0 flex-1"
                 />
                 <button
                   type="button"

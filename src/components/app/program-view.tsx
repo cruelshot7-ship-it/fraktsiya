@@ -43,7 +43,8 @@ import {
   type ProgramBlock,
 } from "@/lib/program-blocks";
 import { MapRouteButtons } from "@/components/app/map-route-buttons";
-import { Field, inputClass, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { Field, KbjuMeters, SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
+import { WheelField } from "@/components/app/wheel-picker";
 import { Fold } from "@/components/app/fold";
 import { specialDataAllowed } from "@/lib/privacy";
 import { cn } from "@/lib/utils";
@@ -631,13 +632,13 @@ export function ProgramView() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Field label="Вес, кг">
-            <input className={inputClass} inputMode="decimal" placeholder="60" value={kg} onChange={(e) => setKg(e.target.value)} />
+            <WheelField label="Вес, кг" kind="dec" unit="кг" max={300} start={60} placeholder="60" value={kg} onChange={setKg} allowEmpty />
           </Field>
           <Field label="Повторы">
-            <input className={inputClass} inputMode="numeric" placeholder="8" value={reps} onChange={(e) => setReps(e.target.value)} />
+            <WheelField label="Повторы" max={100} start={8} placeholder="8" value={reps} onChange={setReps} allowEmpty />
           </Field>
           <Field label="Подходы">
-            <input className={inputClass} inputMode="numeric" placeholder="3" value={sets} onChange={(e) => setSets(e.target.value)} />
+            <WheelField label="Подходы" max={20} start={3} placeholder="3" value={sets} onChange={setSets} allowEmpty />
           </Field>
           <div className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
             <span id="rir-label">Повторов в запасе</span>
@@ -784,24 +785,20 @@ function BlockRow({
       {!readOnly && on && block.load ? (
         <div className="mt-1 mb-2 ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex items-center gap-2">
-            <input
-              className={cn(inputClass, "w-28 tabular-nums")}
-              inputMode="decimal"
-              enterKeyHint="done"
-              autoComplete="off"
-              aria-label={`Факт веса, кг: ${block.exercise}`}
-              aria-invalid={fact.trim() !== "" && parseFactKg(fact) == null}
+            <WheelField
+              label={`Факт веса, кг: ${block.exercise}`}
+              kind="dec"
+              unit="кг"
+              max={500}
+              start={Number(String(block.load).replace(",", ".")) || undefined}
               placeholder={`${block.load}`}
               value={fact}
-              onChange={(e) => onFact(e.target.value.replace(/[^\d.,\s]/g, ""))}
+              onChange={onFact}
+              allowEmpty
+              className="w-32"
             />
-            <span className="text-tiny text-muted-foreground">кг</span>
           </div>
-          <span className="text-tiny text-muted-foreground">
-            {fact.trim() !== "" && parseFactKg(fact) == null
-              ? "Введите число, например 22,5"
-              : `план ${block.load} кг, если пусто`}
-          </span>
+          <span className="text-tiny text-muted-foreground">план {block.load} кг, если пусто</span>
         </div>
       ) : null}
     </>

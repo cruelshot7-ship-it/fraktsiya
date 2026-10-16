@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { WheelField } from "@/components/app/wheel-picker";
 import { createPortal } from "react-dom";
 import { Camera, Keyboard, ScanLine, X } from "lucide-react";
 import { DEMO_BARCODES, scaleKbju, type ScanProduct } from "@/data/studio";
@@ -284,16 +285,16 @@ export function ScannerSheet({
                   </Field>
                   <div className="grid grid-cols-4 gap-2">
                     <Field label="ккал">
-                      <input className={inputClass} inputMode="decimal" value={draftCal} onChange={(e) => setDraftCal(e.target.value)} />
+                      <WheelField label="Калории, ккал" max={900} start={100} value={draftCal} onChange={setDraftCal} allowEmpty />
                     </Field>
                     <Field label="Б">
-                      <input className={inputClass} inputMode="decimal" value={draftP} onChange={(e) => setDraftP(e.target.value)} />
+                      <WheelField label="Белки, г" kind="dec" unit="г" max={100} start={10} value={draftP} onChange={setDraftP} allowEmpty />
                     </Field>
                     <Field label="Ж">
-                      <input className={inputClass} inputMode="decimal" value={draftF} onChange={(e) => setDraftF(e.target.value)} />
+                      <WheelField label="Жиры, г" kind="dec" unit="г" max={100} start={5} value={draftF} onChange={setDraftF} allowEmpty />
                     </Field>
                     <Field label="У">
-                      <input className={inputClass} inputMode="decimal" value={draftC} onChange={(e) => setDraftC(e.target.value)} />
+                      <WheelField label="Углеводы, г" kind="dec" unit="г" max={100} start={20} value={draftC} onChange={setDraftC} allowEmpty />
                     </Field>
                   </div>
                 </div>
@@ -316,11 +317,15 @@ export function ScannerSheet({
                     </button>
                   ))}
                 </div>
-                <input
-                  className={`${inputClass} mt-2`}
-                  inputMode="numeric"
-                  value={grams}
-                  onChange={(e) => setGrams(Number(e.target.value) || 0)}
+                <WheelField
+                  label="Граммы"
+                  unit="г"
+                  max={1000}
+                  start={100}
+                  value={grams ? String(grams) : ""}
+                  onChange={(v) => setGrams(Number(v) || 0)}
+                  allowEmpty
+                  className="mt-2"
                 />
                 <div className="mt-3 grid grid-cols-4 gap-2 text-tiny">
                   <span>{scaled.calories} ккал</span>
@@ -451,16 +456,16 @@ export function ScannerSheet({
                     </Field>
                     <div className="grid grid-cols-4 gap-2">
                       <Field label="ккал/100г">
-                        <input className={inputClass} inputMode="decimal" value={draftCal} onChange={(e) => setDraftCal(e.target.value)} />
+                        <WheelField label="Калории, ккал" max={900} start={100} value={draftCal} onChange={setDraftCal} allowEmpty />
                       </Field>
                       <Field label="Б">
-                        <input className={inputClass} inputMode="decimal" value={draftP} onChange={(e) => setDraftP(e.target.value)} />
+                        <WheelField label="Белки, г" kind="dec" unit="г" max={100} start={10} value={draftP} onChange={setDraftP} allowEmpty />
                       </Field>
                       <Field label="Ж">
-                        <input className={inputClass} inputMode="decimal" value={draftF} onChange={(e) => setDraftF(e.target.value)} />
+                        <WheelField label="Жиры, г" kind="dec" unit="г" max={100} start={5} value={draftF} onChange={setDraftF} allowEmpty />
                       </Field>
                       <Field label="У">
-                        <input className={inputClass} inputMode="decimal" value={draftC} onChange={(e) => setDraftC(e.target.value)} />
+                        <WheelField label="Углеводы, г" kind="dec" unit="г" max={100} start={20} value={draftC} onChange={setDraftC} allowEmpty />
                       </Field>
                     </div>
                     <button

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { WheelField } from "@/components/app/wheel-picker";
 import { EmptyHint, Field, inputClass, SectionLabel, Surface } from "@/components/app/bits";
 import { addManualFoodFn, searchFoodReferenceFn, type ReferenceRow } from "@/lib/food-reference";
 import { MANUAL_STATES, STATE_LABEL } from "@/lib/food-reference-manual";
@@ -61,6 +62,11 @@ function AddForm({ onAdded }: { onAdded: (row: ReferenceRow) => void }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
+    // поля — барабаны, нативный required на них не работает: проверяем сами
+    if (!values.kcal || !values.protein || !values.fat || !values.carbs) {
+      setError("Заполните калории и Б/Ж/У на 100 г.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -86,8 +92,7 @@ function AddForm({ onAdded }: { onAdded: (row: ReferenceRow) => void }) {
     }
   }
 
-  const setValue = (key: keyof typeof values) => (event: ChangeEvent<HTMLInputElement>) =>
-    setValues((prev) => ({ ...prev, [key]: event.target.value }));
+  const setValue = (key: keyof typeof values) => (value: string) => setValues((prev) => ({ ...prev, [key]: value }));
 
   return (
     <form onSubmit={submit} className="space-y-3">
@@ -118,19 +123,19 @@ function AddForm({ onAdded }: { onAdded: (row: ReferenceRow) => void }) {
       </Field>
       <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3">
         <Field label="Калории, на 100 г">
-          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.kcal} onChange={setValue("kcal")} required />
+          <WheelField label="Калории на 100 г" kind="dec" max={900} start={100} value={values.kcal} onChange={setValue("kcal")} />
         </Field>
         <Field label="Белки, г">
-          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.protein} onChange={setValue("protein")} required />
+          <WheelField label="Белки на 100 г" kind="dec" unit="г" max={100} start={10} value={values.protein} onChange={setValue("protein")} />
         </Field>
         <Field label="Жиры, г">
-          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.fat} onChange={setValue("fat")} required />
+          <WheelField label="Жиры на 100 г" kind="dec" unit="г" max={100} start={5} value={values.fat} onChange={setValue("fat")} />
         </Field>
         <Field label="Углеводы, г">
-          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.carbs} onChange={setValue("carbs")} required />
+          <WheelField label="Углеводы на 100 г" kind="dec" unit="г" max={100} start={20} value={values.carbs} onChange={setValue("carbs")} />
         </Field>
         <Field label="Клетчатка, г (если известна)">
-          <input className={cn(inputClass, "min-w-0")} inputMode="decimal" value={values.fiber} onChange={setValue("fiber")} />
+          <WheelField label="Клетчатка на 100 г" kind="dec" unit="г" max={100} start={2} value={values.fiber} onChange={setValue("fiber")} allowEmpty />
         </Field>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

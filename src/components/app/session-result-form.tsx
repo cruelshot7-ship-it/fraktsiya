@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WheelField } from "@/components/app/wheel-picker";
 import { getTelegramInitData } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
 import { neonBookingId } from "@/lib/booking/client-dual-write";
@@ -189,20 +190,26 @@ export function SessionResultForm({
               onChange={(e) => updateRow(i, { exercise: e.target.value })}
             />
             <div className="grid grid-cols-3 gap-2">
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-2 text-sm"
-                inputMode="decimal"
+              <WheelField
+                label="Вес"
+                kind="dec"
+                unit={row.unit === "lb" ? "lb" : "кг"}
+                max={500}
+                start={20}
                 placeholder="Вес"
                 value={row.load}
                 disabled={row.unit === "bw"}
-                onChange={(e) => updateRow(i, { load: e.target.value })}
+                onChange={(v) => updateRow(i, { load: v })}
+                allowEmpty
               />
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-2 text-sm"
-                inputMode="numeric"
+              <WheelField
+                label="Повторы"
+                max={100}
+                start={8}
                 placeholder="Повт."
                 value={row.reps}
-                onChange={(e) => updateRow(i, { reps: e.target.value })}
+                onChange={(v) => updateRow(i, { reps: v })}
+                allowEmpty
               />
               <select
                 className="rounded-lg border border-border bg-background px-2 py-2 text-sm"
@@ -215,38 +222,10 @@ export function SessionResultForm({
               </select>
             </div>
             <div className="grid grid-cols-4 gap-1.5">
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs"
-                inputMode="numeric"
-                placeholder="мин"
-                value={row.targetRepsMin}
-                onChange={(e) => updateRow(i, { targetRepsMin: e.target.value })}
-                aria-label="Целевые повторы мин"
-              />
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs"
-                inputMode="numeric"
-                placeholder="макс"
-                value={row.targetRepsMax}
-                onChange={(e) => updateRow(i, { targetRepsMax: e.target.value })}
-                aria-label="Целевые повторы макс"
-              />
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs"
-                inputMode="numeric"
-                placeholder="сдел."
-                value={row.setsCompleted}
-                onChange={(e) => updateRow(i, { setsCompleted: e.target.value })}
-                aria-label="Подходы сделано"
-              />
-              <input
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs"
-                inputMode="numeric"
-                placeholder="план"
-                value={row.setsPlanned}
-                onChange={(e) => updateRow(i, { setsPlanned: e.target.value })}
-                aria-label="Подходы план"
-              />
+              <WheelField label="Целевые повторы мин" max={100} start={8} placeholder="мин" value={row.targetRepsMin} onChange={(v) => updateRow(i, { targetRepsMin: v })} allowEmpty />
+              <WheelField label="Целевые повторы макс" max={100} start={12} placeholder="макс" value={row.targetRepsMax} onChange={(v) => updateRow(i, { targetRepsMax: v })} allowEmpty />
+              <WheelField label="Подходы сделано" max={20} start={3} placeholder="сдел." value={row.setsCompleted} onChange={(v) => updateRow(i, { setsCompleted: v })} allowEmpty />
+              <WheelField label="Подходы план" max={20} start={3} placeholder="план" value={row.setsPlanned} onChange={(v) => updateRow(i, { setsPlanned: v })} allowEmpty />
             </div>
           </div>
         ))}
@@ -255,13 +234,7 @@ export function SessionResultForm({
         + упражнение
       </button>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <input
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          inputMode="decimal"
-          placeholder="RPE (необяз.)"
-          value={rpe}
-          onChange={(e) => setRpe(e.target.value)}
-        />
+        <WheelField label="RPE" kind="dec" min={1} max={10} start={8} placeholder="RPE (необяз.)" value={rpe} onChange={setRpe} allowEmpty />
         <input
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
           placeholder="Заметка"
