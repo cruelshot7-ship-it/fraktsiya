@@ -31,7 +31,7 @@ export type CoreBookInput = {
 };
 
 export type CoreBookResult =
-  | { ok: true; bookingId: string; rev: string }
+  | { ok: true; bookingId: string; rev: string; created: boolean }
   | { ok: false; reason: "slot-missing" | "slot-closed" | "full" };
 
 export type ExtraSlotRow = {
@@ -92,7 +92,8 @@ export async function bookSlotCore(sql: Sql, input: CoreBookInput): Promise<Core
       `select id, ${REV_SQL} as rev from slot_bookings where slot_id = $1 and client_id = $2 and status <> 'cancelled'`,
       [input.slotId, input.clientId],
     );
-    if (prior[0]) return { ok: true, bookingId: prior[0].id, rev: prior[0].rev };
+    // повторный запрос той же записи: ничего не создаём и тренера повторно не извещаем
+    if (prior[0]) return { ok: true, bookingId: prior[0].id, rev: prior[0].rev, created: false };
 
     const countRows = await tx.query<{ n: string }>(
       "select count(*)::text as n from slot_bookings where slot_id = $1 and status <> 'cancelled'",
@@ -109,7 +110,7 @@ export async function bookSlotCore(sql: Sql, input: CoreBookInput): Promise<Core
        returning ${REV_SQL} as rev`,
       [bookingId, input.slotId, input.clientId],
     );
-    return { ok: true, bookingId, rev: written[0].rev };
+    return { ok: true, bookingId, rev: written[0].rev, created: true };
   });
 }
 

@@ -487,6 +487,12 @@ export async function sendTrainerNote(
   });
 }
 
+/** Короткое сообщение тренеру о записи или отмене. Возвращает true, если Telegram принял сообщение. */
+export async function sendTrainerAlert(telegramId: string, text: string): Promise<boolean> {
+  const res = await tg("sendMessage", { chat_id: telegramId, text });
+  return res.ok === true;
+}
+
 export async function sendBotLink(telegramId: string, text: string) {
   const sent = await tg("sendMessage", {
     chat_id: telegramId,
