@@ -16,6 +16,7 @@ import {
   type BuildGoal,
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
+import { WheelField } from "@/components/app/wheel-picker";
 import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
 import {
@@ -248,11 +249,13 @@ export function ProgramEditor({
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Недель">
-          <input
-            className={inputClass}
-            inputMode="numeric"
-            value={draft.programWeeks}
-            onChange={(e) => setDraft({ ...draft, programWeeks: Number(e.target.value) || 1 })}
+          <WheelField
+            label="Недель"
+            value={String(draft.programWeeks)}
+            onChange={(v) => setDraft({ ...draft, programWeeks: Number(v) || 1 })}
+            max={52}
+            start={8}
+            unit="нед."
           />
         </Field>
         <Field label="Старт">
@@ -640,12 +643,13 @@ function SessionEditor({
               />
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Field label="Подходы">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    enterKeyHint="next"
-                    value={b.sets || ""}
-                    onChange={(e) => patch(i, { sets: Number(e.target.value.replace(/\D/g, "")) || 0 })}
+                  <WheelField
+                    label="Подходы"
+                    value={b.sets ? String(b.sets) : ""}
+                    onChange={(v) => patch(i, { sets: Number(v) || 0 })}
+                    max={20}
+                    start={3}
+                    allowEmpty
                   />
                 </Field>
                 <Field label="Повторы">
@@ -655,15 +659,18 @@ function SessionEditor({
                   <input className={inputClass} enterKeyHint="next" placeholder="—" value={b.load} onChange={(e) => patch(i, { load: e.target.value.trim() })} />
                 </Field>
                 <Field label="Отдых, с">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    enterKeyHint="next"
-                    value={b.rest ?? ""}
-                    onChange={(e) => {
-                      const n = Number(e.target.value.replace(/\D/g, ""));
+                  <WheelField
+                    label="Отдых, с"
+                    value={b.rest ? String(b.rest) : ""}
+                    onChange={(v) => {
+                      const n = Number(v);
                       patch(i, { rest: n > 0 ? n : null });
                     }}
+                    min={15}
+                    max={600}
+                    step={15}
+                    start={90}
+                    allowEmpty
                   />
                 </Field>
               </div>
@@ -810,11 +817,14 @@ function KbjuFields({ value, onChange }: { value: Kbju; onChange: (k: Kbju) => v
         ] as const
       ).map(([key, label]) => (
         <Field key={key} label={label}>
-          <input
-            className={inputClass}
-            inputMode="numeric"
-            value={value[key]}
-            onChange={(e) => onChange({ ...value, [key]: Number(e.target.value) || 0 })}
+          <WheelField
+            label={label}
+            value={value[key] ? String(value[key]) : ""}
+            onChange={(v) => onChange({ ...value, [key]: Number(v) || 0 })}
+            max={key === "calories" ? 5000 : 500}
+            step={key === "calories" ? 10 : 1}
+            start={key === "calories" ? 2000 : key === "protein" ? 150 : key === "fat" ? 70 : 200}
+            allowEmpty
           />
         </Field>
       ))}
@@ -855,7 +865,17 @@ export function MeasuresEditor({
       </div>
       {healthOk ? (
         <Field label="Вес, кг">
-          <input className={inputClass} inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
+          <WheelField
+            label="Вес, кг"
+            kind="dec"
+            unit="кг"
+            min={30}
+            max={300}
+            start={70}
+            value={weight}
+            onChange={setWeight}
+            allowEmpty
+          />
         </Field>
       ) : (
         <p className="text-tiny text-muted-foreground">Вес записывается только с согласия клиента на данные о здоровье.</p>
