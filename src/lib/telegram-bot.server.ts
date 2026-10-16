@@ -3,6 +3,7 @@ import { applyOfferBooking, BOT_USERNAME, clientCoach, coachKey, coachPhase, COA
 import { claimReminders, dueReminders, findByToken, remindToken } from "@/lib/studio-remind";
 import { closeBotMessage, messageIdOf, recordBotMessage, sweepBotMessages } from "@/lib/bot-retention.server";
 import { sweepDue } from "@/lib/bot-sweep-throttle";
+import { isInHall } from "@/lib/join-rules";
 import { commitStudioState, dropTombstones, emptyPayload, loadStudioState, saveStudioState, StateConflictError } from "@/lib/studio-sync";
 import {
   buildSessions,
@@ -116,12 +117,8 @@ export async function registerJoin(
 ) {
   const message = (offer?.message ?? "").trim().slice(0, 500);
   let payload = await loadStudioState();
-  const uname = (user.username ?? "").replace(/^@/, "").trim().toLowerCase();
-  const inHall = payload.clients.some(
-    (c) =>
-      c.telegramId === user.id ||
-      (uname && (c.telegramUsername ?? "").replace(/^@/, "").trim().toLowerCase() === uname),
-  );
+  // Только по telegramId: карточка с одним юзернеймом ещё не привязана, для неё заявка нужна (см. join-rules).
+  const inHall = isInHall(payload.clients, user.id);
   // The app calls this on every open (studio-store), so an existing client gets no message here:
   // a bot message on each open was spam. The app itself is already open for them.
   if (inHall) return { ok: true, already: true };
@@ -135,7 +132,8 @@ export async function registerJoin(
     return { ok: false, already: false };
   }
   const prev = (payload.joinRequests ?? []).find((r) => r.telegramId === user.id && r.status === "pending");
-  if (prev?.coachId && prev.coachId !== coachId) return { ok: true, already: true };
+  // Заявка уже у другого тренера: молча «ок» без записи вводил клиента в заблуждение.
+  if (prev?.coachId && prev.coachId !== coachId) return { ok: false, already: false };
   if (prev?.message === message) return { ok: true, already: false };
   const req: JoinRequest = {
     id: `jr_${user.id}`,

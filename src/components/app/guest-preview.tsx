@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { STUDIO, formatLongDate, isSlotPast } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { PRIVACY_VERSION } from "@/lib/privacy";
-import { requestJoin } from "@/lib/studio-sync";
+import { requestJoin, type JoinResult } from "@/lib/studio-sync";
 import { getTelegramInitData } from "@/lib/telegram";
 import { SectionLabel } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,13 @@ const GOALS = ["Похудеть", "Сила", "Форма"] as const;
 /** Единственное предложение на входе: пробный час. Цены и пакеты здесь не показываем. */
 const TRIAL_LABEL = "Пробный час";
 const ANY_TIME_LABEL = "Время: согласуем с тренером";
+
+/** Что делать клиенту при отказе сервера. Без этого «не отправилось» не объясняет причину. */
+const JOIN_FAIL: Record<NonNullable<JoinResult["reason"]>, string> = {
+  consent: "Приложение обновилось. Закройте Telegram полностью и откройте зал снова.",
+  session: "Не подтвердили вход в Telegram. Откройте зал из меню бота.",
+  coach: "Не удалось определить тренера. Откройте зал из меню бота и отправьте заявку ещё раз.",
+};
 
 const OSWALD = "Oswald, 'Arial Narrow', sans-serif";
 
@@ -87,7 +94,7 @@ export function OfferLanding({ live }: { live: boolean }) {
       return;
     }
     setBusy(true);
-    sendJoinRequest(offer, { slotId: picked?.id, goal, pack: TRIAL_LABEL });
+    // Сначала сервер, потом экран: локальная «ожидающая» запись появляется только после ответа «ок».
     const res = await requestJoin({
       data: {
         initData: getTelegramInitData(),
@@ -97,14 +104,14 @@ export function OfferLanding({ live }: { live: boolean }) {
         pack: TRIAL_LABEL,
         consentVersion: PRIVACY_VERSION,
       },
-    }).catch(() => ({ ok: false }));
+    }).catch((): JoinResult => ({ ok: false }));
     setBusy(false);
     if (!res.ok) {
-      showToast("Не отправилось. Напишите тренеру.");
+      showToast((res.reason && JOIN_FAIL[res.reason]) || "Не отправилось. Напишите тренеру.");
       return;
     }
+    sendJoinRequest(offer, { slotId: picked?.id, goal, pack: TRIAL_LABEL });
     setSent(true);
-    showToast("Заявка ушла.");
   }
 
   if (waiting) {

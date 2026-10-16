@@ -341,12 +341,6 @@ function pingClient(telegramId: string | null | undefined, text: string) {
 
 let slotBusy = false;
 
-function mergeJoin(base: JoinRequest[], incoming: JoinRequest[]) {
-  const map = new Map(base.map((x) => [x.id, x]));
-  for (const x of incoming) map.set(x.id, x);
-  return [...map.values()];
-}
-
 function makeTxn(
   clientId: string,
   kind: SessionTxn["kind"],
@@ -623,7 +617,9 @@ export const useStudio = create<State>((set, get) => ({
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const joined = cloud.role === "trainer" ? payload.joinRequests ?? [] : mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      // Заявки — из ответа сервера, а не слиянием с локальным списком: локальная «ожидающая» запись,
+      // которой нет на сервере (отказ, старая сборка), иначе висит на экране вечно.
+      const joined = payload.joinRequests ?? [];
       const localFresh =
         cloud.role === "trainer"
           ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
@@ -700,7 +696,9 @@ export const useStudio = create<State>((set, get) => ({
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
-      const joined = cloud.role === "trainer" ? payload.joinRequests ?? [] : mergeJoin(get().joinRequests, payload.joinRequests ?? []);
+      // Заявки — из ответа сервера, а не слиянием с локальным списком: локальная «ожидающая» запись,
+      // которой нет на сервере (отказ, старая сборка), иначе висит на экране вечно.
+      const joined = payload.joinRequests ?? [];
       const localFresh =
         cloud.role === "trainer"
           ? get().clients.filter((c) => c.id.startsWith("c_") && !(payload.clients ?? []).some((row) => row.id === c.id))
