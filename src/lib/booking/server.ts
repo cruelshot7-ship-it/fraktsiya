@@ -67,7 +67,20 @@ export const bookSlotFn = createServerFn({ method: "POST" })
         if (owner !== trainerId && (await coachBookingBlocked(owner))) {
           return { ok: false, reason: "paused" };
         }
-        return bookSlotCore(sql, { slotId: data.slotId, clientId: selfClientId, create });
+        const booked = await bookSlotCore(sql, { slotId: data.slotId, clientId: selfClientId, create });
+        // тренер узнаёт о новой записи в Telegram; повторный запрос (created: false) не дублирует сообщение
+        if (booked.ok && booked.created) {
+          const { loadStudioState } = await import("@/lib/studio-sync");
+          const { alertTrainerOfBooking } = await import("@/lib/booking/trainer-alert.server");
+          await alertTrainerOfBooking({
+            loadPayload: loadStudioState,
+            ownerCoachId: owner ?? trainerId,
+            slotId: data.slotId,
+            clientId: selfClientId,
+            kind: "book",
+          });
+        }
+        return booked;
       }
 
       // Тренер: может записывать любого клиента и создать слот.
@@ -151,6 +164,18 @@ export const cancelBookingFn = createServerFn({ method: "POST" })
         expectedRev: data.rev ?? null,
       });
       if (!res.ok) return { ok: false, reason: res.reason };
+      // отменил клиент: тренер узнаёт в Telegram (отмена тренером — он и так её делает сам)
+      if (res.cancelled && session.role === "client") {
+        const { loadStudioState } = await import("@/lib/studio-sync");
+        const { alertTrainerOfBooking } = await import("@/lib/booking/trainer-alert.server");
+        await alertTrainerOfBooking({
+          loadPayload: loadStudioState,
+          ownerCoachId: owner,
+          slotId: data.slotId,
+          clientId: data.clientId,
+          kind: "cancel",
+        });
+      }
       return { ok: true, cancelled: res.cancelled, ...(res.stale ? { stale: true } : {}) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
