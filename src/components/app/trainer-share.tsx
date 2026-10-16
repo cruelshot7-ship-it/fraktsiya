@@ -54,7 +54,10 @@ export function TrainerShareCard() {
         ) : (
           <div aria-hidden="true" className="size-[160px] rounded-xl bg-secondary" />
         )}
-        <p className="break-all text-center text-2xs text-muted-foreground">{link}</p>
+        <details className="w-full text-center">
+          <summary className="cursor-pointer text-2xs text-muted-foreground">Показать ссылку</summary>
+          <p className="mt-2 break-all text-2xs text-muted-foreground">{link}</p>
+        </details>
         <button
           type="button"
           className="pressable h-11 w-full rounded-xl bg-primary text-sm font-medium text-primary-foreground"

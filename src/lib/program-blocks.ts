@@ -215,7 +215,19 @@ function loadMid(load: string): number | null {
   return Math.round(((a + b) / 2) * 10) / 10;
 }
 
-/** Totals for the checked blocks. A typed fact weight replaces the planned load. */
+/**
+ * Факт веса в кг из текста поля. Принимает «22,5», «22.5», «22 кг». Мусор и пустое — null.
+ * Диапазон 0–1000 кг, не больше одного знака после запятой.
+ */
+export function parseFactKg(raw: string): number | null {
+  const cleaned = raw.replace(/кг/gi, "").replace(/\s+/g, "").replace(",", ".");
+  if (!/^\d{1,4}(\.\d{1,2})?$/.test(cleaned)) return null;
+  const value = Number(cleaned);
+  if (!(value > 0 && value <= 1000)) return null;
+  return value;
+}
+
+/** Totals for the checked blocks. A typed fact weight replaces the planned load; an unreadable one counts as no fact. */
 export function planTotalsFromBlocks(blocks: ProgramBlock[], checked: string[], facts: Record<string, string>) {
   let sets = 0;
   let volume = 0;
@@ -223,8 +235,8 @@ export function planTotalsFromBlocks(blocks: ProgramBlock[], checked: string[], 
   for (const b of blocks) {
     if (!checked.includes(b.id)) continue;
     restSec += b.rest ?? 0;
-    const typed = Number((facts[b.id] ?? "").replace(",", "."));
-    const kg = typed > 0 ? typed : loadMid(b.load);
+    const typed = parseFactKg(facts[b.id] ?? "");
+    const kg = typed ?? loadMid(b.load);
     const reps = repsMid(b.reps);
     const s = b.sets * (b.side ? 2 : 1);
     if (s > 0 && reps > 0 && kg != null) {

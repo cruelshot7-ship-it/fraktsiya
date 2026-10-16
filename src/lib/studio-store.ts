@@ -68,7 +68,7 @@ import { COACH_TIERS_TEXT } from "@/lib/coach-tier";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
 import { stripDemoData } from "@/lib/studio-clean";
 import { mergeChecks } from "@/lib/checks-merge";
-import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
+import { getStartParam, getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 
 export type TabId = "today" | "schedule" | "program" | "programs" | "progress" | "more" | "slots" | "bookings" | "food" | "form" | "hall" | "clients" | "signals";
 export type Role = "client" | "trainer";
@@ -621,7 +621,9 @@ export const useStudio = create<State>((set, get) => ({
       programTemplates,
       menus,
       inviteBlocked,
-      tab: role === "trainer" ? "clients" : "slots",
+      // QR-наклейка на стойке (m_<id>) открывает «Зал». Ставим вкладку здесь, одним местом:
+      // раньше эффект в mini-app ставил «Зал», а этот вызов тут же возвращал «Слоты».
+      tab: role === "trainer" ? "clients" : getStartParam().toLowerCase().startsWith("m_") ? ("hall" as TabId) : "slots",
     });
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
