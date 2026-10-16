@@ -320,9 +320,11 @@ export function MiniApp() {
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-ok" : "text-muted-foreground",
                     )} aria-current={active ? "page" : undefined}>
-                    {active ? <span className="absolute top-0 h-[3px] w-7 rounded-b-[3px] bg-ok" /> : null}
                     <span className="relative">
-                      <Icon className="size-5" />
+                      {/* активный пункт — стеклянная пилюля под иконкой; полоска сверху убрана */}
+                      <span className={cn("grid h-8 w-14 place-items-center rounded-2xl transition-colors", active && "bg-ok-dim shadow-border")}>
+                        <Icon className="size-5" />
+                      </span>
                       {badge > 0 ? (
                         // счётчик ведёт к задачам: там сигнал закрывается кнопкой «Готово»
                         <span
