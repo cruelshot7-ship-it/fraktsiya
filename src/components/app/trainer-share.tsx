@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { inviteUrl } from "@/lib/telegram";
+import { getTelegramUser, inviteUrl } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
 import { TRAINER_TG_ID } from "@/data/studio";
 import { SectionLabel, Surface } from "@/components/app/bits";
@@ -11,7 +11,9 @@ export function TrainerShareCard() {
   const showToast = useStudio((s) => s.showToast);
   const [copied, setCopied] = useState(false);
 
-  const code = useMemo(() => `coach_${TRAINER_TG_ID}`, []);
+  // Ссылка — своя: код тренера, который открыл карточку. Без Telegram-пользователя — главный тренер.
+  const ownerId = useMemo(() => String(getTelegramUser()?.id ?? TRAINER_TG_ID), []);
+  const code = useMemo(() => `coach_${ownerId}`, [ownerId]);
   const link = useMemo(() => inviteUrl(undefined, code), [code]);
   // The QR is drawn in the browser: the link is not sent to any third-party service.
   const [qrSrc, setQrSrc] = useState<string | null>(null);
