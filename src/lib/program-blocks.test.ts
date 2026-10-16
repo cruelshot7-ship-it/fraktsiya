@@ -8,6 +8,7 @@ import {
   legacyMarkMap,
   PHASE_LABEL,
   PHASES,
+  parseFactKg,
   planTotalsFromBlocks,
   rewriteFacts,
   rewriteMarks,
@@ -194,4 +195,27 @@ test("rirLabel: 0 — до отказа, остальное — запас по�
   assert.equal(rirLabel(0), "до отказа");
   assert.equal(rirLabel(1), "запас 1 повт.");
   assert.equal(rirLabel(3), "запас 3 повт.");
+});
+
+test("parseFactKg accepts comma, dot and a unit, rejects garbage and out-of-range", () => {
+  assert.equal(parseFactKg("22,5"), 22.5);
+  assert.equal(parseFactKg("22.5"), 22.5);
+  assert.equal(parseFactKg(" 20 кг "), 20);
+  assert.equal(parseFactKg("20кг"), 20);
+  assert.equal(parseFactKg("20"), 20);
+  assert.equal(parseFactKg(""), null);
+  assert.equal(parseFactKg("2x20"), null);
+  assert.equal(parseFactKg("1,2,3"), null);
+  assert.equal(parseFactKg("0"), null);
+  assert.equal(parseFactKg("1500"), null);
+});
+
+test("planTotalsFromBlocks uses the typed fact, falls back to plan when the fact is unreadable", () => {
+  const b: ProgramBlock = { id: "p", exercise: "Жим", sets: 3, reps: "10", load: "20", rest: null, side: null, group: null };
+  const plain = planTotalsFromBlocks([b], ["p"], {});
+  assert.ok(plain.volume > 0, "у блока есть план веса");
+  const comma = planTotalsFromBlocks([b], ["p"], { p: "22,5" });
+  assert.equal(comma.volume, planTotalsFromBlocks([b], ["p"], { p: "22.5" }).volume);
+  assert.notEqual(comma.volume, plain.volume);
+  assert.equal(planTotalsFromBlocks([b], ["p"], { p: "abc" }).volume, plain.volume);
 });
