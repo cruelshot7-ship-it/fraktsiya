@@ -19,7 +19,6 @@ import {
   applyOfferBooking,
   formatDayMonth,
   formatLongDate,
-  generateWindow,
   hoursAgoIso,
   hoursUntilLabel,
   hoursUntilSlot,
@@ -316,16 +315,10 @@ function slotViewer(clients: Client[], role: Role): string {
 function mergeSlots(extra: Slot[], viewerId?: string) {
   const viewer = coachKey(viewerId || String(TRAINER_TG_ID));
   const owner = String(TRAINER_TG_ID);
-  const mine = extra.filter((slot) => coachKey(slot.ownerId) === viewer);
-  const rows =
-    viewer === owner
-      ? (() => {
-          const base = generateWindow(startOfWeek(new Date()), 42);
-          const map = new Map(base.map((slot) => [slot.id, { ...slot, ownerId: owner }]));
-          for (const slot of mine) map.set(slot.id, { ...slot, ownerId: slot.ownerId || owner });
-          return [...map.values()];
-        })()
-      : mine;
+  // Только слоты, которые добавил сам тренер (у каждого свои). Вшитых слотов нет.
+  const rows = extra
+    .filter((slot) => coachKey(slot.ownerId) === viewer)
+    .map((slot) => ({ ...slot, ownerId: slot.ownerId || owner }));
   return rows
     .map((slot) => {
       const hold = slotHolds[slot.id] ?? 0;
@@ -470,7 +463,7 @@ export const useStudio = create<State>((set, get) => ({
   sheetClientId: null,
   sheetStartMode: null,
   clientFilter: "all",
-  slots: generateWindow(startOfWeek(new Date()), 42),
+  slots: [],
   extraSlots: [],
   closedSlotIds: [],
   bookings: [],

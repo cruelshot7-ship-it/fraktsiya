@@ -12,7 +12,6 @@
  *   с тех пор заново создана (`rev` другой), старая отмена не трогает новое место.
  */
 import type { Sql } from "../db-adapters";
-import { capacityFor } from "../slot-rules";
 
 export type CreateSpec = {
   ownerCoachId: string;
@@ -35,9 +34,6 @@ export type CoreBookResult =
   | { ok: true; bookingId: string; rev: string }
   | { ok: false; reason: "slot-missing" | "slot-closed" | "full" };
 
-/** Слот из расписания по умолчанию: id вида `2026-10-12_10:00`. */
-const DEFAULT_SLOT_ID = /^(\d{4}-\d{2}-\d{2})_(\d{2}:\d{2})$/;
-
 export type ExtraSlotRow = {
   date: string;
   time: string;
@@ -53,36 +49,18 @@ const clampInt = (value: number, min: number, max: number, fallback: number) => 
 
 /**
  * Какой слот клиент может создать при первой записи (слота в БД ещё нет).
- * - Дополнительный слот тренера (`extra`) — все поля берём из сохранённых данных тренера.
- * - Слот по умолчанию — владелец всегда тренер, дата и время из id. Ёмкость — по правилам
- *   расписания (`capacityFor`), а не из запроса клиента.
- * - Всё остальное — null: клиент слот не создаёт.
+ * Только слот, который тренер сам добавил (`extra`): все поля берём из его сохранённых данных.
+ * Вшитых слотов нет, поэтому без `extra` клиент слот не создаёт — null.
  */
-export function clientCreateSpec(input: {
-  slotId: string;
-  trainerId: string;
-  extra?: ExtraSlotRow | null;
-}): CreateSpec | null {
-  if (input.extra) {
-    const e = input.extra;
-    const capacity = clampInt(e.capacity, 1, 100, 1);
-    return {
-      ownerCoachId: e.ownerId ? String(e.ownerId) : input.trainerId,
-      startsAt: `${e.date}T${e.time}:00`,
-      timezone: "Europe/Minsk",
-      durationMin: clampInt(e.duration, 1, 480, 60),
-      capacity,
-      kind: capacity <= 1 ? "individual" : "group",
-    };
-  }
-  const m = DEFAULT_SLOT_ID.exec(input.slotId);
-  if (!m) return null;
-  const capacity = capacityFor(m[2]);
+export function clientCreateSpec(input: { trainerId: string; extra?: ExtraSlotRow | null }): CreateSpec | null {
+  const e = input.extra;
+  if (!e) return null;
+  const capacity = clampInt(e.capacity, 1, 100, 1);
   return {
-    ownerCoachId: input.trainerId,
-    startsAt: `${m[1]}T${m[2]}:00`,
+    ownerCoachId: e.ownerId ? String(e.ownerId) : input.trainerId,
+    startsAt: `${e.date}T${e.time}:00`,
     timezone: "Europe/Minsk",
-    durationMin: 60,
+    durationMin: clampInt(e.duration, 1, 480, 60),
     capacity,
     kind: capacity <= 1 ? "individual" : "group",
   };

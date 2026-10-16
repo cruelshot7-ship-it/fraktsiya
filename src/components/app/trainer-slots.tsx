@@ -12,12 +12,10 @@ import {
   startOfWeek,
 } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
-import { Field, inputClass } from "@/components/app/bits";
+import { PlacesWheel, TimeWheel } from "@/components/app/wheel-picker";
 import { cn } from "@/lib/utils";
 import { BOT_USERNAME, TRAINER_TG_ID } from "@/data/studio";
 import { openTelegramUrl, getTelegramUser } from "@/lib/telegram";
-
-const SLOT_TIMES = ["07:00", "07:30", "08:00", "08:30", "09:00", "16:30", "19:00"];
 
 export function TrainerSlots() {
   const selectedDate = useStudio((s) => s.selectedDate);
@@ -37,8 +35,9 @@ export function TrainerSlots() {
   const cancelBooking = useStudio((s) => s.cancelBooking);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Время и места выбираются колёсами: вводить с клавиатуры не нужно.
   const [time, setTime] = useState("18:00");
-  const [cap, setCap] = useState("3");
+  const [cap, setCap] = useState(3);
   const [pickId, setPickId] = useState<string | null>(null);
 
   const start = startOfWeek(parseISODate(weekStart));
@@ -242,28 +241,18 @@ export function TrainerSlots() {
       {adding ? (
         <div className="mt-3 rounded-xl bg-card p-4 shadow-border">
           <p className="font-display text-xs tracking-[0.08em] text-muted-foreground ">Новый слот</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {SLOT_TIMES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTime(t)}
-                className={cn(
-                  "h-9 rounded-lg px-2.5 text-xs font-medium",
-                  time === t ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
-                )}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Field label="Время">
-              <input className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} placeholder="18:00" inputMode="numeric" />
-            </Field>
-            <Field label="Мест">
-              <input className={inputClass} inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} />
-            </Field>
+          <p className="mt-2 text-center font-display text-lg font-semibold tabular-nums">
+            {time} · {cap} {cap === 1 ? "место" : cap < 5 ? "места" : "мест"}
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <p className="pb-1 text-center text-2xs tracking-wide text-muted-foreground">Время</p>
+              <TimeWheel value={time} onChange={setTime} />
+            </div>
+            <div>
+              <p className="pb-1 text-center text-2xs tracking-wide text-muted-foreground">Мест</p>
+              <PlacesWheel value={cap} onChange={setCap} />
+            </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button type="button" className="h-11 rounded-lg bg-secondary text-sm" onClick={() => setAdding(false)}>
@@ -273,13 +262,11 @@ export function TrainerSlots() {
               type="button"
               className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
               onClick={() => {
-                const capacity = Number(cap);
-                const hhmm = /^\d{1,2}:\d{2}$/.test(time.trim()) ? time.trim().padStart(5, "0") : "";
-                if (!hhmm || !capacity) {
-                  showToast("Укажите время и число мест.");
+                if (isSlotPast(selectedDate, time)) {
+                  showToast("Это время уже прошло.");
                   return;
                 }
-                addSlot(selectedDate, hhmm, capacity);
+                addSlot(selectedDate, time, cap);
                 setAdding(false);
               }}
             >

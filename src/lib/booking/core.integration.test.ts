@@ -89,16 +89,15 @@ describe("bookSlotCore on Postgres", { skip: DB_URL ? false : "TEST_DATABASE_URL
     assert.equal(await slotOwnerOf(sql, slotId), OWNER);
   });
 
-  it("client creates a default-schedule slot via server rule: owner is the trainer, booking succeeds", async () => {
+  it("client cannot create a slot the trainer did not add: no built-in schedule row is made", async () => {
     const slotId = "2026-12-03_18:00";
     await sql.query("delete from slot_bookings where slot_id = $1", [slotId]);
     await sql.query("delete from training_slots where id = $1", [slotId]);
-    const create = clientCreateSpec({ slotId, trainerId: OWNER });
-    const res = await bookSlotCore(sql, { slotId, clientId: "tg_first", create });
-    assert.equal(res.ok, true);
-    assert.equal(await slotOwnerOf(sql, slotId), OWNER);
-    const rows = await sql.query<{ starts_at: string }>("select starts_at::text from training_slots where id = $1", [slotId]);
-    assert.match(rows[0].starts_at, /^2026-12-03 18:00:00/);
+    const create = clientCreateSpec({ trainerId: OWNER, extra: null });
+    assert.equal(create, null);
+    assert.deepEqual(await bookSlotCore(sql, { slotId, clientId: "tg_first", create }), { ok: false, reason: "slot-missing" });
+    const rows = await sql.query<{ id: string }>("select id from training_slots where id = $1", [slotId]);
+    assert.equal(rows.length, 0);
   });
 
   it("cancel frees the seat in Neon: the next client gets it; a repeat cancel is a no-op", async () => {

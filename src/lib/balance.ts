@@ -16,7 +16,6 @@
  */
 import type { Booking, Client, SessionTxn } from "@/data/studio";
 import { isLateCancelAt, slotStartMs } from "./minsk-time.ts";
-import { capacityFor, generatedTimesFor } from "./slot-rules.ts";
 
 export const LEDGER_KEEP = 40;
 export const TXN_ID_KEEP = 300;
@@ -66,17 +65,15 @@ export function settleOwned(
   const closed = new Set(current.closedSlotIds ?? []);
   const occupancy = new Map<string, number>();
   for (const b of current.bookings) occupancy.set(b.slotId, (occupancy.get(b.slotId) ?? 0) + 1);
-  // A slot is real when the schedule generates it for that date and time, or it is a trainer's extra slot
-  // at exactly that date and time. An id the client made up is not a slot.
+  // A slot is real only when the trainer added it at exactly that date and time. No built-in schedule:
+  // an id the client made up, or a time the trainer never added, is not a slot.
   const exists = (row: Booking) => {
     const extra = extraAt.get(row.slotId);
-    if (extra) return extra.date === row.date && extra.time === row.time;
-    return row.slotId === `${row.date}_${row.time}` && generatedTimesFor(row.date).includes(row.time);
+    return !!extra && extra.date === row.date && extra.time === row.time;
   };
   const bookable = (row: Booking) => {
     if (!exists(row) || closed.has(row.slotId) || !(now < slotStartMs(row.date, row.time))) return false;
-    const capacity = extraCap.get(row.slotId) ?? capacityFor(row.time);
-    return (occupancy.get(row.slotId) ?? 0) < capacity;
+    return (occupancy.get(row.slotId) ?? 0) < (extraCap.get(row.slotId) ?? 0);
   };
 
   for (const id of owners) {
