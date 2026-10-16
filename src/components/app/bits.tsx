@@ -48,14 +48,23 @@ export function Surface({
 }
 
 /** Bottom sheet: dims the screen, closes on a tap outside, slides up from the bottom edge. */
-export function BottomSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+export function BottomSheet({
+  onClose,
+  children,
+  compact = false,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+  /** высота по содержимому (для барабана), а не почти во весь экран */
+  compact?: boolean;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <button type="button" tabIndex={-1} aria-label="Закрыть" onClick={onClose} className="sheet-backdrop absolute inset-0 bg-black/60" />
       <div
         role="dialog"
         aria-modal="true"
-        className="sheet-up relative mx-auto flex h-[92dvh] w-full max-w-app flex-col overflow-hidden rounded-t-[1.375rem] border border-b-0 border-border bg-background pb-[var(--inset-bottom)]"
+        className={`sheet-up relative mx-auto flex ${compact ? "h-auto" : "h-[92dvh]"} w-full max-w-app flex-col overflow-hidden rounded-t-[1.375rem] border border-b-0 border-border bg-background pb-[var(--inset-bottom)]`}
       >
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden="true" />
         {children}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WheelField } from "@/components/app/wheel-picker";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatDayMonth, type Client } from "@/data/studio";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -104,12 +105,17 @@ function WeightEntry({ current }: { current: number }) {
     <Surface>
       <label className="text-xs text-muted-foreground">Вес сегодня, кг</label>
       <div className="mt-1.5 flex gap-2">
-        <input
-          className={inputClass}
-          inputMode="decimal"
+        <WheelField
+          label="Вес сегодня, кг"
+          kind="dec"
+          unit="кг"
+          min={30}
+          max={300}
+          start={80}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="например, 82,5"
+          onChange={setValue}
+          placeholder="82,5"
+          className="min-w-0 flex-1"
         />
         <button type="button" onClick={save} className="pressable h-11 shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">
           Сохранить

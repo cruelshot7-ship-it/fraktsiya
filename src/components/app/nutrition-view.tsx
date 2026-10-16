@@ -9,6 +9,7 @@ import { MenuDay } from "@/components/app/menu-day";
 import { FEATURES } from "@/lib/features";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
 import { FoodReferencePanel } from "@/components/app/food-reference-panel";
+import { WheelField } from "@/components/app/wheel-picker";
 import { cn } from "@/lib/utils";
 
 type Slot = "all" | "breakfast" | "lunch" | "dinner" | "snack";
@@ -352,16 +353,16 @@ function NutritionContent({ client }: { client: Client }) {
               </Field>
               <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
                 <Field label="ккал">
-                  <input className={inputClass} inputMode="numeric" value={cal} onChange={(e) => setCal(e.target.value)} />
+                  <WheelField label="Калории, ккал" value={cal} onChange={setCal} max={2000} step={5} start={300} allowEmpty />
                 </Field>
                 <Field label="Б">
-                  <input className={inputClass} inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value)} />
+                  <WheelField label="Белки, г" value={protein} onChange={setProtein} unit="г" max={300} start={20} allowEmpty />
                 </Field>
                 <Field label="Ж">
-                  <input className={inputClass} inputMode="numeric" value={fat} onChange={(e) => setFat(e.target.value)} />
+                  <WheelField label="Жиры, г" value={fat} onChange={setFat} unit="г" max={300} start={10} allowEmpty />
                 </Field>
                 <Field label="У">
-                  <input className={inputClass} inputMode="numeric" value={carbs} onChange={(e) => setCarbs(e.target.value)} />
+                  <WheelField label="Углеводы, г" value={carbs} onChange={setCarbs} unit="г" max={300} start={30} allowEmpty />
                 </Field>
               </div>
               <button type="button" className="pressable h-11 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onClick={addOwn}>
