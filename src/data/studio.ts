@@ -3,7 +3,6 @@ import type { Consent } from "@/lib/privacy";
 import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/lib/minsk-time";
 
 export { studioToday };
-import { capacityFor, SATURDAY_TIMES, WEEKDAY_TIMES } from "@/lib/slot-rules";
 import { blocksFromItems, type ProgramBlock, type ProgramPhase } from "@/lib/program-blocks";
 import { programProgress, visitsBefore } from "@/lib/program-status";
 import { currentStreak, nextVisitIso, slotInLabel } from "@/lib/program-screen";
@@ -97,8 +96,6 @@ export const MONTHS = [
   "января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ] as const;
-
-export { WEEKDAY_TIMES, SATURDAY_TIMES } from "@/lib/slot-rules";
 
 export const SAMPLE_KBJU_TRAIN: Kbju = { calories: 1750, protein: 135, fat: 55, carbs: 180 };
 export const SAMPLE_KBJU_REST: Kbju = { calories: 1600, protein: 135, fat: 55, carbs: 140 };
@@ -1074,25 +1071,9 @@ export function downloadIcs(filename: string, ics: string) {
 }
 
 export function firstBookableDate() {
-  const from = startOfWeek(new Date());
-  const next = generateWindow(from, 14).find((s) => !isSlotPast(s.date, s.time));
-  return next?.date ?? isoDate(new Date());
-}
-
-export function generateWindow(from: Date, days = 21): Slot[] {
-  const slots: Slot[] = [];
-  for (let i = 0; i < days; i += 1) {
-    const day = addDays(from, i);
-    const dow = (day.getDay() + 6) % 7;
-    const times = dow === 6 ? [] : dow === 5 ? SATURDAY_TIMES : WEEKDAY_TIMES;
-    for (const time of times) {
-      const date = isoDate(day);
-      const id = `${date}_${time}`;
-      const capacity = capacityFor(time);
-      slots.push({ id, date, time, duration: 60, capacity, seeded: 0 });
-    }
-  }
-  return slots;
+  // Вшитого расписания нет: слоты есть только те, что добавил тренер.
+  // Стартуем с сегодняшнего дня; пустой день покажет «Слотов нет».
+  return isoDate(new Date());
 }
 
 export function formatLongDate(iso: string) {
@@ -1409,10 +1390,8 @@ export function applyOfferBooking(input: {
     return { clients: input.clients, bookings: input.bookings, booked: true };
   }
   if (input.closedSlotIds.includes(slotId)) return { clients: input.clients, bookings: input.bookings, booked: false };
-  const [date, time] = slotId.split("_");
-  const extra = input.extraSlots.find((s) => s.id === slotId);
-  const generated = date && time ? generateWindow(startOfWeek(parseISODate(date)), 8).find((s) => s.id === slotId) : undefined;
-  const slot = extra ?? generated;
+  // Только слоты, которые добавил тренер. Вшитых слотов нет.
+  const slot = input.extraSlots.find((s) => s.id === slotId);
   if (!slot || isSlotPast(slot.date, slot.time)) return { clients: input.clients, bookings: input.bookings, booked: false };
   if (input.bookings.filter((b) => b.slotId === slot.id).length >= slot.capacity) {
     return { clients: input.clients, bookings: input.bookings, booked: false };

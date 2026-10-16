@@ -22,7 +22,12 @@ function hold(over: Partial<T> = {}): T {
 function cancel(kind: "refund" | "burn", b: B, over: Partial<T> = {}): T {
   return { id: cancelTxnId(b), clientId: "c1", kind, delta: kind === "refund" ? 1 : 0, at: "", note: "Отмена", bookingId: b.id, ...over };
 }
-const snap = (clients: C[], bookings: B[] = []): Snapshot => ({ clients, bookings });
+/** Слоты, которые тренер добавил сам: вшитого расписания больше нет. Вместимость — как была у слотов теста. */
+const TRAINER_SLOTS = [
+  { id: "2026-10-12_19:00", capacity: 3, date: "2026-10-12", time: "19:00" },
+  { id: "2026-10-12_08:00", capacity: 2, date: "2026-10-12", time: "08:00" },
+];
+const snap = (clients: C[], bookings: B[] = []): Snapshot => ({ clients, bookings, extraSlots: TRAINER_SLOTS });
 const one = (r: ReturnType<typeof settleOwned>) => r.balances.get("c1")!;
 const owners = new Set(["c1"]);
 
@@ -236,7 +241,7 @@ test("past slot: a hold is refused once the slot has started", () => {
   assert.deepEqual(r.rejected, ["tx_hold_1"]);
 });
 
-test("extra slot uses its own capacity, not the generated one", () => {
+test("extra slot uses its own capacity, not the trainer-default one", () => {
   const extraFull = {
     ...snap([client()], [other("bk_x", "c2", { slotId: "x1", time: "19:00" })]),
     extraSlots: [{ id: "x1", capacity: 1, date: "2026-10-12", time: "19:00" }],
@@ -246,7 +251,7 @@ test("extra slot uses its own capacity, not the generated one", () => {
   // Without the extra slot the id is not a real slot, so it is refused too.
   const noExtra = { ...extraFull, extraSlots: [] };
   assert.deepEqual(settleOwned(noExtra, incoming, owners, "client", RULE, NOW).rejected, ["tx_hold_1"]);
-  // A generated 19:00 slot has three places, so the same single booking fits.
+  // The trainer's 19:00 slot has three places, so the same single booking fits.
   const gen = booking({ id: "bk_new", slotId: "2026-10-12_19:00", time: "19:00", date: SLOT_DAY, holdId: "tx_hold_1" });
   const generated = snap([client({ ledger: [hold({ bookingId: "bk_new" })] })], [gen]);
   assert.deepEqual(settleOwned(snap([client()], [other("bk_x", "c2", { slotId: "2026-10-12_19:00", time: "19:00" })]), generated, owners, "client", RULE, NOW).rejected, []);

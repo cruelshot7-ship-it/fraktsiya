@@ -60,7 +60,7 @@ export const bookSlotFn = createServerFn({ method: "POST" })
           const { loadStudioState } = await import("@/lib/studio-sync");
           const payload = await loadStudioState();
           const extra = (payload.extraSlots ?? []).find((s) => s.id === data.slotId) ?? null;
-          create = clientCreateSpec({ slotId: data.slotId, trainerId, extra });
+          create = clientCreateSpec({ trainerId, extra });
           if (!create) return { ok: false, reason: "slot-missing" };
           owner = create.ownerCoachId;
         }

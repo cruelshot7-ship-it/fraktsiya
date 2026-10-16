@@ -7,7 +7,6 @@ import {
   isoDate,
   SAMPLE_KBJU_REST,
   SAMPLE_KBJU_TRAIN,
-  WEEKDAY_TIMES,
   type Client,
   type Kbju,
   type ProgramSession,
@@ -143,6 +142,9 @@ export function ProgramEditor({
   const [parsed, setParsed] = useState<PastedProgram | null>(null);
   const saveTemplate = useStudio((s) => s.saveTemplate);
   const showToast = useStudio((s) => s.showToast);
+  const extraSlots = useStudio((s) => s.extraSlots);
+  // Времена тренировок — только те, что тренер сам добавил во вкладке «Слоты» (вшитых нет).
+  const timeOptions = [...new Set([...extraSlots.map((s) => s.time), ...draft.trainTimes])].sort();
   // unsaved work: pasted text, or days/title/weeks that differ from the client's saved copy
   const dirty = paste.trim() !== "" || JSON.stringify(draft) !== JSON.stringify(client);
   const leave = async () => {
@@ -431,7 +433,10 @@ export function ProgramEditor({
       </p>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
-        {WEEKDAY_TIMES.map((t) => {
+        {timeOptions.length === 0 ? (
+          <p className="text-tiny text-muted-foreground">Времени пока нет. Добавьте слоты во вкладке «Слоты».</p>
+        ) : null}
+        {timeOptions.map((t) => {
           const on = draft.trainTimes.includes(t);
           return (
             <button
