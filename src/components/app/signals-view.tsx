@@ -1,4 +1,4 @@
-import { confirmAction } from "@/lib/confirm";
+import { JoinRequestCard } from "@/components/app/join-request-card";
 import { useState } from "react";
 import { Bell, X } from "lucide-react";
 import { CANCEL_WINDOWS, relativeLabel, type Notice } from "@/data/studio";
@@ -11,7 +11,6 @@ import { TrainerShareCard } from "@/components/app/trainer-share";
 import { OutboxPanel } from "@/components/app/outbox-panel";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { cn } from "@/lib/utils";
-import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { PolicyText } from "@/components/app/privacy-panel";
 
 type Pane = "tasks" | "settings" | "tools";
@@ -32,8 +31,6 @@ export function SignalsView() {
   const bookings = useStudio((s) => s.bookings);
   const slots = useStudio((s) => s.slots);
   const joinRequests = useStudio((s) => s.joinRequests);
-  const approveJoin = useStudio((s) => s.approveJoin);
-  const rejectJoin = useStudio((s) => s.rejectJoin);
 
   const pending = joinRequests.filter((r) => r.status === "pending");
   const items = notices
@@ -79,36 +76,7 @@ export function SignalsView() {
 
           {pending.map((req) => (
             <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
-              <p className="text-2xs font-medium tracking-wide text-muted-foreground">Заявка в зал</p>
-              <p className="font-display mt-1 text-base">
-                {req.firstName} {req.lastName}
-              </p>
-              {req.telegramUsername ? (
-                <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p>
-              ) : null}
-              <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-                {req.message || "Выбрал пакет и время"}
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                  onClick={async () => {
-                    if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
-                  }}
-                >
-                  Принять
-                </button>
-                <button
-                  type="button"
-                  className="pressable h-11 rounded-xl bg-secondary text-sm"
-                  onClick={async () => {
-                    if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
-                  }}
-                >
-                  Отклонить
-                </button>
-              </div>
+              <JoinRequestCard req={req} label="Заявка в зал" fallbackMessage="Выбрал пакет и время" preLine />
             </div>
           ))}
 

@@ -33,7 +33,6 @@
   ],
   "exclude": [
     "src/lib/multiplayer",
-    "src/lib/auth/middleware.ts",
     "src/lib/app-data/index.ts",
     "src/lib/app-data/readiness.ts",
     "src/lib/app-data/client.server.ts",
