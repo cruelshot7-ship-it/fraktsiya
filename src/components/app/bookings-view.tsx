@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
   countdownLabel,
-  downloadIcs,
-  bookingIcs,
   formatLongDate,
   hoursUntilSlot,
   isLateCancel,
@@ -11,9 +9,11 @@ import {
   relativeDayLabel,
   sessionsRu,
   shortName,
+  STUDIO,
   WEEK_GOAL,
   visitDatesOf,
 } from "@/data/studio";
+import { openCalendarEvent } from "@/lib/calendar-ics";
 import { weekVisitDays } from "@/lib/program-screen";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { SectionLabel, Surface, EmptyHint } from "@/components/app/bits";
@@ -205,10 +205,15 @@ export function BookingsView() {
                   <button
                     type="button"
                     onClick={() =>
-                      downloadIcs(
-                        `ruksha-${booking.date}.ics`,
-                        bookingIcs(booking),
-                      )
+                      openCalendarEvent({
+                        id: booking.id,
+                        title: "Тренировка · Discipline",
+                        date: booking.date,
+                        time: booking.time,
+                        durationMin: booking.duration,
+                        timezone: "Europe/Minsk",
+                        location: STUDIO.brand,
+                      })
                     }
                     className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
                   >
