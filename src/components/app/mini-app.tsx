@@ -199,7 +199,7 @@ export function MiniApp() {
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div>
                   <h1 key={title} className="title-in title-grad font-display text-4xl leading-none tracking-wide">{title}</h1>
-                  <SyncStatusChip className="mt-1" />
+                  <SyncStatusChip className="mt-1" quietWhenOk />
                 </div>
               </div>
             </>
@@ -319,23 +319,19 @@ export function MiniApp() {
                   <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
                       active ? "text-ok" : "text-muted-foreground",
-                    )} aria-current={active ? "page" : undefined}>
+                    )} aria-current={active ? "page" : undefined}
+                    aria-label={badge > 0 ? `${item.label}, сигналов: ${badge}` : undefined}>
                     <span className="relative">
                       {/* активный пункт — стеклянная пилюля под иконкой; полоска сверху убрана */}
                       <span className={cn("grid h-8 w-14 place-items-center rounded-2xl transition-colors", active && "bg-ok-dim shadow-border")}>
                         <Icon className="size-5" />
                       </span>
                       {badge > 0 ? (
-                        // счётчик ведёт к задачам: там сигнал закрывается кнопкой «Готово»
+                        // счётчик только показывает число: кнопка вкладки уже озвучивает его через aria-label.
+                        // Сигналы открываются из «Сегодня»: плитка «Заявки» и кнопка «Сигналы и настройки →».
                         <span
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Открыть сигналы: ${badge}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTab("signals");
-                          }}
-                          className="pressable absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground"
+                          aria-hidden
+                          className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground"
                         >
                           {badge}
                         </span>

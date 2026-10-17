@@ -251,7 +251,7 @@ export function ClientsView() {
                 className="pressable flex min-h-11 items-baseline justify-between gap-3 rounded-lg bg-secondary px-3 py-2 text-left"
               >
                 <span className="shrink-0 text-sm font-medium">{relativeDayLabel(key)}</span>
-                <span className="min-w-0 truncate text-tiny text-muted-foreground">{names || "пусто"}</span>
+                <span className="min-w-0 break-words text-right text-tiny text-muted-foreground">{names || "пусто"}</span>
               </button>
             );
           })}

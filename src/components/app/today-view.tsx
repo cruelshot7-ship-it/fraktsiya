@@ -92,9 +92,8 @@ export function TodayView() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <SectionLabel>Смена</SectionLabel>
-            <p className="mt-1 text-tiny text-muted-foreground">Что требует внимания сегодня?</p>
           </div>
-          <SyncStatusChip />
+          <SyncStatusChip quietWhenOk />
         </div>
 
         <div className="apple-block grid grid-cols-3 divide-x divide-border">

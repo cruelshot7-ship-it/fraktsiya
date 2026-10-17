@@ -75,7 +75,7 @@ export function SignalsView() {
       {pane === "tasks" ? (
         <>
           <ActionCenter />
-          <SyncStatusChip />
+          <SyncStatusChip quietWhenOk />
 
           {pending.map((req) => (
             <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border glow-ok">
@@ -229,7 +229,7 @@ export function SignalsView() {
           <BackupExportPanel />
           <TrainerShareCard />
           <OutboxPanel />
-          <SyncStatusChip />
+          <SyncStatusChip quietWhenOk />
           <Surface>
             <SectionLabel>Политика конфиденциальности</SectionLabel>
             <div className="mt-3">

@@ -98,7 +98,7 @@ export function TrainerSlots() {
               )}
             >
               <span className="block text-2xs tracking-wide text-muted-foreground">
-                {day.key === tomorrowKey ? "завт" : DOW[(day.date.getDay() + 6) % 7]}
+                {day.key === tomorrowKey ? "ЗАВТ" : DOW[(day.date.getDay() + 6) % 7]}
               </span>
               <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
               <span className="mt-0.5 block text-3xs text-muted-foreground">{day.total === 0 ? "—" : `${day.booked} зап.`}</span>
@@ -134,7 +134,7 @@ export function TrainerSlots() {
                 )}
               >
                 <span className="shrink-0 text-sm font-medium">{relativeDayLabel(day.key)}</span>
-                <span className="min-w-0 truncate text-tiny text-muted-foreground">{names || "пусто"}</span>
+                <span className="min-w-0 break-words text-right text-tiny text-muted-foreground">{names || "пусто"}</span>
               </button>
             );
           })}
