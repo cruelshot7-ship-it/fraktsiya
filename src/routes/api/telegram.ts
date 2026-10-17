@@ -3,11 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/telegram")({
   server: {
     handlers: {
-      GET: async () => {
-  const { ensureBotHook } = await import("@/lib/telegram-bot.server");
-  const ok = await ensureBotHook();
-  return Response.json({ ok, hook: "set" });
-},
+      // GET без авторизации раньше переустанавливал webhook и меню бота; теперь только POST от Telegram с секретом
+      GET: async () => new Response("Method not allowed", { status: 405, headers: { allow: "POST" } }),
       POST: async ({ request }) => {
         const { env } = await import("@/lib/env.server");
         const { handleTelegramUpdate, webhookSecret } = await import("@/lib/telegram-bot.server");
