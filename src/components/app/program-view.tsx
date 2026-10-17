@@ -533,7 +533,7 @@ export function ProgramView() {
           {client.sessions.map((day, i) => {
             const active = shown?.id === day.id;
             return (
-              <Surface key={day.id} className={cn(active ? "glow-ok bg-ok-dim" : "opacity-70")}>
+              <Surface key={day.id} className={cn(active ? "ring-1 ring-inset ring-ok" : "opacity-70")}>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="font-display text-sm">{day.name}</p>
                   <p className="text-2xs text-muted-foreground">
@@ -585,7 +585,7 @@ export function ProgramView() {
               onClick={() => setExercise(item)}
               className={cn(
                 "pressable h-9 rounded-full px-3 text-sm",
-                current === item ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
+                current === item ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
               {item}
@@ -651,7 +651,7 @@ export function ProgramView() {
                   onClick={() => setRir(rir === v ? null : v)}
                   className={cn(
                     "pressable h-11 flex-1 rounded-lg text-sm tabular-nums",
-                    rir === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
+                    rir === v ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
                   {v === 3 ? "3+" : v}
