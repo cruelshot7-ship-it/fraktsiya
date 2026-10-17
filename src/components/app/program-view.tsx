@@ -266,7 +266,7 @@ export function ProgramView() {
         </div>
       </Surface>
 
-      <Surface glow={client.sessionsLeft <= 2 ? "alert" : session ? "ok" : undefined}>
+      <Surface glow={client.sessionsLeft <= 2 ? "alert" : undefined}>
         <div className="flex items-start justify-between gap-3">
           <SectionLabel>
             {client.programTitle} · {finished ? `завершена, ${client.programWeeks} нед.` : `нед. ${week}/${client.programWeeks}`}
@@ -329,7 +329,7 @@ export function ProgramView() {
       </Surface>
 
       {shown ? (
-        <Surface glow={todayWorkout ? "ok" : undefined}>
+        <Surface>
           <div className="flex items-baseline justify-between gap-3">
             <p className="font-display text-base">{shown.name}</p>
             <p className="text-xs text-muted-foreground">{shown.focus}</p>

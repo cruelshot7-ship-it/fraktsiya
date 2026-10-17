@@ -78,7 +78,7 @@ export function SignalsView() {
           <SyncStatusChip quietWhenOk />
 
           {pending.map((req) => (
-            <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border glow-ok">
+            <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
               <p className="text-2xs font-medium tracking-wide text-muted-foreground">Заявка в зал</p>
               <p className="font-display mt-1 text-base">
                 {req.firstName} {req.lastName}
@@ -279,7 +279,7 @@ function SignalCard({
     <div
       className={cn(
         "relative overflow-hidden rounded-xl bg-card p-4 shadow-border",
-        alert ? "glow-alert" : "glow-ok",
+        alert ? "glow-alert" : undefined,
       )}
     >
       <span

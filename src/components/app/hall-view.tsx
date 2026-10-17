@@ -61,7 +61,7 @@ export function HallView() {
         <button type="button" onClick={() => setMachine(null)} className="pressable self-start min-h-11 text-sm text-muted-foreground">
           Назад
         </button>
-        <Surface glow="ok">
+        <Surface>
           <SectionLabel>{machine.zone}</SectionLabel>
           <h2 className="font-display mt-1 text-xl">{machine.name}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{machine.hint}</p>
@@ -150,7 +150,7 @@ function Drill({
       <button type="button" onClick={onBack} className="pressable self-start min-h-11 text-sm text-muted-foreground">
         Назад
       </button>
-      <Surface glow="ok">
+      <Surface>
         <SectionLabel>Техника</SectionLabel>
         <h2 className="font-display mt-1 text-xl">{exercise.name}</h2>
         <ul className="mt-3 space-y-1.5 text-sm">

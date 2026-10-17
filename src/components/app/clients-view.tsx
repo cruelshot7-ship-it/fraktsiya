@@ -275,7 +275,6 @@ export function ClientsView() {
             className={cn(
               "pressable relative w-full overflow-hidden rounded-xl bg-card p-3.5 text-left shadow-border",
               flag.tone === "alert" && "glow-alert",
-              flag.tone === "ok" && "glow-ok",
               open && "ring-1 ring-ok/40",
             )}
           >
