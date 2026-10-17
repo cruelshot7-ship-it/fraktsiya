@@ -674,6 +674,16 @@ function SessionEditor({
                 />
                 <button
                   type="button"
+                  aria-label={`Удалить «${b.exercise || "упражнение"}»`}
+                  onClick={async () => {
+                    if (await confirmAction(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
+                  }}
+                  className="pressable grid size-11 shrink-0 place-items-center rounded-lg bg-secondary text-lg text-muted-foreground"
+                >
+                  ×
+                </button>
+                <button
+                  type="button"
                   aria-expanded={isOpen}
                   aria-label={isOpen ? `Свернуть «${b.exercise || "упражнение"}»` : `Параметры: ${b.exercise || "упражнение"}`}
                   onClick={() => toggleOpen(b.id)}
@@ -746,14 +756,6 @@ function SessionEditor({
               <div className="mt-2 flex justify-end gap-1.5">
                 <IconButton label="Выше" disabled={i === 0} onClick={() => move(i, i - 1)}>↑</IconButton>
                 <IconButton label="Ниже" disabled={i === blocks.length - 1} onClick={() => move(i, i + 1)}>↓</IconButton>
-                <IconButton
-                  label="Убрать блок"
-                  onClick={async () => {
-                    if (await confirmAction(`Убрать «${blocks[i].exercise || "упражнение"}» из дня?`)) update(blocks.filter((_, j) => j !== i));
-                  }}
-                >
-                  ×
-                </IconButton>
               </div>
               </>
               ) : null}
