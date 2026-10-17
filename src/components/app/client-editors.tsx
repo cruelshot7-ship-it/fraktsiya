@@ -310,7 +310,7 @@ export function ProgramEditor({
                 setDraft({ ...draft, trainDays });
               }}
               className={cn(
-                "pressable h-9 min-w-10 rounded-lg px-2 text-xs",
+                "pressable h-10 min-w-10 rounded-lg px-2 text-xs",
                 on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
@@ -458,7 +458,7 @@ export function ProgramEditor({
                 setDraft({ ...draft, trainTimes });
               }}
               className={cn(
-                "pressable h-9 rounded-lg px-2 text-xs",
+                "pressable h-10 rounded-lg px-2 text-xs",
                 on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
               )}
             >
@@ -642,7 +642,7 @@ function SessionEditor({
         <div className="mt-3 flex justify-end">
           <button
             type="button"
-            className="pressable min-h-9 text-tiny text-muted-foreground"
+            className="pressable min-h-11 text-tiny text-muted-foreground"
             onClick={() => setOpenIds(allOpen ? new Set() : new Set(blocks.map((b) => b.id)))}
           >
             {allOpen ? "свернуть все" : "раскрыть все"}
@@ -799,7 +799,7 @@ function IconButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="pressable grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-sm text-muted-foreground disabled:opacity-30"
+      className="pressable grid size-11 shrink-0 place-items-center rounded-lg bg-secondary text-sm text-muted-foreground disabled:opacity-30"
     >
       {children}
     </button>
@@ -813,7 +813,7 @@ function ChipToggle({ on, onClick, children }: { on: boolean; onClick: () => voi
       aria-pressed={on}
       onClick={onClick}
       className={cn(
-        "pressable h-8 rounded-full px-3 text-tiny",
+        "pressable h-10 rounded-full px-3 text-tiny",
         on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
       )}
     >
