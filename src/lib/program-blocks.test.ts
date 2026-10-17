@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { rirLabel, type ProgramBlock } from "./program-blocks.ts";
+import { blockSummary, rirLabel, type ProgramBlock } from "./program-blocks.ts";
 import {
   blockLines,
   blocksFromItems,
@@ -218,4 +218,13 @@ test("planTotalsFromBlocks uses the typed fact, falls back to plan when the fact
   assert.equal(comma.volume, planTotalsFromBlocks([b], ["p"], { p: "22.5" }).volume);
   assert.notEqual(comma.volume, plain.volume);
   assert.equal(planTotalsFromBlocks([b], ["p"], { p: "abc" }).volume, plain.volume);
+});
+
+test("blockSummary: строка параметров для свёрнутого упражнения, пустые части не выводятся", () => {
+  const base: ProgramBlock = { id: "b1", exercise: "Жим", sets: 0, reps: "", load: "", rest: null, side: null, group: null, rir: null } as ProgramBlock;
+  assert.equal(blockSummary(base), "");
+  assert.equal(blockSummary({ ...base, sets: 3, reps: "8-10", load: "60", rest: 90, rir: 2 }), "3×8-10 · 60 кг · отдых 90 с · RIR 2");
+  assert.equal(blockSummary({ ...base, sets: 2, reps: "12", side: "ногу" }), "2×12 на ногу");
+  assert.equal(blockSummary({ ...base, sets: 4 }), "4 подх.");
+  assert.equal(blockSummary({ ...base, rest: 0 }), "");
 });

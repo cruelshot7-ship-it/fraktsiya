@@ -1,6 +1,7 @@
 import { confirmAction } from "@/lib/confirm";
 import { MeasuresSummary } from "@/components/app/measures-card";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   coachKey,
   DOW,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
 import {
   blockLines,
+  blockSummary,
   newBlockId,
   PHASE_LABEL,
   PHASES,
@@ -551,6 +553,16 @@ function SessionEditor({
   const blocks = sessionPlan(session).blocks;
   const listId = `ex-${session.id}`;
   const listRef = useRef<HTMLDivElement>(null);
+  /** раскрытые упражнения; свёрнутое показывает имя и одну строку параметров */
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const toggleOpen = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allOpen = blocks.length > 0 && blocks.every((b) => openIds.has(b.id));
   /** блок, который только что добавлен: фокус и прокрутка к нему, имя выделено для замены */
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
   useEffect(() => {
@@ -620,9 +632,21 @@ function SessionEditor({
           <option key={o} value={o} />
         ))}
       </datalist>
-      <div ref={listRef} className="mt-3 flex flex-col gap-2">
+      {blocks.length > 1 ? (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            className="pressable min-h-9 text-tiny text-muted-foreground"
+            onClick={() => setOpenIds(allOpen ? new Set() : new Set(blocks.map((b) => b.id)))}
+          >
+            {allOpen ? "свернуть все" : "раскрыть все"}
+          </button>
+        </div>
+      ) : null}
+      <div ref={listRef} className="mt-2 flex flex-col gap-2">
         {blocks.map((b, i) => {
           const sameAsPrev = i > 0 && Boolean(b.group) && b.group === blocks[i - 1].group;
+          const isOpen = openIds.has(b.id);
           return (
             <div
               key={b.id}
@@ -633,14 +657,30 @@ function SessionEditor({
                 sameAsPrev && "border border-primary/40",
               )}
             >
-              <input
-                className={inputClass}
-                list={listId}
-                enterKeyHint="next"
-                aria-label={`Упражнение ${i + 1}`}
-                value={b.exercise}
-                onChange={(e) => patch(i, { exercise: e.target.value })}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  className={cn(inputClass, "min-w-0 flex-1")}
+                  list={listId}
+                  enterKeyHint="next"
+                  aria-label={`Упражнение ${i + 1}`}
+                  value={b.exercise}
+                  onChange={(e) => patch(i, { exercise: e.target.value })}
+                />
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-label={isOpen ? `Свернуть «${b.exercise || "упражнение"}»` : `Параметры: ${b.exercise || "упражнение"}`}
+                  onClick={() => toggleOpen(b.id)}
+                  className="pressable grid size-11 shrink-0 place-items-center rounded-lg bg-secondary text-muted-foreground"
+                >
+                  <ChevronDown className={cn("size-4 transition-transform", isOpen && "rotate-180")} />
+                </button>
+              </div>
+              {!isOpen && blockSummary(b) ? (
+                <p className="mt-1.5 px-1 text-tiny tabular-nums text-muted-foreground">{blockSummary(b)}</p>
+              ) : null}
+              {isOpen ? (
+              <>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Field label="Подходы">
                   <WheelField
@@ -683,7 +723,7 @@ function SessionEditor({
                 ))}
                 {i > 0 ? (
                   <ChipToggle on={sameAsPrev} onClick={() => toggleSuperset(i)}>
-                    в суперсет с предыдущим
+                    суперсет
                   </ChipToggle>
                 ) : null}
               </div>
@@ -709,6 +749,8 @@ function SessionEditor({
                   ×
                 </IconButton>
               </div>
+              </>
+              ) : null}
             </div>
           );
         })}
@@ -720,13 +762,16 @@ function SessionEditor({
           const created = newBlock();
           update([...blocks, created]);
           setFocusBlockId(created.id);
+          setOpenIds((prev) => new Set(prev).add(created.id));
         }}
       >
         Добавить блок
       </button>
+      {index === 0 ? (
       <p className="mt-2 text-tiny leading-relaxed text-muted-foreground">
         Блок — это упражнение с подходами и повторами. Вес и отдых необязательны. «на каждую руку / ногу / сторону» считает обе стороны. Суперсет — блоки подряд с отметкой.
       </p>
+      ) : null}
     </div>
   );
 }

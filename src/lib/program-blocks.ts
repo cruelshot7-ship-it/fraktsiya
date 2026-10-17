@@ -132,6 +132,20 @@ export function blockLines(b: ProgramBlock): string[] {
   return out;
 }
 
+/**
+ * Короткая строка параметров для свёрнутого упражнения в редакторе тренера.
+ * Только показ: в данные не пишется, на сохранённые строки не влияет.
+ */
+export function blockSummary(b: ProgramBlock): string {
+  const out: string[] = [];
+  if (b.sets > 0 && b.reps) out.push(`${b.sets}×${b.reps}${b.side ? ` на ${b.side}` : ""}`);
+  else if (b.sets > 0) out.push(`${b.sets} подх.`);
+  if (b.load) out.push(`${b.load} кг`);
+  if (b.rest != null && b.rest > 0) out.push(`отдых ${b.rest} с`);
+  if (b.rir != null) out.push(`RIR ${b.rir}`);
+  return out.join(" · ");
+}
+
 export function itemsFromBlocks(blocks: ProgramBlock[]): string[] {
   return blocks.flatMap(blockLines);
 }
