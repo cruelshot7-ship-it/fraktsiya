@@ -311,7 +311,7 @@ export function ProgramEditor({
               }}
               className={cn(
                 "pressable h-10 min-w-10 rounded-lg px-2 text-xs",
-                on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
+                on ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
               {label}
@@ -375,11 +375,11 @@ export function ProgramEditor({
             onClick={() => setPreset(row.id)}
             className={cn(
               "pressable rounded-xl px-3 py-2.5 text-left",
-              preset === row.id ? "bg-ok text-ok-foreground" : "bg-secondary",
+              preset === row.id ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary",
             )}
           >
             <span className="block text-sm font-medium">{row.label}</span>
-            <span className={cn("mt-0.5 block text-2xs", preset === row.id ? "text-primary-foreground" : "text-muted-foreground")}>
+            <span className="mt-0.5 block text-2xs text-muted-foreground">
               {row.hint}
             </span>
           </button>
@@ -398,7 +398,7 @@ export function ProgramEditor({
             key={id}
             type="button"
             onClick={() => setGoal(id)}
-            className={cn("pressable h-11 rounded-lg text-sm", goal === id ? "bg-ok text-ok-foreground" : "bg-secondary")}
+            className={cn("pressable h-11 rounded-lg text-sm", goal === id ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary")}
           >
             {label}
           </button>
@@ -459,7 +459,7 @@ export function ProgramEditor({
               }}
               className={cn(
                 "pressable h-10 rounded-lg px-2 text-xs",
-                on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
+                on ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
               {t}
@@ -816,7 +816,7 @@ function ChipToggle({ on, onClick, children }: { on: boolean; onClick: () => voi
       onClick={onClick}
       className={cn(
         "pressable h-10 rounded-full px-3 text-tiny",
-        on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
+        on ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
       )}
     >
       {children}
