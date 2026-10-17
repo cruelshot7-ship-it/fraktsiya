@@ -18,6 +18,7 @@ import {
 } from "@/data/studio";
 import { Field, inputClass, ProgressRail, SectionLabel, Surface } from "@/components/app/bits";
 import { WheelField } from "@/components/app/wheel-picker";
+import { Fold } from "@/components/app/fold";
 import { cn } from "@/lib/utils";
 import { addExerciseName, exerciseOptions } from "@/lib/exercises";
 import {
@@ -179,7 +180,7 @@ export function ProgramEditor({
       <button type="button" onClick={leave} className="pressable self-start min-h-11 text-sm text-muted-foreground">
         Назад
       </button>
-      <SectionLabel>Вставить программу текстом</SectionLabel>
+      <Fold title="Вставить программу текстом">
       <p className="text-tiny text-muted-foreground">
         Вставьте программу как есть: из заметок или чата. «День A», «День B» — заголовки дней. Под упражнением, каждое с новой строки: подходы×повторения (4×8), вес (80 кг), отдых (Отдых 90 секунд). Строка «/program» не нужна.
       </p>
@@ -246,6 +247,7 @@ export function ProgramEditor({
           </p>
         </div>
       ) : null}
+      </Fold>
       <Field label="Название программы">
         <input className={inputClass} value={draft.programTitle} onChange={(e) => setDraft({ ...draft, programTitle: e.target.value })} />
       </Field>
@@ -264,7 +266,7 @@ export function ProgramEditor({
           <input className={inputClass} type="date" value={draft.programStart} onChange={(e) => setDraft({ ...draft, programStart: e.target.value })} />
         </Field>
       </div>
-      <SectionLabel>Фазы по неделям</SectionLabel>
+      <Fold title={`Фазы по неделям · ${Object.keys(draft.programPhases ?? {}).length ? `${Object.keys(draft.programPhases ?? {}).length} нед. с фазой` : "не заданы"}`}>
       <p className="text-tiny text-muted-foreground">
         Фаза видна клиенту в шапке программы. Не отмечено — обычная неделя.
       </p>
@@ -292,6 +294,7 @@ export function ProgramEditor({
           );
         })}
       </div>
+      </Fold>
       <SectionLabel>Дни визита</SectionLabel>
       <div className="flex flex-wrap gap-1">
         {DOW.map((label, i) => {
@@ -317,7 +320,7 @@ export function ProgramEditor({
         })}
       </div>
       <p className="text-tiny text-muted-foreground">Порядок блоков сверху вниз — это порядок визитов. Буквы в названии дня ни на что не влияют.</p>
-      <SectionLabel>Свои упражнения для рекордов</SectionLabel>
+      <Fold title={`Свои упражнения для рекордов · ${(draft.exerciseNames ?? []).length}`}>
       <p className="text-tiny text-muted-foreground">Базовые пять есть всегда. Добавьте свои, например «ягодичный мост» — клиент сможет записывать по ним подходы.</p>
       <div className="flex flex-wrap gap-1">
         {(draft.exerciseNames ?? []).map((name) => (
@@ -361,6 +364,8 @@ export function ProgramEditor({
         </button>
       </div>
       {exerciseError ? <p className="text-tiny text-destructive">{exerciseError}</p> : null}
+      </Fold>
+      <Fold title="Собрать программу заново по цели">
       <SectionLabel>Сплит · шаблон</SectionLabel>
       <div className="grid grid-cols-1 gap-1.5">
         {PROGRAM_PRESETS.map((row) => (
@@ -436,6 +441,7 @@ export function ProgramEditor({
           : "выберутся при сборке"}
         . Старт цикла — сегодня (сброс при «Собрать»).
       </p>
+      </Fold>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
         {timeOptions.length === 0 ? (
