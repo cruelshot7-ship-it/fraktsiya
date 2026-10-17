@@ -362,7 +362,9 @@ export function ClientsView() {
                       key={row.id}
                       type="button"
                       className="pressable flex h-11 items-center justify-center rounded-lg bg-secondary text-sm font-medium text-foreground"
-                      onClick={() => {
+                      onClick={async () => {
+                        const when = `${row.date === today ? "сегодня" : formatDayMonth(row.date)} ${row.time}`;
+                        if (!(await confirmAction(`Отменить запись · ${when} · ${shortName(client)}?`))) return;
                         cancelBooking(row.id, "trainer");
                         showToast(
                           `Отменено · ${row.date === today ? "сегодня" : formatDayMonth(row.date)} ${row.time} · ${shortName(client)}`,
