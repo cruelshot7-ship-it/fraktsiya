@@ -1038,38 +1038,6 @@ export function dayRitual(opts: { trainDay: boolean; arrived: boolean; workout: 
   return { visit, workout, food, restDay, done: [visit, workout, food].filter(Boolean).length };
 }
 
-export function bookingIcs(booking: { date: string; time: string; duration: number }, title = "Тренировка · Discipline") {
-  const start = new Date(slotStartMs(booking.date, booking.time));
-  const end = new Date(start.getTime() + booking.duration * 60000);
-  // UTC with Z: the calendar app converts to the phone's zone itself
-  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Ruksha Discipline//RU",
-    "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT",
-    `DTSTART:${stamp(start)}`,
-    `DTEND:${stamp(end)}`,
-    `SUMMARY:${title}`,
-    `LOCATION:${STUDIO.brand}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-}
-
-export function downloadIcs(filename: string, ics: string) {
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 500);
-}
-
 export function firstBookableDate() {
   // Вшитого расписания нет: слоты есть только те, что добавил тренер.
   // Стартуем с сегодняшнего дня; пустой день покажет «Слотов нет».
