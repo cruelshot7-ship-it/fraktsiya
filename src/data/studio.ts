@@ -69,7 +69,7 @@ export const STUDIO = {
   line: "Тренировки",
   est: "Est. 2026",
   city: "Гродно",
-  address: "ул. Лидская, 1",
+  address: "Гродно, улица Лидская, 1",
   gym: "TITAN",
   trainer: "Евгений",
 };
@@ -78,7 +78,7 @@ export const STUDIO = {
 /** Зал: карточка в Яндекс Картах для кнопки маршрута. Адрес по умолчанию — DEFAULT_NOTIFY.address. */
 export const STUDIO_VENUE = {
   name: "Titan",
-  address: "Гродно, Лидская 1",
+  address: "Гродно, улица Лидская, 1",
   yandexOrgUrl: "https://yandex.ru/maps/org/198928680684",
 };
 
@@ -629,7 +629,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   notifyTrainer: true,
   flagLate: true,
   absentDays: 10,
-  address: "Гродно, Лидская 1",
+  address: "Гродно, улица Лидская, 1",
 };
 
 export const CANCEL_WINDOWS = [2, 6, 12, 24] as const;
