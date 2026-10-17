@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { popTab, pushTab } from "@/lib/tab-history";
 import { buildMeasure, mergeMeasures, upsertMeasure, type MeasureInput } from "@/lib/body-measures";
 import { activeLogFor, canUndoWorkout, cleanFacts } from "@/lib/workout-undo";
 import { anonymizedIdentity, PRIVACY_VERSION, specialDataAllowed } from "@/lib/privacy";
@@ -113,6 +114,8 @@ type State = {
   ready: boolean;
   role: Role;
   tab: TabId;
+  /** Экраны, с которых пришли на текущий (в памяти, не сохраняется). */
+  tabHistory: TabId[];
   weekStart: string;
   selectedDate: string;
   selectedSlotId: string | null;
@@ -155,6 +158,7 @@ type State = {
   removeCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
   payCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
   setTab: (tab: TabId) => void;
+  goBack: () => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
   openClientSheet: (id: string | null, startMode?: "program") => void;
@@ -451,6 +455,7 @@ export const useStudio = create<State>((set, get) => ({
   ready: false,
   role: "client",
   tab: "slots",
+  tabHistory: [],
   weekStart: isoDate(startOfWeek(parseISODate(firstBookableDate()))),
   selectedDate: firstBookableDate(),
   selectedSlotId: null,
@@ -979,7 +984,14 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast(res.tierLine ? `Оплата принята · ${res.tierLine}. Доступ ещё на 30 дней.` : "Оплата принята. Доступ ещё на 30 дней.");
   },
 
-  setTab: (tab) => set({ tab, selectedSlotId: null }),
+  setTab: (tab) => {
+    const { tab: current, tabHistory } = get();
+    set({ tab, tabHistory: pushTab(tabHistory, current, tab), selectedSlotId: null });
+  },
+  goBack: () => {
+    const { tab, history } = popTab(get().tabHistory);
+    set({ tab: tab ?? "today", tabHistory: history, selectedSlotId: null });
+  },
   setRole: (role) => {
     if (telegramLocked()) return;
     let tab = get().tab;
@@ -992,6 +1004,7 @@ export const useStudio = create<State>((set, get) => ({
     set({
       role,
       tab,
+      tabHistory: [],
       sheetClientId: null,
       selectedDate,
       weekStart: isoDate(startOfWeek(parseISODate(selectedDate))),

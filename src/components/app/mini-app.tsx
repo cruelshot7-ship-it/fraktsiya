@@ -1,7 +1,7 @@
 import { PrivacyGate } from "@/components/app/privacy-panel";
 import { needsDecision } from "@/lib/privacy";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CalendarDays, ClipboardList, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
+import { ArrowLeft, Bell, CalendarDays, ClipboardList, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
@@ -79,6 +79,8 @@ export function MiniApp() {
   const refreshCloud = useStudio((s) => s.refreshCloud);
   const tab = useStudio((s) => s.tab);
   const setTab = useStudio((s) => s.setTab);
+  const tabHistory = useStudio((s) => s.tabHistory);
+  const goBack = useStudio((s) => s.goBack);
   const role = useStudio((s) => s.role);
   const setRole = useStudio((s) => s.setRole);
   const toast = useStudio((s) => s.toast);
@@ -191,6 +193,16 @@ export function MiniApp() {
         <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>
         <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
         <header className="pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)] pt-[calc(var(--inset-top)+0.75rem)] pb-3">
+          {tabHistory.length > 0 ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="pressable -ml-1 mb-1 flex h-11 items-center gap-1 self-start rounded-lg px-2 text-sm text-muted-foreground"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              Назад
+            </button>
+          ) : null}
           {role === "trainer" ? (
             <>
               <div className="flex items-center justify-between gap-3">
@@ -267,9 +279,6 @@ export function MiniApp() {
             {tab === "progress" ? <ProgressView /> : null}
             {tab === "food" ? (
               <div className="space-y-3">
-                <button type="button" onClick={() => setTab("today")} className="pressable self-start min-h-11 text-sm text-muted-foreground">
-                  ← Сегодня
-                </button>
                 <NutritionView />
               </div>
             ) : null}
@@ -293,9 +302,6 @@ export function MiniApp() {
             ) : null}
             {tab === "signals" ? (
               <div className="space-y-3">
-                <button type="button" onClick={() => setTab("today")} className="pressable self-start min-h-11 text-sm text-muted-foreground">
-                  ← Сегодня
-                </button>
                 <SignalsView />
               </div>
             ) : null}
