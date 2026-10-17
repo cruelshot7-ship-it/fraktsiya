@@ -10,6 +10,7 @@ import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
 import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
+  clientFlag,
   daysSince,
   dayKbju,
   formatDayMonth,
@@ -81,11 +82,10 @@ export function TodayView() {
     // a request addressed to another trainer is not this trainer's to approve
     const myTgId = String(getTelegramUser()?.id ?? TRAINER_TG_ID);
     const pendingJoins = joinRequests.filter((r) => r.status === "pending" && (!r.coachId || r.coachId === myTgId));
-    const attention = clients.filter((c) => {
-      const low = (c.sessionsLeft ?? 0) <= 2;
-      const silent = daysSince(c.lastReportAt, today) >= 7;
-      return low || silent;
-    });
+    // одно определение «внимания» на всех экранах тренера: то же, что фильтр во вкладке «Клиенты»
+    const attention = clients
+      .map((c) => ({ client: c, flag: clientFlag(c, today, food, bookings) }))
+      .filter((r) => r.flag.attention);
 
     return (
       <div className="space-y-4">
@@ -209,9 +209,7 @@ export function TodayView() {
             <p className="text-2xs font-medium tracking-wide text-muted-foreground ">
               Внимание · {attention.length}
             </p>
-            {attention.slice(0, 5).map((c) => {
-              const low = (c.sessionsLeft ?? 0) <= 2;
-              const silent = daysSince(c.lastReportAt, today) >= 7;
+            {attention.slice(0, 5).map(({ client: c, flag }) => {
               return (
                 <button
                   key={c.id}
@@ -223,11 +221,7 @@ export function TodayView() {
                     <p className="text-sm font-medium">
                       {c.firstName} {c.lastName}
                     </p>
-                    <p className="mt-0.5 text-tiny text-muted-foreground">
-                      {[low ? `мало занятий · ${c.sessionsLeft ?? 0}` : null, silent ? "тишина 7+ дн" : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+                    {flag.badge ? <p className="mt-0.5 text-tiny text-muted-foreground">{flag.badge}</p> : null}
                   </Surface>
                 </button>
               );

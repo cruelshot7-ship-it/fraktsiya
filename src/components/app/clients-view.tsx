@@ -42,7 +42,7 @@ import { openPhone, openTelegramUrl, openTrainerChat, inviteUrl, getTelegramUser
 import { Avatar, BottomSheet, Pill, ProgressRail, SectionLabel, Surface, Field, inputClass } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
-import { FilterChip, FoodEditor, Kpi, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
+import { FilterChip, FoodEditor, MacroMini, MeasuresEditor, ProgramEditor } from "@/components/app/client-editors";
 import { Fold } from "@/components/app/fold";
 import { MenuDay } from "@/components/app/menu-day";
 import { FEATURES } from "@/lib/features";
@@ -110,19 +110,6 @@ export function ClientsView() {
   // «записей сегодня» — те же записи, что в списке недели ниже (раньше считали клиентов по плану дней)
   const todayCount = bookings.filter((b) => b.date === today).length;
   const attentionCount = rows.filter((r) => r.flag.attention).length;
-  const [attentionOpen, setAttentionOpen] = useState(false);
-  const weekBookings = bookings.filter((b) => {
-    if (b.date < today) return false;
-    const d = new Date(`${b.date}T00:00:00`);
-    const now = new Date();
-    const start = new Date(now);
-    const offset = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - offset);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
-    return d >= start && d < end;
-  }).length;
 
   const emptyCount = rows.filter((r) => isEmptyClient(r.client)).length;
   const packSoonCount = rows.filter((r) => isPackSoon(r.client, today)).length;
@@ -151,20 +138,6 @@ export function ClientsView() {
           </p>
         </Surface>
       ) : null}
-      <Surface className="glow-hero">
-        <SectionLabel>Ваши клиенты</SectionLabel>
-        <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
-        <button
-          type="button"
-          className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-xs text-muted-foreground"
-          onClick={() => {
-            void navigator.clipboard?.writeText(myLink);
-            showToast("Ссылка скопирована");
-          }}
-        >
-          {myLink}
-        </button>
-      </Surface>
       {slots.filter((s) => !closedSlotIds.includes(s.id) && !isSlotPast(s.date, s.time) && slotTaken(s, bookings) < s.capacity).length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-3 text-sm text-alert-text shadow-border">Нет свободных окон. Новичок записаться не может.</p>
       ) : null}
@@ -202,26 +175,6 @@ export function ClientsView() {
               </div>
             ))}
         </div>
-      ) : null}
-
-      <div className="grid grid-cols-3 gap-3 px-1 py-1">
-        <Kpi value={todayCount} label={"записей\nсегодня"} tone="ok" />
-        <button
-          type="button"
-          className="pressable text-left"
-          aria-expanded={attentionOpen}
-          onClick={() => setAttentionOpen((v) => !v)}
-        >
-          <Kpi value={attentionCount} label={"требуют\nвнимания"} tone="alert" />
-        </button>
-        <Kpi value={weekBookings} label={"записей\nна неделю"} />
-      </div>
-      {attentionOpen ? (
-        <Surface>
-          <p className="text-tiny text-muted-foreground">
-            Внимание, если у клиента: нет отчёта 3 и больше дней или отчёта не было вовсе · еда ниже 72% цели за сегодня · 2 и больше поздних отмен · 2 занятия или меньше на балансе · заморозка · пакет истекает в ближайшие 7 дней.
-          </p>
-        </Surface>
       ) : null}
 
       <Surface>

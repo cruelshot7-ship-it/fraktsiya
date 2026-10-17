@@ -5,17 +5,19 @@ import { HallView } from "@/components/app/hall-view";
 import { MyDataPanel, PolicyText } from "@/components/app/privacy-panel";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { activeClient, useStudio } from "@/lib/studio-store";
-import { BOT_USERNAME, sessionsRu } from "@/data/studio";
+import { addDays, BOT_USERNAME, clientFlag, isoDate, sessionsRu, startOfWeek, TRAINER_TG_ID } from "@/data/studio";
 import { referralStart } from "@/lib/referral";
-import { inviteUrl } from "@/lib/telegram";
+import { getTelegramUser, inviteUrl } from "@/lib/telegram";
 import { FEATURES } from "@/lib/features";
+import { cn } from "@/lib/utils";
 
 type Sub = "menu" | "form" | "hall" | "privacy" | "policy";
 
 /**
  * Ещё (клиент): короткое меню, без лишних переключателей на первом экране.
+ * Профиль тренера: ссылка для клиентов и сводка (перенесено со вкладки «Клиенты»).
  */
-export function MoreView({ initial }: { initial?: "form" | "hall" }) {
+export function MoreView({ initial, role = "client" }: { initial?: "form" | "hall"; role?: "client" | "trainer" }) {
   const [sub, setSub] = useState<Sub>(initial ?? "menu");
   const clients = useStudio((s) => s.clients);
   const activeClientId = useStudio((s) => s.activeClientId);
@@ -27,6 +29,8 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
   useEffect(() => {
     if (initial) setSub(initial);
   }, [initial]);
+
+  if (role === "trainer") return <TrainerProfile />;
 
   if (sub === "policy") {
     return (
@@ -171,6 +175,66 @@ export function MoreView({ initial }: { initial?: "form" | "hall" }) {
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </Surface>
       </button>
+    </div>
+  );
+}
+
+function ProfileStat({ value, label, alert }: { value: number; label: string; alert?: boolean }) {
+  return (
+    <div>
+      <p className={cn("font-display text-2xl tabular-nums leading-none", alert && "text-alert-text")}>{value}</p>
+      <p className="mt-1 text-tiny text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+/** Профиль тренера: ссылка для клиентов и сводка. Список «Внимание» — во вкладке «Клиенты». */
+function TrainerProfile() {
+  const clients = useStudio((s) => s.clients);
+  const bookings = useStudio((s) => s.bookings);
+  const food = useStudio((s) => s.food);
+  const showToast = useStudio((s) => s.showToast);
+  const tgUser = getTelegramUser();
+  const myLink = inviteUrl(BOT_USERNAME, `c_${tgUser?.id ?? TRAINER_TG_ID}`);
+  const today = isoDate(new Date());
+  const weekEnd = isoDate(addDays(startOfWeek(new Date()), 7));
+  const todayCount = bookings.filter((b) => b.date === today).length;
+  const weekBookings = bookings.filter((b) => b.date >= today && b.date < weekEnd).length;
+  const attentionCount = clients.filter((c) => clientFlag(c, today, food, bookings).attention).length;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <SectionLabel>Профиль тренера</SectionLabel>
+        <p className="mt-1 text-tiny text-muted-foreground">Ссылка для клиентов и сводка</p>
+      </div>
+
+      <Surface className="glow-hero">
+        <SectionLabel>Ваши клиенты</SectionLabel>
+        <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
+        <button
+          type="button"
+          className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-xs text-muted-foreground"
+          onClick={() => {
+            void navigator.clipboard?.writeText(myLink);
+            showToast("Ссылка скопирована");
+          }}
+        >
+          {myLink}
+        </button>
+      </Surface>
+
+      <Surface>
+        <SectionLabel>Сводка</SectionLabel>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <ProfileStat value={todayCount} label="записей сегодня" />
+          <ProfileStat value={attentionCount} label="требуют внимания" alert />
+          <ProfileStat value={weekBookings} label="записей на неделю" />
+        </div>
+        <p className="mt-3 text-tiny text-muted-foreground">
+          Внимание, если у клиента: нет отчёта 3 и больше дней или отчёта не было вовсе · еда ниже 72% цели за сегодня · 2 и больше поздних отмен · 2 занятия или меньше на балансе · заморозка · пакет истекает в ближайшие 7 дней. Список — во вкладке «Клиенты», фильтр «Внимание».
+        </p>
+      </Surface>
     </div>
   );
 }
