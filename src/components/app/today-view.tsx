@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { JoinRequestCard } from "@/components/app/join-request-card";
 import { confirmAction } from "@/lib/confirm";
 import { useMemo, useState } from "react";
 import { SoftReturnPanel } from "@/components/app/soft-return";
@@ -7,7 +8,6 @@ import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
 import { balanceSummary } from "@/lib/balance-summary";
 import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
-import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
   clientFlag,
@@ -43,8 +43,6 @@ export function TodayView() {
   const checkIn = useStudio((s) => s.checkIn);
   const markNoShow = useStudio((s) => s.markNoShow);
   const setActiveClient = useStudio((s) => s.setActiveClient);
-  const approveJoin = useStudio((s) => s.approveJoin);
-  const rejectJoin = useStudio((s) => s.rejectJoin);
   const showToast = useStudio((s) => s.showToast);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
@@ -172,33 +170,7 @@ export function TodayView() {
             </p>
             {pendingJoins.slice(0, 5).map((req) => (
               <Surface key={req.id}>
-                <p className="font-display text-base">
-                  {req.firstName} {req.lastName}
-                </p>
-                {req.telegramUsername ? (
-                  <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p>
-                ) : null}
-                <p className="mt-1 text-sm text-muted-foreground">{req.message || "Заявка в зал"}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={async () => {
-                      if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
-                    }}
-                  >
-                    Принять
-                  </button>
-                  <button
-                    type="button"
-                    className="pressable h-11 rounded-xl bg-secondary text-sm"
-                    onClick={async () => {
-                      if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
-                    }}
-                  >
-                    Отклонить
-                  </button>
-                </div>
+                <JoinRequestCard req={req} fallbackMessage="Заявка в зал" />
               </Surface>
             ))}
           </div>

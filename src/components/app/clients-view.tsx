@@ -1,4 +1,5 @@
 import { confirmAction } from "@/lib/confirm";
+import { JoinRequestCard } from "@/components/app/join-request-card";
 import { WheelField } from "@/components/app/wheel-picker";
 import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
 import { isLapsed, lastActivityDate, retentionExpired } from "@/lib/lapsed";
@@ -46,7 +47,6 @@ import { FilterChip, FoodEditor, MacroMini, MeasuresEditor, ProgramEditor } from
 import { Fold } from "@/components/app/fold";
 import { MenuDay } from "@/components/app/menu-day";
 import { FEATURES } from "@/lib/features";
-import { joinConfirmText, joinRejectText } from "@/lib/join-confirm";
 import { coachTierLine } from "@/lib/coach-tier";
 
 export function ClientsView() {
@@ -67,8 +67,6 @@ export function ClientsView() {
   const slots = useStudio((s) => s.slots);
   const closedSlotIds = useStudio((s) => s.closedSlotIds);
   const joinRequests = useStudio((s) => s.joinRequests);
-  const approveJoin = useStudio((s) => s.approveJoin);
-  const rejectJoin = useStudio((s) => s.rejectJoin);
   const coaches = useStudio((s) => s.coaches);
   const addCoach = useStudio((s) => s.addCoach);
   const removeCoach = useStudio((s) => s.removeCoach);
@@ -147,31 +145,7 @@ export function ClientsView() {
             .filter((r) => r.status === "pending" && (!r.coachId || r.coachId === String(me?.id ?? TRAINER_TG_ID)))
             .map((req) => (
               <div key={req.id} className="rounded-xl bg-card px-4 py-3 shadow-border">
-                <p className="font-display text-base">
-                  {req.firstName} {req.lastName}
-                </p>
-                {req.telegramUsername ? <p className="text-tiny text-muted-foreground">@{req.telegramUsername}</p> : null}
-                <p className="mt-1 text-sm text-muted-foreground">{req.message || "Нажал Старт"}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className="pressable h-11 rounded-xl bg-primary text-sm font-medium text-primary-foreground"
-                    onClick={async () => {
-                      if (await confirmAction(joinConfirmText(req))) approveJoin(req.id);
-                    }}
-                  >
-                    Принять
-                  </button>
-                  <button
-                    type="button"
-                    className="pressable h-11 rounded-xl bg-secondary text-sm"
-                    onClick={async () => {
-                      if (await confirmAction(joinRejectText(req))) rejectJoin(req.id);
-                    }}
-                  >
-                    Отклонить
-                  </button>
-                </div>
+                <JoinRequestCard req={req} fallbackMessage="Нажал Старт" />
               </div>
             ))}
         </div>
