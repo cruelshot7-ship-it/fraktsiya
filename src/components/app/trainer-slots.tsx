@@ -110,7 +110,7 @@ export function TrainerSlots() {
       <div className="mb-3 rounded-xl bg-card px-4 py-3 shadow-border">
         <p className="text-tiny tracking-[0.08em] text-muted-foreground ">Записи на неделю</p>
         <div className="mt-2 flex flex-col gap-1.5">
-          {days.map((day) => {
+          {days.filter((day) => day.key >= todayKey).map((day) => {
             const rows = bookings
               .filter((booking) => booking.date === day.key)
               .sort((a, b) => a.time.localeCompare(b.time));

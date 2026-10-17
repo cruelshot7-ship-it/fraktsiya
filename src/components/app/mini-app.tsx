@@ -47,6 +47,7 @@ const TRAINER_NAV: NavItem[] = [
   { id: "clients", label: "Клиенты", icon: Users },
   { id: "schedule", label: "Расписание", icon: CalendarDays },
   { id: "programs", label: "Программы", icon: ClipboardList },
+  { id: "more", label: "Профиль", icon: User },
 ];
 
 const TITLES: Partial<Record<TabId, string>> = {
@@ -273,7 +274,7 @@ export function MiniApp() {
               </div>
             ) : null}
             {tab === "more" || tab === "form" || tab === "hall" ? (
-              <MoreView initial={tab === "hall" ? "hall" : tab === "form" ? "form" : undefined} />
+              <MoreView role={role} initial={tab === "hall" ? "hall" : tab === "form" ? "form" : undefined} />
             ) : null}
             {tab === "clients" ? (
               <div className="space-y-4">
