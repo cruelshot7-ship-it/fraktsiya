@@ -123,7 +123,7 @@ export function OfferLanding({ live }: { live: boolean }) {
               Закрыть
             </button>
           ) : null}
-          <div className="rounded-xl bg-card p-5 shadow-border glow-ok">
+          <div className="rounded-xl bg-card p-5 shadow-border">
             <SectionLabel>Заявка ушла</SectionLabel>
             <p className="font-display mt-2 text-2xl leading-tight">Евгений напишет</p>
             <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{pending?.message || "Ждём ответ тренера."}</p>

@@ -171,7 +171,7 @@ export function TodayView() {
               Заявки в зал · {pendingJoins.length}
             </p>
             {pendingJoins.slice(0, 5).map((req) => (
-              <Surface key={req.id} glow="ok">
+              <Surface key={req.id}>
                 <p className="font-display text-base">
                   {req.firstName} {req.lastName}
                 </p>
