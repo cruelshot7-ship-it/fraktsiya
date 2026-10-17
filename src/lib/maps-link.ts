@@ -1,35 +1,47 @@
 /**
- * Route link without requiring client geolocation.
- * Opens maps app / site with destination only.
+ * Одна кнопка «Маршрут»: открывает карты, которые подходят устройству клиента.
+ * iPhone и iPad → Apple Карты, Android → Google Maps, остальное (компьютер, веб) → Яндекс Карты.
+ * Геолокация не нужна: маршрут строится до адреса зала.
  */
 
-export function mapsRouteUrl(destination: string, provider: "yandex" | "google" = "yandex"): string {
-  const q = destination.trim();
-  if (!q) return "";
-  const encoded = encodeURIComponent(q);
-  if (provider === "google") {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
-  }
-  return `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
+export type MapPlatform = "ios" | "android" | "other";
+export type Venue = { name: string; address: string; yandexOrgUrl?: string };
+
+const STOP_WORDS = new Set(["улица", "ул", "г", "город"]);
+
+export function mapPlatform(userAgent: string): MapPlatform {
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return "ios";
+  if (/Android/i.test(userAgent)) return "android";
+  return "other";
 }
 
-export type MapAppLink = { label: string; url: string };
-export type Venue = { name: string; yandexOrgUrl?: string };
+/** Адрес без написания: «Гродно, Лидская 1» и «Гродно, улица Лидская, 1» — один и тот же адрес. */
+export function normalizeAddress(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word && !STOP_WORDS.has(word))
+    .join(" ");
+}
+
+export function isVenueAddress(address: string, venue: Venue): boolean {
+  const typed = normalizeAddress(address);
+  return typed !== "" && typed === normalizeAddress(venue.address);
+}
 
 /**
- * Кнопки маршрута: Яндекс Карты и Google Maps. С известным залом (venue) Яндекс открывает его карточку,
- * а Google ведёт до «название, адрес». Без зала — поиск по адресу. Яндекс Навигатор не даём:
- * схема yandexnavi:// для маршрута по тексту адреса не подтверждена документацией.
+ * Ссылка маршрута для устройства. Пусто, если адреса нет.
+ * Адрес самого зала берётся в каноническом написании; карточка Яндекса открывается, если она известна.
  */
-export function mapsAppLinks(address: string, venue?: Venue): MapAppLink[] {
-  const q = address.trim();
-  if (!q) return [];
-  const place = venue?.name ? `${venue.name}, ${q}` : q;
-  return [
-    {
-      label: "Яндекс Карты",
-      url: venue?.yandexOrgUrl ?? `https://yandex.ru/maps/?text=${encodeURIComponent(place)}`,
-    },
-    { label: "Google Maps", url: mapsRouteUrl(place, "google") },
-  ];
+export function routeUrl(address: string, platform: MapPlatform, venue?: Venue): string {
+  const typed = address.trim();
+  if (!typed) return "";
+  const atVenue = venue !== undefined && isVenueAddress(typed, venue);
+  const q = atVenue ? venue.address : typed;
+  const encoded = encodeURIComponent(q);
+  if (platform === "ios") return `https://maps.apple.com/?daddr=${encoded}&dirflg=d`;
+  if (platform === "android") return `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
+  if (atVenue && venue.yandexOrgUrl) return venue.yandexOrgUrl;
+  return `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
 }
