@@ -406,7 +406,7 @@ export function ProgramEditor({
       </div>
       <button
         type="button"
-        className="pressable h-11 rounded-xl bg-secondary text-sm"
+        className="pressable h-11 w-full rounded-xl bg-secondary text-sm"
         onClick={async () => {
           const hasDays = draft.sessions.some((s) => s.items.length > 0);
           if (hasDays && !await confirmAction("Заменить дни сборкой по цели? Правки дней, что не сохранены, пропадут.")) return;
