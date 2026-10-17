@@ -62,7 +62,7 @@ import { hapticNotify } from "@/lib/haptics";
 import { withArrival } from "@/lib/studio-visits";
 import { repeatWeekSlots } from "@/lib/studio-repeat";
 import { cancelTxnId } from "@/lib/balance";
-import { applyTelegramIdentity, flushCloudPush, hasUnsyncedChanges, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
+import { applyTelegramIdentity, flushCloudPush, hasPendingCloudPush, hasUnsyncedChanges, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { mergeBookingFlags, unionIds } from "@/lib/studio-merge";
 import { COACH_TIERS_TEXT } from "@/lib/coach-tier";
 import { addCoachFn, decideJoinFn, dropTombstones, ensureApprovedClients, isRemovedClient, mergeClients, payCoachFn, removeCoachFn, requestJoin, sendBotLinkFn, tombstonesFor } from "@/lib/studio-sync";
@@ -159,6 +159,7 @@ type State = {
   payCoach: (coach: { username?: string | null; code?: string; telegramId?: string | null }) => Promise<void>;
   setTab: (tab: TabId) => void;
   goBack: () => void;
+  releaseBooking: (slotId: string, clientId: string) => void;
   setRole: (role: Role) => void;
   setActiveClient: (id: string) => void;
   openClientSheet: (id: string | null, startMode?: "program") => void;
@@ -697,6 +698,11 @@ export const useStudio = create<State>((set, get) => ({
   refreshCloud: () => {
     void syncFromCloud().then((cloud) => {
       if (!cloud) return;
+      // Несохранённые правки тренера важнее ответа сервера: отправляем их и не затираем список клиентов.
+      if (cloud.role === "trainer" && hasPendingCloudPush()) {
+        flushCloudPush();
+        return;
+      }
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
@@ -990,6 +996,13 @@ export const useStudio = create<State>((set, get) => ({
   goBack: () => {
     const { tab, history } = popTab(get().tabHistory);
     set({ tab: tab ?? "today", tabHistory: history, selectedSlotId: null });
+  },
+  releaseBooking: (slotId, clientId) => {
+    // только локальные записи, которые сервер не подтвердил (нет serverRev)
+    const bookings = get().bookings.filter((b) => !(b.slotId === slotId && b.clientId === clientId && !b.serverRev));
+    if (bookings.length === get().bookings.length) return;
+    set({ bookings });
+    persist(snap(get()));
   },
   setRole: (role) => {
     if (telegramLocked()) return;

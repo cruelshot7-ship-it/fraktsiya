@@ -3,6 +3,7 @@
  * Avoids rewriting the large studio-store.ts blob on the remote branch.
  */
 import { useStudio } from "@/lib/studio-store";
+import { bookConflictText, releasesLocalBooking } from "@/lib/booking/booking-conflict";
 
 let patched = false;
 
@@ -26,11 +27,9 @@ export function ensureBookDualWrite() {
       if (slot && clientId) {
         void import("@/lib/booking/client-dual-write").then(({ scheduleBookDualWrite }) => {
           scheduleBookDualWrite(slot, clientId, (reason) => {
-            s.showToast(
-              reason === "full"
-                ? "Слот только что заняли. Обновите список."
-                : "Запись уже есть на сервере.",
-            );
+            // «Слот занят» — запись клиента на сервере нет, локальную убираем; «уже записан» — запись на сервере есть, оставляем
+            if (releasesLocalBooking(reason)) useStudio.getState().releaseBooking(slot.id, clientId);
+            useStudio.getState().showToast(bookConflictText(reason));
           });
         });
       }
