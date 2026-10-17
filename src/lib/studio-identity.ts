@@ -89,6 +89,11 @@ export function hasUnsyncedChanges(): boolean {
   }
 }
 
+/** Правки этой сессии ещё не отправлены. В отличие от признака в localStorage, после перезагрузки это false. */
+export function hasPendingCloudPush(): boolean {
+  return latest !== null;
+}
+
 async function pushLatest(attempt: number) {
   const initData = getTelegramInitData();
   const payload = latest;
