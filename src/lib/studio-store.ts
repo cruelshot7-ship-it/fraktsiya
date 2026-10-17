@@ -183,7 +183,6 @@ type State = {
   removeFood: (logId: string) => void;
   saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind" | "fatigue" | "soreness" | "pain">>) => void;
   importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
-  ensureHealthToken: () => string;
   addLift: (exercise: string, weight: number, reps: number, sets: number, rir?: number) => void;
   /** rewrite maps legacy "index:line" marks to block ids before toggling */
   toggleCheck: (item: string, rewrite?: Record<string, string>) => void;
@@ -1610,16 +1609,6 @@ export const useStudio = create<State>((set, get) => ({
     get().showToast("FatSecret внесён в еду.");
   },
 
-  ensureHealthToken: () => {
-    const clientId = get().activeClientId;
-    const client = get().clients.find((row) => row.id === clientId);
-    if (!client) return "";
-    if (client.healthToken) return client.healthToken;
-    const token = crypto.randomUUID().replace(/-/g, "");
-    set({ clients: get().clients.map((row) => (row.id === clientId ? { ...row, healthToken: token } : row)) });
-    persist(snap(get()));
-    return token;
-  },
 
   removeFood: (logId) => {
     const food = get().food.filter((f) => f.logId !== logId);

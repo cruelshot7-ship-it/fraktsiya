@@ -1,5 +1,5 @@
 import { WheelField } from "@/components/app/wheel-picker";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FORM_GOALS, isTrainDay, MOVE_KINDS, studioToday } from "@/data/studio";
 import { trainDayHints, type LoadHintTone } from "@/lib/day-load-hint";
 import { activeClient, useStudio } from "@/lib/studio-store";
@@ -19,7 +19,6 @@ export function FormView() {
   const dayChecks = useStudio((s) => s.dayChecks);
   const saveDayCheck = useStudio((s) => s.saveDayCheck);
   const importFatSecret = useStudio((s) => s.importFatSecret);
-  const ensureHealthToken = useStudio((s) => s.ensureHealthToken);
   const showToast = useStudio((s) => s.showToast);
   const clients = useStudio((s) => s.clients);
   const bookings = useStudio((s) => s.bookings);
@@ -53,11 +52,6 @@ export function FormView() {
         })
       : [];
   const [paste, setPaste] = useState("");
-  const [autoOpen, setAutoOpen] = useState(false);
-
-  useEffect(() => {
-    if (client && !client.healthToken) ensureHealthToken();
-  }, [client, ensureHealthToken]);
 
   if (!client) return <EmptyHint>Форма откроется, когда тренер добавит вас в зал.</EmptyHint>;
 
@@ -86,11 +80,6 @@ export function FormView() {
             : recoveryDecision?.status === "ok"
               ? "Можно тренироваться"
               : null;
-
-  const token = client.healthToken || "";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const hook = token ? `${origin}/api/health?token=${token}` : "";
-  const healthLink = token ? `healthautoexport://x-callback-url/export?tokens=${token}` : "";
 
   return (
     <div className="flex flex-col gap-3">
@@ -272,35 +261,6 @@ export function FormView() {
 
       <MeasuresCard client={client} />
 
-      <button type="button" className="self-start text-xs text-muted-foreground" onClick={() => setAutoOpen((open) => !open)}>
-        {autoOpen ? "Скрыть импорт" : "Импорт с часов"}
-      </button>
-      {autoOpen ? (
-        <Surface>
-          <p className="text-xs text-muted-foreground">Один раз вставь ссылку в Health Auto Export. Дальше цифры приходят сами.</p>
-          <button
-            type="button"
-            className="pressable mt-3 h-11 w-full rounded-lg bg-secondary text-sm"
-            onClick={() => {
-              if (!hook) return;
-              void navigator.clipboard?.writeText(hook);
-              showToast("Ссылка скопирована");
-            }}
-          >
-            Скопировать ссылку
-          </button>
-          <button
-            type="button"
-            className="pressable mt-2 h-11 w-full rounded-lg bg-secondary text-sm"
-            onClick={() => {
-              if (!healthLink) return;
-              window.location.href = healthLink;
-            }}
-          >
-            Открыть Health Auto Export
-          </button>
-        </Surface>
-      ) : null}
     </div>
   );
 }

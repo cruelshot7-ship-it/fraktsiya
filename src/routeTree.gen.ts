@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as ApiBotSweepRouteImport } from './routes/api/bot-sweep'
 import { Route as ApiRemindersRouteImport } from './routes/api/reminders'
@@ -18,11 +17,6 @@ import { Route as ApiRemindersRouteImport } from './routes/api/reminders'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTelegramRoute = ApiTelegramRouteImport.update({
@@ -43,14 +37,12 @@ const ApiRemindersRoute = ApiRemindersRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/api/bot-sweep': typeof ApiBotSweepRoute
   '/api/reminders': typeof ApiRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/api/bot-sweep': typeof ApiBotSweepRoute
   '/api/reminders': typeof ApiRemindersRoute
@@ -58,22 +50,20 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/health': typeof ApiHealthRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/api/bot-sweep': typeof ApiBotSweepRoute
   '/api/reminders': typeof ApiRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
+  fullPaths: '/' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
-  id: '__root__' | '/' | '/api/health' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
+  to: '/' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
+  id: '__root__' | '/' | '/api/telegram' | '/api/bot-sweep' | '/api/reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiHealthRoute: typeof ApiHealthRoute
   ApiTelegramRoute: typeof ApiTelegramRoute
   ApiBotSweepRoute: typeof ApiBotSweepRoute
   ApiRemindersRoute: typeof ApiRemindersRoute
@@ -86,13 +76,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/telegram': {
@@ -121,7 +104,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiHealthRoute: ApiHealthRoute,
   ApiTelegramRoute: ApiTelegramRoute,
   ApiBotSweepRoute: ApiBotSweepRoute,
   ApiRemindersRoute: ApiRemindersRoute,

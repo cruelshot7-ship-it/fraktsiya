@@ -6,7 +6,6 @@ import { clientSlotView } from "@/lib/studio-scope";
 import { z } from "zod";
 import { mergeBookingFlags, ownDismissed, unionIds } from "@/lib/studio-merge";
 import { keepClientOwned } from "@/lib/client-owned";
-import { pickHealthToken } from "@/lib/health-token";
 import { newReferralCode, referralCodeFromStart, referrerByCode } from "@/lib/referral";
 import { applyCoachNotices, coachNoticeText, dueCoachNotices, type CoachNotice } from "@/lib/coach-notice";
 import { withoutTrainerMoney } from "@/lib/payments";
@@ -663,14 +662,6 @@ function mergeClientWrite(current: StudioPayload, incoming: StudioPayload, teleg
     consentLog: consentLogAfter(mine, incomingSelf.consent, now),
     lastReportAt: incomingSelf.lastReportAt ?? mine.lastReportAt,
     streak: incomingSelf.streak ?? mine.streak,
-    // токен ingest: свой сохраняем, присланный принимаем только свободный, иначе выдаём новый
-    healthToken: pickHealthToken({
-      own: mine.healthToken,
-      proposed: incomingSelf.healthToken,
-      usedByOthers: new Set(
-        current.clients.filter((c) => c.id !== id && c.healthToken).map((c) => (c.healthToken ?? "").toLowerCase()),
-      ),
-    }),
     ...(balance ?? {}),
   };
   return {
