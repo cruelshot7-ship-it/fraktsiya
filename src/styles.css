@@ -379,6 +379,11 @@ button:active:not(:disabled) {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
+/* В нижней панели нажатие без красного свечения: выделяет только пилюля выбранной вкладки. */
+.nav-blur button:active:not(:disabled) {
+  box-shadow: none;
+}
+
 /* Шапка полупрозрачная всегда; после прокрутки чуть плотнее и с тонкой линией. */
 .chrome {
   background: rgb(21 23 27 / 0.62);
