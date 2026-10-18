@@ -78,7 +78,7 @@ export function ClientSlots() {
         }}
       />
 
-      <p className="font-display mb-2.5 text-xs tracking-[0.08em] text-muted-foreground ">
+      <p className="font-display mb-2.5 text-2xs tracking-[0.08em] text-muted-foreground ">
         {formatDayMonth(selectedDate)}
         {me.trainDays.includes((parseISODate(selectedDate).getDay() + 6) % 7) ? ` · день ${me.firstName}` : ""}
       </p>
@@ -122,15 +122,15 @@ export function ClientSlots() {
                     </p>
                   </div>
                   {mine ? (
-                    <span className="text-xs font-medium text-ok">Вы записаны</span>
+                    <span className="text-2xs font-medium text-ok">Вы записаны</span>
                   ) : past ? (
-                    <span className="text-xs text-muted-foreground">Прошло</span>
+                    <span className="text-2xs text-muted-foreground">Прошло</span>
                   ) : left > 0 && !frozen ? (
                     confirmId === slot.id ? (
                       <div className="flex flex-col items-end gap-1.5">
                         <p className="text-2xs text-muted-foreground">−1 с баланса · {slot.time}</p>
                         <div className="flex gap-1.5">
-                          <button type="button" className="pressable rounded-lg bg-secondary px-2.5 py-1.5 text-xs" onClick={() => setConfirmId(null)}>
+                          <button type="button" className="pressable rounded-lg bg-secondary px-2.5 py-1.5 text-2xs" onClick={() => setConfirmId(null)}>
                             Отмена
                           </button>
                           <button
@@ -211,9 +211,9 @@ export function ClientSlots() {
                       В лист
                     </button>
                   ) : waiting ? (
-                    <span className="text-xs text-muted-foreground">В листе</span>
+                    <span className="text-2xs text-muted-foreground">В листе</span>
                   ) : frozen ? (
-                    <span className="text-xs text-alert-text">Заморозка</span>
+                    <span className="text-2xs text-alert-text">Заморозка</span>
                   ) : null}
                 </div>
               </div>
@@ -243,11 +243,11 @@ function WeekStrip({
   return (
     <div className="mb-3">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" className="pressable text-xs text-muted-foreground" onClick={onPrev}>
+        <button type="button" className="pressable text-2xs text-muted-foreground" onClick={onPrev}>
           ←
         </button>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <button type="button" className="pressable text-xs text-muted-foreground" onClick={onNext}>
+        <p className="text-2xs text-muted-foreground">{label}</p>
+        <button type="button" className="pressable text-2xs text-muted-foreground" onClick={onNext}>
           →
         </button>
       </div>

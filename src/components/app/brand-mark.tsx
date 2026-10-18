@@ -48,7 +48,7 @@ export function BrandLockup({ compact }: { compact?: boolean }) {
         <p className="font-display leading-none tracking-[0.22em] text-foreground uppercase" style={{ fontSize: compact ? "0.7rem" : "0.92rem" }}>
           {STUDIO.name}
         </p>
-        <p className="mt-1 truncate text-3xs tracking-[0.16em] text-muted-foreground uppercase">
+        <p className="mt-1 truncate text-2xs tracking-[0.16em] text-muted-foreground uppercase">
           {STUDIO.line} · {STUDIO.est}
         </p>
       </div>

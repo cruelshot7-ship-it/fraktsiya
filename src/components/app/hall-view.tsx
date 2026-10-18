@@ -74,7 +74,7 @@ export function HallView() {
             className="pressable rounded-xl bg-card px-4 py-3 text-left shadow-border"
           >
             <span className="font-display block text-base">{item.name}</span>
-            <span className="mt-1 block text-xs text-muted-foreground">техника, затем движение</span>
+            <span className="mt-1 block text-2xs text-muted-foreground">техника, затем движение</span>
           </button>
         ))}
       </div>
@@ -172,7 +172,7 @@ function Drill({
       <Surface className="overflow-hidden p-0" glow="alert">
         <div className="px-4 pt-4">
           <SectionLabel>Движение</SectionLabel>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-2xs text-muted-foreground">
             Упражнение уже выбрано. Ведите палец по дуге. Камера форму не оценивает.
           </p>
         </div>
@@ -185,7 +185,7 @@ function Drill({
         />
         <div className="flex items-center justify-between px-4 pb-4">
           <p className="font-display text-2xl tabular-nums">{score == null ? "—" : `${score}%`}</p>
-          <p className="text-xs text-muted-foreground">{reps}/3 повтора</p>
+          <p className="text-2xs text-muted-foreground">{reps}/3 повтора</p>
         </div>
       </Surface>
     </div>

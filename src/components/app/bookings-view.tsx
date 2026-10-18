@@ -132,7 +132,7 @@ export function BookingsView() {
         return (
           <Surface key={booking.id} glow={pending ? "alert" : "ok"}>
             <p className="font-display text-lg font-semibold">{booking.time}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-2xs text-muted-foreground">
               {formatLongDate(booking.date)} · {booking.duration} мин
               {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
               {booking.checkedIn ? " · в зале" : ""}
@@ -174,7 +174,7 @@ export function BookingsView() {
                   <button
                     type="button"
                     onClick={() => checkIn(booking.id)}
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium text-foreground"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs font-medium text-foreground"
                   >
                     Явка
                   </button>
@@ -186,7 +186,7 @@ export function BookingsView() {
                       setActiveClient(booking.clientId);
                       setTab("program");
                     }}
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs font-medium"
                   >
                     К программе
                   </button>
@@ -196,7 +196,7 @@ export function BookingsView() {
                   <button
                     type="button"
                     onClick={() => setPendingId(booking.id)}
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs text-muted-foreground"
                   >
                     {role === "trainer" ? "Отменить · вернуть занятие" : "Отменить запись"}
                   </button>
@@ -215,7 +215,7 @@ export function BookingsView() {
                         location: STUDIO.brand,
                       })
                     }
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs text-muted-foreground"
                   >
                     В календарь
                   </button>
@@ -237,7 +237,7 @@ export function BookingsView() {
             return (
             <Surface key={booking.id} className="opacity-80">
               <p className="font-display text-base font-semibold">{formatLongDate(booking.date)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-2xs text-muted-foreground">
                 {booking.time} · {booking.duration} мин
                 {role === "trainer" && who ? ` · ${shortName(who)}` : ""}
                 {booking.checkedIn ? " · чек-ин" : booking.noShow ? " · неявка" : ""}
@@ -247,14 +247,14 @@ export function BookingsView() {
                   <button
                     type="button"
                     onClick={() => checkIn(booking.id)}
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium text-foreground"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs font-medium text-foreground"
                   >
                     Явка
                   </button>
                   <button
                     type="button"
                     onClick={() => markNoShow(booking.id)}
-                    className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                    className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs text-muted-foreground"
                   >
                     Неявка
                   </button>
@@ -267,7 +267,7 @@ export function BookingsView() {
                     setActiveClient(booking.clientId);
                     setTab("program");
                   }}
-                  className="pressable mt-2 rounded-lg bg-secondary px-3 py-2 text-xs font-medium"
+                  className="pressable mt-2 rounded-lg bg-secondary px-3 py-2 text-2xs font-medium"
                 >
                   К программе клиента
                 </button>
@@ -281,7 +281,7 @@ export function BookingsView() {
       <button
         type="button"
         onClick={() => setTab("slots")}
-        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        className="self-start text-2xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       >
         К слотам
       </button>

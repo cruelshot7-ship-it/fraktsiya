@@ -341,7 +341,7 @@ export function MiniApp() {
                         // Сигналы открываются из «Сегодня»: плитка «Заявки» и кнопка «Сигналы и настройки →».
                         <span
                           aria-hidden
-                          className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-3xs font-medium text-primary-foreground"
+                          className="absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-2xs font-medium text-primary-foreground"
                         >
                           {badge}
                         </span>
@@ -369,10 +369,10 @@ export function MiniApp() {
 function RoleSwitch({ role, onChange, compact }: { role: "client" | "trainer"; onChange: (role: "client" | "trainer") => void; compact?: boolean }) {
   return (
     <div className={cn("grid grid-cols-2 gap-0.5 rounded-full bg-secondary p-0.5", compact && "opacity-80")}>
-      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("client")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-2xs" : "h-8 px-3 text-2xs", role === "client" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Клиент
       </button>
-      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
+      <button type="button" onClick={() => onChange("trainer")} className={cn("pressable font-medium", compact ? "h-7 px-2.5 text-2xs" : "h-8 px-3 text-2xs", role === "trainer" ? "rounded-full bg-ok text-ok-foreground" : "text-muted-foreground")}>
         Тренер
       </button>
     </div>
@@ -408,13 +408,13 @@ function InboxSheet({ items, onClose, onDismiss, onRebook }: { items: Notice[]; 
                     <p className="text-2xs font-medium tracking-wide text-muted-foreground">Запись</p>
                   ) : null}
                   <p className="mt-1 text-sm font-medium">{item.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+                  <p className="mt-1 text-2xs text-muted-foreground">{item.body}</p>
                   <p className="mt-2 text-2xs text-muted-foreground">{relativeLabel(item.at)}</p>
                   <div className="mt-3 flex gap-2">
                     {(item.kind === "cancel" || item.kind === "reschedule") && (
-                      <button type="button" onClick={onRebook} className="pressable rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">К расписанию</button>
+                      <button type="button" onClick={onRebook} className="pressable rounded-lg bg-primary px-3 py-2 text-2xs text-primary-foreground">К расписанию</button>
                     )}
-                    <button type="button" onClick={() => onDismiss(item.id)} className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground">Скрыть</button>
+                    <button type="button" onClick={() => onDismiss(item.id)} className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs text-muted-foreground">Скрыть</button>
                   </div>
                 </div>
               ))}

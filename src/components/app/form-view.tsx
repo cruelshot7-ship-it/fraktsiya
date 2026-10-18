@@ -87,17 +87,17 @@ export function FormView() {
       <Surface>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground">Шаги</label>
+            <label className="text-2xs text-muted-foreground">Шаги</label>
             <WheelField label="Шаги" value={steps} onChange={setSteps} max={40000} step={100} start={FORM_GOALS.steps} placeholder={String(FORM_GOALS.steps)} allowEmpty />
             <ProgressRail value={Number(steps) || 0} max={FORM_GOALS.steps} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Сон, ч</label>
+            <label className="text-2xs text-muted-foreground">Сон, ч</label>
             <WheelField label="Сон, часы" kind="dec" unit="ч" value={sleep} onChange={setSleep} max={16} start={FORM_GOALS.sleep} placeholder={String(FORM_GOALS.sleep)} allowEmpty />
             <ProgressRail value={Number(sleep.replace(",", ".")) || 0} max={FORM_GOALS.sleep} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Вода, мл</label>
+            <label className="text-2xs text-muted-foreground">Вода, мл</label>
             <div className="flex gap-1.5">
               <WheelField label="Вода, мл" unit="мл" value={water} onChange={setWater} max={5000} step={50} start={FORM_GOALS.water} placeholder={String(FORM_GOALS.water)} allowEmpty className="flex-1" />
               {[250, 500].map((add) => (
@@ -114,7 +114,7 @@ export function FormView() {
             <ProgressRail value={Number(water) || 0} max={FORM_GOALS.water} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Движение, мин</label>
+            <label className="text-2xs text-muted-foreground">Движение, мин</label>
             <WheelField label="Движение, мин" unit="мин" value={move} onChange={setMove} max={300} step={5} start={FORM_GOALS.move} placeholder={String(FORM_GOALS.move)} allowEmpty />
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -122,7 +122,7 @@ export function FormView() {
               <button
                 key={item}
                 type="button"
-                className={`pressable h-11 rounded-lg px-2.5 text-xs ${kind === item ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"}`}
+                className={`pressable h-11 rounded-lg px-2.5 text-2xs ${kind === item ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"}`}
                 onClick={() => setKind(item)}
               >
                 {item}
@@ -132,7 +132,7 @@ export function FormView() {
         </div>
         {specialDataAllowed(client?.consent) ? (
         <div className="mt-3 space-y-2">
-          <p className="text-xs text-muted-foreground">Восстановление</p>
+          <p className="text-2xs text-muted-foreground">Восстановление</p>
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs text-muted-foreground">Усталость 1–5</span>
             <div className="flex gap-1">
@@ -142,7 +142,7 @@ export function FormView() {
                   type="button"
                   aria-pressed={fatigue === v}
                   onClick={() => setFatigue(fatigue === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                  className={`pressable h-9 flex-1 rounded-lg text-2xs ${
                     fatigue === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
@@ -160,7 +160,7 @@ export function FormView() {
                   type="button"
                   aria-pressed={soreness === v}
                   onClick={() => setSoreness(soreness === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                  className={`pressable h-9 flex-1 rounded-lg text-2xs ${
                     soreness === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
@@ -178,7 +178,7 @@ export function FormView() {
                   type="button"
                   aria-pressed={pain === v}
                   onClick={() => setPain(pain === v ? null : v)}
-                  className={`pressable h-9 flex-1 rounded-lg text-xs ${
+                  className={`pressable h-9 flex-1 rounded-lg text-2xs ${
                     pain === v ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
                   }`}
                 >
@@ -189,12 +189,12 @@ export function FormView() {
           </div>
         </div>
         ) : (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-2xs text-muted-foreground">
             Усталость, крепатуру и боль отмечаем только с согласия. Дать или отозвать его можно в «Профиль» → «Мои данные».
           </p>
         )}
         {recoveryLabel ? (
-          <p className="mt-2 text-xs text-muted-foreground" role="status">
+          <p className="mt-2 text-2xs text-muted-foreground" role="status">
             Сегодня: {recoveryLabel}
           </p>
         ) : null}
@@ -231,7 +231,7 @@ export function FormView() {
 
       <Fold title="Внести еду из FatSecret">
       <Surface>
-        <p className="text-xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
+        <p className="text-2xs text-muted-foreground">Одно число калорий за день. Белки, жиры и углеводы можно не писать.</p>
         <div className="mt-3 grid grid-cols-4 gap-2">
           <WheelField label="Калории, ккал" value={kcal} onChange={setKcal} max={5000} step={10} start={2000} placeholder="ккал" allowEmpty />
           <WheelField label="Белки, г" value={protein} onChange={setProtein} unit="г" max={500} start={100} placeholder="Б" allowEmpty />

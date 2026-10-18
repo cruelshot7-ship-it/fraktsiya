@@ -196,7 +196,7 @@ function MenuDayBody({ client, date, bookings }: { client: Client; date: string;
                   type="button"
                   onClick={() => setCount(n)}
                   className={cn(
-                    "pressable h-11 flex-1 rounded-lg text-xs",
+                    "pressable h-11 flex-1 rounded-lg text-2xs",
                     count === n ? "bg-ok text-ok-foreground lit-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >

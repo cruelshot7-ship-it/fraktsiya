@@ -37,7 +37,7 @@ export function PolicyText() {
           </div>
         </div>
       ))}
-      <p className="text-xs text-muted-foreground">Версия политики: {PRIVACY_VERSION}</p>
+      <p className="text-2xs text-muted-foreground">Версия политики: {PRIVACY_VERSION}</p>
     </div>
   );
 }

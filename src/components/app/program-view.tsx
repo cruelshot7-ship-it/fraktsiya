@@ -280,7 +280,7 @@ export function ProgramView() {
         {session ? (
           <>
             <h2 className="font-display mt-2 text-xl tracking-wide">{session.name}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-2xs text-muted-foreground">
               {session.focus} · день {client.sessions.indexOf(session) + 1} из {client.sessions.length}
               {todayStatus ? ` · ${todayStatus}` : ""}
             </p>
@@ -288,13 +288,13 @@ export function ProgramView() {
         ) : (
           <>
             <h2 className="font-display mt-2 text-xl tracking-wide">Сегодня не тренировочный</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-2xs text-muted-foreground">
               {next ? `Ближайший визит ${formatDayMonth(next)}` : "Ближайший визит не назначен"}
               {nextSession ? ` · ${nextSession.name}` : ""}
             </p>
           </>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-3 text-2xs text-muted-foreground">
           Дни: {client.trainDays.map((d) => DOW[d]).join(" · ") || "не назначены"} ·{" "}
           {todayBook?.time ?? nextBook?.time ?? (client.trainTimes.join(", ") || "время свободно")}
         </p>
@@ -332,18 +332,18 @@ export function ProgramView() {
         <Surface>
           <div className="flex items-baseline justify-between gap-3">
             <p className="font-display text-base">{shown.name}</p>
-            <p className="text-xs text-muted-foreground">{shown.focus}</p>
+            <p className="text-2xs text-muted-foreground">{shown.focus}</p>
           </div>
           {planMissingWeights ? (
             <div className="mt-3 rounded-xl border border-border/60 bg-secondary/40 px-3 py-2.5">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {isTrainer
                   ? "В плане нет рабочих весов. Проставьте их в редакторе программы."
                   : "Тренер ещё не проставил рабочие веса в вашем плане."}
               </p>
             </div>
           ) : null}
-          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div className="mt-3 flex items-center justify-between gap-3 text-2xs text-muted-foreground">
             <span className="tabular-nums">
               Упражнений {doneCount} из {plan.blocks.length} · подходов {setsDoneAll} из {setsTotalAll}
             </span>
@@ -420,7 +420,7 @@ export function ProgramView() {
               <span className="max-w-[45%] truncate text-tiny">{nextSetInfo.block.exercise}</span>
             </button>
           ) : null}
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-2xs text-muted-foreground">
             Общий вес {totals.volume} кг · подходы {totals.sets} · работа {startedAt ? elapsedMin : 0} мин · отдых {restMin} мин
           </p>
           <div className="mt-4 border-t border-hairline pt-3">
@@ -555,7 +555,7 @@ export function ProgramView() {
             eaten={eaten}
             target={t}
           />
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-2xs text-muted-foreground">
             {t.calories > 0
               ? `Сегодня: ${eaten.calories} из ${t.calories} ккал. Цель от тренера.`
               : eaten.calories > 0
@@ -596,14 +596,14 @@ export function ProgramView() {
           {series.at(-1)?.rm ?? 0}
           <span className="ml-2 text-base font-sans font-normal text-muted-foreground">кг · максимум</span>
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-2xs text-muted-foreground">
           {trend.status === "ok"
             ? `Тренд: ${trend.kgPerWeek > 0 ? "+" : ""}${trend.kgPerWeek} кг/нед за ${trend.sessions} тренировок`
             : "Для тренда нужно минимум 3 тренировки за 14 дней."}
           {lastPr ? ` · Последний рекорд ${formatDayMonth(lastPr.date)}: ${lastPr.e1rm} кг (+${lastPr.gain})` : ""}
         </p>
         {unreliableOnly ? (
-          <p className="mt-1 text-xs text-muted-foreground">Все записи — длинные подходы, для ПМ они не годятся. Запишите подход, где повторы + запас не больше 10.</p>
+          <p className="mt-1 text-2xs text-muted-foreground">Все записи — длинные подходы, для ПМ они не годятся. Запишите подход, где повторы + запас не больше 10.</p>
         ) : null}
         <div className="mt-3 h-44">
           {chartReady && series.length > 1 ? (
@@ -640,7 +640,7 @@ export function ProgramView() {
           <Field label="Подходы">
             <WheelField label="Подходы" max={20} start={3} placeholder="3" value={sets} onChange={setSets} allowEmpty />
           </Field>
-          <div className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
+          <div className="flex min-w-0 flex-col gap-1.5 text-2xs text-muted-foreground">
             <span id="rir-label">Повторов в запасе</span>
             <div className="flex gap-1" role="group" aria-labelledby="rir-label">
               {[0, 1, 2, 3].map((v) => (
@@ -755,7 +755,7 @@ function BlockRow({
           {setMarks.map((filled, i) => {
             const isNext = currentSet === i && !filled;
             const cls = cn(
-              "grid size-11 shrink-0 place-items-center rounded-full border-2 text-xs tabular-nums transition-colors",
+              "grid size-11 shrink-0 place-items-center rounded-full border-2 text-2xs tabular-nums transition-colors",
               filled ? "border-ok bg-ok text-ok-foreground" : isNext ? "border-primary text-foreground" : "border-hairline text-muted-foreground",
             );
             const label = `Подход ${i + 1} из ${setMarks.length}: ${block.exercise}`;

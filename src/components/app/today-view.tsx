@@ -133,7 +133,7 @@ export function TodayView() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium text-foreground"
+                      className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs font-medium text-foreground"
                       onClick={() => {
                         checkIn(b.id);
                         showToast(name ? `Явка · ${name}` : "Явка отмечена");
@@ -143,7 +143,7 @@ export function TodayView() {
                     </button>
                     <button
                       type="button"
-                      className="pressable rounded-lg bg-secondary px-3 py-2 text-xs text-muted-foreground"
+                      className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs text-muted-foreground"
                       onClick={async () => {
                         if (!await confirmAction(`Отметить неявку${name ? ` · ${name}` : ""}?`)) return;
                         markNoShow(b.id);
@@ -154,7 +154,7 @@ export function TodayView() {
                     </button>
                     <button
                       type="button"
-                      className="pressable rounded-lg bg-secondary px-3 py-2 text-xs font-medium"
+                      className="pressable rounded-lg bg-secondary px-3 py-2 text-2xs font-medium"
                       onClick={() => {
                         setActiveClient(b.clientId);
                         setTab("program");
@@ -403,7 +403,7 @@ export function TodayView() {
               <p className="mt-1 text-tiny text-muted-foreground">
                 Галочки и факты сохраняются и уходят на сервер
               </p>
-              <p className="mt-3 text-xs font-medium text-foreground">К программе →</p>
+              <p className="mt-3 text-2xs font-medium text-foreground">К программе →</p>
             </Surface>
           </button>
         ) : (
@@ -414,7 +414,7 @@ export function TodayView() {
             {me?.sessions?.length ? (
               <button
                 type="button"
-                className="pressable mt-3 h-10 rounded-lg bg-secondary px-3 text-xs font-medium"
+                className="pressable mt-3 h-10 rounded-lg bg-secondary px-3 text-2xs font-medium"
                 onClick={() => setTab("program")}
               >
                 Посмотреть программу
@@ -431,7 +431,7 @@ export function TodayView() {
             <p className="text-sm">Сегодня уже есть запись по еде</p>
             <button
               type="button"
-              className="pressable mt-3 h-10 rounded-lg bg-secondary px-3 text-xs font-medium"
+              className="pressable mt-3 h-10 rounded-lg bg-secondary px-3 text-2xs font-medium"
               onClick={() => setTab("food")}
             >
               К еде
@@ -454,7 +454,7 @@ export function TodayView() {
             <Surface>
               <p className="font-display text-base leading-tight">Питание</p>
               <p className="mt-1 text-tiny text-muted-foreground">Дневник и КБЖУ за день</p>
-              <p className="mt-3 text-xs font-medium text-muted-foreground">Открыть питание →</p>
+              <p className="mt-3 text-2xs font-medium text-muted-foreground">Открыть питание →</p>
             </Surface>
           </button>
         )}

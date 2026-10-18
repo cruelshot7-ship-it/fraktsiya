@@ -81,7 +81,7 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
+    <label className="flex min-w-0 flex-col gap-1.5 text-2xs text-muted-foreground">
       {label}
       {children}
     </label>
@@ -258,9 +258,9 @@ export function KbjuMacroRing({
         </span>
       </div>
       {safeTarget > 0 ? (
-        <span className="text-3xs tabular-nums text-muted-foreground">/{Math.round(safeTarget)}</span>
+        <span className="text-2xs tabular-nums text-muted-foreground">/{Math.round(safeTarget)}</span>
       ) : (
-        <span className="text-3xs text-muted-foreground">факт</span>
+        <span className="text-2xs text-muted-foreground">факт</span>
       )}
       <span className="text-2xs tracking-wide text-muted-foreground ">{label}</span>
     </button>
