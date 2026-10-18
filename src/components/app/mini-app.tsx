@@ -92,6 +92,7 @@ export function MiniApp() {
   const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const inviteBlocked = useStudio((s) => s.inviteBlocked);
+  const inviteChecked = useStudio((s) => s.inviteChecked);
   const openNote = useStudio((s) => s.openNote);
   const guestPreview = useStudio((s) => s.guestPreview);
   const client = activeClient({ clients, activeClientId });
@@ -258,7 +259,9 @@ export function MiniApp() {
             showNav ? "pb-[calc(5.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
           )}>
           <div key={`${role}-${tab}`} className="pt-4">
-            {inviteBlocked && role === "client" ? (
+            {role === "client" && !inviteChecked ? (
+              <p className="pt-16 text-center text-sm text-muted-foreground">Открываем зал…</p>
+            ) : inviteBlocked && role === "client" ? (
               <JoinGate />
             ) : role === "client" && client && needsDecision(client.consent) ? (
               <PrivacyGate />

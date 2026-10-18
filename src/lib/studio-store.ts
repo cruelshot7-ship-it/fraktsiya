@@ -62,6 +62,7 @@ import { hapticNotify } from "@/lib/haptics";
 import { withArrival } from "@/lib/studio-visits";
 import { repeatWeekSlots } from "@/lib/studio-repeat";
 import { cancelTxnId } from "@/lib/balance";
+import { resolvedInviteGate } from "@/lib/invite-gate";
 import { applyTelegramIdentity, flushCloudPush, hasPendingCloudPush, hasUnsyncedChanges, scheduleCloudPush, syncFromCloud, telegramLocked } from "@/lib/studio-identity";
 import { mergeBookingFlags, unionIds } from "@/lib/studio-merge";
 import { COACH_TIERS_TEXT } from "@/lib/coach-tier";
@@ -146,6 +147,8 @@ type State = {
   programTemplates: ProgramTemplate[];
   menus: MenuRecord[];
   inviteBlocked: boolean;
+  /** сервер ещё не ответил на вопрос «есть ли у этого Telegram-пользователя клиент» */
+  inviteChecked: boolean;
   noteOpen: boolean;
   guestPreview: boolean;
   toast: string | null;
@@ -485,6 +488,7 @@ export const useStudio = create<State>((set, get) => ({
   programTemplates: [],
   menus: [],
   inviteBlocked: false,
+  inviteChecked: true,
   noteOpen: false,
   guestPreview: false,
   toast: null,
@@ -580,6 +584,7 @@ export const useStudio = create<State>((set, get) => ({
     role = identified.role;
     notices = identified.notices;
     const inviteBlocked = identified.inviteBlocked;
+    const inviteChecked = identified.inviteChecked;
     if (role === "trainer") {
       const handle = getTelegramUser()?.username;
       if (handle) trainerUsername = handle;
@@ -613,12 +618,17 @@ export const useStudio = create<State>((set, get) => ({
       programTemplates,
       menus,
       inviteBlocked,
+      inviteChecked,
       // QR-наклейка на стойке (m_<id>) открывает «Зал». Ставим вкладку здесь, одним местом:
       // раньше эффект в mini-app ставил «Зал», а этот вызов тут же возвращал «Слоты».
       tab: role === "trainer" ? "clients" : getStartParam().toLowerCase().startsWith("m_") ? ("hall" as TabId) : "slots",
     });
     void syncFromCloud().then((cloud) => {
-      if (!cloud) return;
+      if (!cloud) {
+        // сеть не ответила: ждать вечно нельзя. Гость увидит лендинг, клиент останется на своём экране
+        set({ inviteChecked: true });
+        return;
+      }
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
@@ -642,7 +652,7 @@ export const useStudio = create<State>((set, get) => ({
       });
       set({
         role: cloud.role,
-        inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
+        ...resolvedInviteGate({ blocked: cloud.blocked, clientCount: next.clients.length }),
         removedClientIds: next.removedClientIds,
         clients: next.clients,
         coaches: payload.coaches ?? [],
@@ -735,7 +745,7 @@ export const useStudio = create<State>((set, get) => ({
       }
       set({
         role: cloud.role,
-        inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
+        ...resolvedInviteGate({ blocked: cloud.blocked, clientCount: next.clients.length }),
         removedClientIds: next.removedClientIds,
         clients: next.clients,
         coaches: payload.coaches ?? get().coaches,

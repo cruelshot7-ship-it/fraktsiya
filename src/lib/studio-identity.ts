@@ -1,6 +1,7 @@
 import { TRAINER_TG_ID, type Client, type Notice } from "@/data/studio";
 import { getTelegramInitData, getTelegramUser } from "@/lib/telegram";
 import { pullStudio, pushStudio, type StudioPayload } from "@/lib/studio-sync";
+import { initialInviteGate } from "@/lib/invite-gate";
 
 type Role = "client" | "trainer";
 
@@ -28,14 +29,15 @@ export function applyTelegramIdentity(state: {
   notices: Notice[];
   identityLocked: boolean;
   inviteBlocked: boolean;
+  inviteChecked: boolean;
 } {
   const user = getTelegramUser();
   if (!user) {
-    return { ...state, identityLocked: false, inviteBlocked: false };
+    return { ...state, identityLocked: false, ...initialInviteGate({ telegramUser: false, trainer: false }) };
   }
   const id = String(user.id);
   if (isTrainerTelegramId(id)) {
-    return { ...state, role: "trainer", identityLocked: true, inviteBlocked: false };
+    return { ...state, role: "trainer", identityLocked: true, ...initialInviteGate({ telegramUser: true, trainer: true }) };
   }
 
   return {
@@ -44,7 +46,7 @@ export function applyTelegramIdentity(state: {
     role: "client",
     notices: state.notices,
     identityLocked: true,
-    inviteBlocked: true,
+    ...initialInviteGate({ telegramUser: true, trainer: false }),
   };
 }
 
