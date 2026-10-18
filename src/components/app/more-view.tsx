@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { ChevronRight } from "lucide-react";
 import { FormView } from "@/components/app/form-view";
 import { HallView } from "@/components/app/hall-view";
@@ -197,6 +198,21 @@ function TrainerProfile() {
   const showToast = useStudio((s) => s.showToast);
   const tgUser = getTelegramUser();
   const myLink = inviteUrl(BOT_USERNAME, `c_${tgUser?.id ?? TRAINER_TG_ID}`);
+  // QR рисуется в браузере: ссылка не уходит в сторонние сервисы
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    QRCode.toDataURL(myLink, { width: 180, margin: 1 })
+      .then((url) => {
+        if (alive) setQrSrc(url);
+      })
+      .catch(() => {
+        if (alive) setQrSrc(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [myLink]);
   const today = isoDate(new Date());
   const weekEnd = isoDate(addDays(startOfWeek(new Date()), 7));
   const todayCount = bookings.filter((b) => b.date === today).length;
@@ -213,6 +229,16 @@ function TrainerProfile() {
       <Surface className="glow-hero">
         <SectionLabel>Ваши клиенты</SectionLabel>
         <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
+        <div className="mt-3 flex flex-col items-center gap-2">
+          {qrSrc ? (
+            <img src={qrSrc} alt="QR-код ссылки для клиентов" width={180} height={180} className="rounded-xl bg-white p-2" />
+          ) : (
+            <div aria-hidden="true" className="size-[180px] rounded-xl bg-secondary" />
+          )}
+          <p className="text-center text-tiny text-muted-foreground">
+            Покажите QR: человек сканирует его и отправляет заявку. Когда вы её подтвердите, он появится в «Клиентах».
+          </p>
+        </div>
         <button
           type="button"
           className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-xs text-muted-foreground"
