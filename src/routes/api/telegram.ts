@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { timingSafeEqual } from "node:crypto";
 
 export const Route = createFileRoute("/api/telegram")({
   server: {
@@ -12,7 +13,9 @@ export const Route = createFileRoute("/api/telegram")({
         if (!tok) return new Response("no bot", { status: 503 });
         const secret = request.headers.get("x-telegram-bot-api-secret-token");
         const expected = webhookSecret(tok);
-        if (secret !== expected) {
+        const given = Buffer.from(secret ?? "");
+        const want = Buffer.from(expected);
+        if (!secret || given.length !== want.length || !timingSafeEqual(given, want)) {
           return new Response("Forbidden", { status: 403 });
         }
         try {
