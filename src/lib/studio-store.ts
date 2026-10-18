@@ -653,8 +653,6 @@ export const useStudio = create<State>((set, get) => ({
       set({
         role: cloud.role,
         ...resolvedInviteGate({ blocked: cloud.blocked, clientCount: next.clients.length }),
-        // существующий клиент открывает «Сегодня», а не «Запись»; вкладка «Запись» — только по выбору
-        tab: cloud.role === "client" && next.clients.length > 0 && get().tab === "slots" ? "today" : get().tab,
         removedClientIds: next.removedClientIds,
         clients: next.clients,
         coaches: payload.coaches ?? [],
@@ -682,7 +680,15 @@ export const useStudio = create<State>((set, get) => ({
         trainerUsername: payload.trainerUsername ?? get().trainerUsername,
         joinRequests: next.joinRequests,
         slots: mergeSlots(extra, slotViewer(next.clients, cloud.role)),
-        tab: cloud.role === "trainer" ? "clients" : get().tab === "clients" || get().tab === "signals" ? "slots" : get().tab,
+        // существующий клиент открывает «Сегодня», а не «Запись»; вкладка «Запись» — только по выбору
+        tab:
+          cloud.role === "trainer"
+            ? "clients"
+            : cloud.role === "client" && next.clients.length > 0 && get().tab === "slots"
+              ? "today"
+              : get().tab === "clients" || get().tab === "signals"
+                ? "slots"
+                : get().tab,
         ...(cloud.role === "client" && hasUnsyncedChanges()
           ? (() => {
               flushCloudPush();
