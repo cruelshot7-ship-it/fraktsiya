@@ -149,19 +149,19 @@ export function OfferLanding({ live }: { live: boolean }) {
         ) : null}
 
         {step === "intro" ? (
-          <div className="flex min-h-[70dvh] flex-col rounded-3xl bg-[#0e0f11] p-6 text-[#f2f2f0]" style={{ fontFamily: "Manrope, system-ui, -apple-system, sans-serif" }}>
+          <div className="flex min-h-[70dvh] flex-col rounded-3xl bg-[#0e0f11] p-5 text-[#f2f2f0]" style={{ fontFamily: "Manrope, system-ui, -apple-system, sans-serif" }}>
             <style>{PRE_ENTRY_CSS}</style>
             <div className="pre-rise flex items-center justify-between">
               <span className="text-xl tracking-[.14em] uppercase" style={{ fontFamily: OSWALD }}>Discipline</span>
               <span className="text-xs text-[#8e929b]">{STUDIO.city} · Titan</span>
             </div>
 
-            <div className="mt-12 flex flex-col gap-3.5">
+            <div className="mt-6 flex flex-col gap-3">
               <span className="pre-rise pre-d1 inline-flex items-center gap-2 text-xs font-semibold tracking-[.12em] uppercase text-[#e8685c]">
                 <span className="pre-live" aria-hidden="true" />
                 Первый визит
               </span>
-              <h1 className="pre-rise pre-d2 m-0 text-[52px] leading-none font-semibold uppercase" style={{ fontFamily: OSWALD, overflowWrap: "break-word" }}>
+              <h1 className="pre-rise pre-d2 m-0 text-[clamp(30px,10vw,40px)] leading-[0.95] font-semibold uppercase" style={{ fontFamily: OSWALD, overflowWrap: "break-word" }}>
                 Один час.
                 <br />
                 Без обязательств.
@@ -172,9 +172,9 @@ export function OfferLanding({ live }: { live: boolean }) {
               </p>
             </div>
 
-            <div className="pre-rise pre-d4 mt-8 grid grid-cols-3 gap-2">
+            <div className="pre-rise pre-d4 mt-6 grid grid-cols-3 gap-2">
               {FACTS.map((fact) => (
-                <div key={fact.label} className="rounded-xl border border-[#262930] bg-[#15171b] px-2.5 py-3">
+                <div key={fact.label} className="rounded-xl border border-[#262930] bg-[#15171b] px-2.5 py-2.5">
                   <p className="m-0 text-[32px] leading-none" style={{ fontFamily: OSWALD }}>
                     {fact.value}
                   </p>
@@ -182,9 +182,9 @@ export function OfferLanding({ live }: { live: boolean }) {
                 </div>
               ))}
             </div>
-            <p className="pre-rise pre-d4 mt-6 text-sm text-[#8e929b]">Возьмите форму, воду и кроссовки.</p>
+            <p className="pre-rise pre-d4 mt-4 text-sm text-[#8e929b]">Возьмите форму, воду и кроссовки.</p>
 
-            <div className="pre-rise pre-d5 mt-auto flex flex-col gap-2.5 pt-8">
+            <div className="pre-rise pre-d5 mt-auto flex flex-col gap-2.5 pt-6">
               {canBook ? (
                 <>
                   <button
