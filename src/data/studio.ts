@@ -1,3 +1,4 @@
+import { isLowSessions, needsAttention } from "@/lib/attention-rule";
 import type { BodyMeasure } from "@/lib/body-measures";
 import { shortName } from "@/lib/name-format";
 import type { Consent } from "@/lib/privacy";
@@ -1290,6 +1291,7 @@ export function clientFlag(
   today: string,
   food: FoodLog[],
   bookings: Booking[],
+  visits: Visit[] = [],
 ): ClientFlag {
   const daysSinceReport = daysSince(client.lastReportAt, today);
   const eaten = sumFood(food.filter((f) => f.date === today && f.clientId === client.id));
@@ -1299,43 +1301,46 @@ export function clientFlag(
   const noReport = hasReport && daysSinceReport >= 3;
   const neverReported = !hasReport;
   const lateOften = (client.lateCancels ?? 0) >= 2;
-  const lowPack = (client.sessionsLeft ?? 0) <= 2;
   const frozen = isFrozen(client, today);
   const expiring = packDaysLeft(client, today);
+  // Последняя тренировка: последний визит, а если визитов не было — старт программы.
+  const lastVisit = visitDatesOf(client.id, bookings, visits).reduce<string | null>(
+    (last, d) => (!last || d > last ? d : last),
+    null,
+  );
+  const lastActivity = lastVisit ?? (client.programStart || null);
+  const daysSinceActivity = daysSince(lastActivity, today);
+  const attention = needsAttention({ sessionsLeft: client.sessionsLeft, daysSinceActivity, frozen });
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
   const todayTrain = client.trainDays.includes(dowIndex(today));
   const todayOn = Boolean(todayBook || todayTrain);
-  const attention =
-    noReport || neverReported || lowCal || lateOften || lowPack || frozen || (expiring !== null && expiring <= 7);
   let badge: string | null = null;
   let tone: ClientFlag["tone"] = "none";
-  if (frozen) {
+  if (attention) {
+    if (isLowSessions(client.sessionsLeft)) {
+      badge = client.sessionsLeft > 0 ? `осталось ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}` : "занятий нет";
+    } else {
+      badge = lastActivity === null ? "без тренировок" : `без тренировок ${daysSinceActivity} ${daysRu(daysSinceActivity)}`;
+    }
+    tone = "alert";
+  } else if (frozen) {
     badge = `заморозка до ${formatDayMonth(client.frozenUntil!)}`;
-    tone = "alert";
-  } else if (noReport && daysSinceReport <= 60) {
-    badge = `нет отчёта ${daysSinceReport} ${daysRu(daysSinceReport)}`;
-    tone = "alert";
-  } else if (noReport || neverReported) {
-    badge = "нет отчёта";
-    tone = "alert";
-  } else if (lateOften) {
-    badge = "поздние отмены";
-    tone = "alert";
-  } else if (lowPack) {
-    badge = `осталось ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`;
-    tone = "alert";
-  } else if (expiring !== null && expiring <= 7) {
-    badge = expiring <= 0 ? "пакет истёк" : `пакет ${expiring} ${daysRu(expiring)}`;
-    tone = "alert";
-  } else if (lowCal) {
-    badge = "недобор калорий";
-    tone = "alert";
   } else if (todayBook) {
     badge = `сегодня ${todayBook.time}`;
     tone = "ok";
   } else if (todayTrain && client.trainTimes[0]) {
     badge = `сегодня ${client.trainTimes[0]}`;
     tone = "ok";
+  } else if (expiring !== null && expiring <= 7) {
+    badge = expiring <= 0 ? "пакет истёк" : `пакет ${expiring} ${daysRu(expiring)}`;
+  } else if (noReport && daysSinceReport <= 60) {
+    badge = `нет отчёта ${daysSinceReport} ${daysRu(daysSinceReport)}`;
+  } else if (noReport || neverReported) {
+    badge = "нет отчёта";
+  } else if (lateOften) {
+    badge = "поздние отмены";
+  } else if (lowCal) {
+    badge = "недобор калорий";
   }
   return { attention, today: todayOn, badge, tone, daysSinceReport, eaten };
 }
@@ -1406,3 +1411,4 @@ export function applyOfferBooking(input: {
     booked: true,
   };
 }
+

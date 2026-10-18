@@ -92,7 +92,7 @@ export function ClientsView() {
     () =>
       clients.map((client) => ({
         client,
-        flag: clientFlag(client, today, food, bookings),
+        flag: clientFlag(client, today, food, bookings, visits),
         week: programWeek(client, today),
         lapsed: isLapsed({
           erased: Boolean(client.erasedAt),
@@ -267,7 +267,7 @@ export function ClientsView() {
                   <p className="font-display truncate text-base leading-tight">{shortName(client)}</p>
                   <div className="flex flex-wrap justify-end gap-1">
                     {retentionDue ? <Pill tone="alert">Срок хранения истёк</Pill> : null}
-                    {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill> : null}
+                    {flag.badge ? <Pill tone={flag.tone === "ok" ? "ok" : flag.tone === "alert" ? "alert" : "muted"}>{flag.badge}</Pill> : null}
                   </div>
                 </div>
                 <p className="mt-0.5 truncate text-tiny text-muted-foreground">
@@ -642,7 +642,7 @@ function ClientSheetBody({
   const showToast = useStudio((s) => s.showToast);
   const visits = useStudio((s) => s.visits);
   const today = isoDate(new Date());
-  const flag = clientFlag(client, today, food, bookings);
+  const flag = clientFlag(client, today, food, bookings, visits);
   const todayGoal = dayKbju(client, today, bookings);
   const week = programWeek(client, today);
   const finished = programFinished(client, today);

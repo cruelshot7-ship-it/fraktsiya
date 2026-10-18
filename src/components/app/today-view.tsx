@@ -35,6 +35,7 @@ export function TodayView() {
   const bookings = useStudio((s) => s.bookings);
   const joinRequests = useStudio((s) => s.joinRequests);
   const food = useStudio((s) => s.food);
+  const visits = useStudio((s) => s.visits);
   const activeClientId = useStudio((s) => s.activeClientId);
   const setTab = useStudio((s) => s.setTab);
   const trainerUsername = useStudio((s) => s.trainerUsername);
@@ -82,7 +83,7 @@ export function TodayView() {
     const pendingJoins = joinRequests.filter((r) => r.status === "pending" && (!r.coachId || r.coachId === myTgId));
     // одно определение «внимания» на всех экранах тренера: то же, что фильтр во вкладке «Клиенты»
     const attention = clients
-      .map((c) => ({ client: c, flag: clientFlag(c, today, food, bookings) }))
+      .map((c) => ({ client: c, flag: clientFlag(c, today, food, bookings, visits) }))
       .filter((r) => r.flag.attention);
 
     return (
