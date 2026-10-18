@@ -16,6 +16,11 @@ export function isNoTraining(daysSinceActivity: number): boolean {
   return daysSinceActivity > NO_TRAINING_DAYS;
 }
 
+/** Отложено тренером: «Внимание» не показывает клиента до конца дня даты отсрочки включительно. */
+export function isSnoozed(snoozeUntil: string | null | undefined, today: string): boolean {
+  return Boolean(snoozeUntil && snoozeUntil >= today);
+}
+
 export function needsAttention(input: {
   sessionsLeft: number | null | undefined;
   daysSinceActivity: number;

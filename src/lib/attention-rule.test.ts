@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isLowSessions, isNoTraining, needsAttention, NO_TRAINING_DAYS } from "./attention-rule.ts";
+import { isLowSessions, isNoTraining, isSnoozed, needsAttention, NO_TRAINING_DAYS } from "./attention-rule.ts";
 
 describe("attention rule", () => {
   it("2 sessions or fewer, including zero, is low", () => {
@@ -27,5 +27,13 @@ describe("attention rule", () => {
 
   it("frozen client is never in attention", () => {
     assert.equal(needsAttention({ sessionsLeft: 0, daysSinceActivity: 99, frozen: true }), false);
+  });
+
+  it("snooze holds through its last day, then expires by itself", () => {
+    assert.equal(isSnoozed(null, "2026-10-18"), false);
+    assert.equal(isSnoozed(undefined, "2026-10-18"), false);
+    assert.equal(isSnoozed("2026-10-25", "2026-10-18"), true);
+    assert.equal(isSnoozed("2026-10-18", "2026-10-18"), true);
+    assert.equal(isSnoozed("2026-10-17", "2026-10-18"), false);
   });
 });

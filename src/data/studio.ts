@@ -1,4 +1,4 @@
-import { isLowSessions, needsAttention } from "@/lib/attention-rule";
+import { isLowSessions, isSnoozed, needsAttention } from "@/lib/attention-rule";
 import type { BodyMeasure } from "@/lib/body-measures";
 import { shortName } from "@/lib/name-format";
 import type { Consent } from "@/lib/privacy";
@@ -669,6 +669,8 @@ export type Client = {
   /** server-stamped history of consent acceptances and erasures */
   consentLog?: import("@/lib/privacy").ConsentEvent[];
   frozenUntil?: string | null;
+  /** до какой даты (включительно) тренер отложил клиента из «Внимания». Служебная дата, не данные о здоровье */
+  attentionSnoozeUntil?: string | null;
   packExpiresAt?: string | null;
   /** цена одного занятия, BYN. Личное для тренера: клиенту не отдаётся (см. withoutTrainerMoney) */
   price?: number | null;
@@ -1279,6 +1281,8 @@ export const SEED_LIFTS: LiftLog[] = [];
 
 export type ClientFlag = {
   attention: boolean;
+  /** тренер отложил клиента из «Внимания» (см. attentionSnoozeUntil) */
+  snoozed: boolean;
   today: boolean;
   badge: string | null;
   tone: "alert" | "ok" | "none";
@@ -1310,19 +1314,22 @@ export function clientFlag(
   );
   const lastActivity = lastVisit ?? (client.programStart || null);
   const daysSinceActivity = daysSince(lastActivity, today);
-  const attention = needsAttention({ sessionsLeft: client.sessionsLeft, daysSinceActivity, frozen });
+  const snoozed = isSnoozed(client.attentionSnoozeUntil, today);
+  const needs = needsAttention({ sessionsLeft: client.sessionsLeft, daysSinceActivity, frozen });
+  // отложенный клиент не попадает во «Внимание», но причина остаётся в бейдже нейтральным цветом
+  const attention = needs && !snoozed;
   const todayBook = bookings.find((b) => b.clientId === client.id && b.date === today);
   const todayTrain = client.trainDays.includes(dowIndex(today));
   const todayOn = Boolean(todayBook || todayTrain);
   let badge: string | null = null;
   let tone: ClientFlag["tone"] = "none";
-  if (attention) {
+  if (needs) {
     if (isLowSessions(client.sessionsLeft)) {
       badge = client.sessionsLeft > 0 ? `осталось ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}` : "занятий нет";
     } else {
       badge = lastActivity === null ? "без тренировок" : `без тренировок ${daysSinceActivity} ${daysRu(daysSinceActivity)}`;
     }
-    tone = "alert";
+    tone = snoozed ? "none" : "alert";
   } else if (frozen) {
     badge = `заморозка до ${formatDayMonth(client.frozenUntil!)}`;
   } else if (todayBook) {
@@ -1342,7 +1349,7 @@ export function clientFlag(
   } else if (lowCal) {
     badge = "недобор калорий";
   }
-  return { attention, today: todayOn, badge, tone, daysSinceReport, eaten };
+  return { attention, snoozed, today: todayOn, badge, tone, daysSinceReport, eaten };
 }
 
 export function applyOfferBooking(input: {

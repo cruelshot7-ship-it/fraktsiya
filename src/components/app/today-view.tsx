@@ -23,6 +23,10 @@ import {
   type FoodLog,
 } from "@/data/studio";
 import { SyncStatusChip } from "@/components/app/sync-status";
+import { addDaysIso } from "@/lib/program-screen";
+
+/** сколько дней «Внимание» молчит после кнопки «Отложить» */
+const SNOOZE_DAYS = 7;
 
 /**
  * Блок A · Мой день
@@ -45,6 +49,7 @@ export function TodayView() {
   const markNoShow = useStudio((s) => s.markNoShow);
   const setActiveClient = useStudio((s) => s.setActiveClient);
   const showToast = useStudio((s) => s.showToast);
+  const updateClient = useStudio((s) => s.updateClient);
   const today = isoDate(new Date());
   const me = activeClient({ clients, activeClientId });
 
@@ -203,6 +208,17 @@ export function TodayView() {
                     }}
                   >
                     Написать
+                  </button>
+                  <button
+                    type="button"
+                    className="pressable h-10 w-full rounded-xl bg-secondary text-sm"
+                    onClick={() => {
+                      const until = addDaysIso(today, SNOOZE_DAYS);
+                      updateClient(c.id, { attentionSnoozeUntil: until });
+                      showToast(`${c.firstName} отложен из «Внимания» на ${SNOOZE_DAYS} дн.`);
+                    }}
+                  >
+                    Отложить на {SNOOZE_DAYS} дней
                   </button>
                 </div>
               );

@@ -680,7 +680,19 @@ function ClientSheetBody({
       <div className="flex-1 overflow-y-auto px-5 pb-8">
         {flag.badge ? (
           <div className="mb-3">
-            <Pill tone={flag.tone === "ok" ? "ok" : "alert"}>{flag.badge}</Pill>
+            <Pill tone={flag.tone === "ok" ? "ok" : flag.tone === "alert" ? "alert" : "muted"}>{flag.badge}</Pill>
+          </div>
+        ) : null}
+        {flag.snoozed ? (
+          <div className="mb-3 flex items-center justify-between gap-3 text-tiny text-muted-foreground">
+            <span>Отложен из «Внимания» до {formatDayMonth(client.attentionSnoozeUntil!)}</span>
+            <button
+              type="button"
+              onClick={() => updateClient(client.id, { attentionSnoozeUntil: null })}
+              className="pressable h-11 shrink-0 rounded-lg bg-secondary px-4 text-sm text-foreground"
+            >
+              Вернуть
+            </button>
           </div>
         ) : null}
 
