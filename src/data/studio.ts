@@ -1,4 +1,5 @@
 import type { BodyMeasure } from "@/lib/body-measures";
+import { shortName } from "@/lib/name-format";
 import type { Consent } from "@/lib/privacy";
 import { hoursUntilSlotAt, isLateCancelAt, slotStartMs, studioToday } from "@/lib/minsk-time";
 
@@ -1097,11 +1098,7 @@ export function daysAgoPhrase(n: number) {
   return `${n} ${daysRu(n)} назад`;
 }
 
-export function shortName(client: Pick<Client, "firstName" | "lastName">) {
-  const last = (client.lastName ?? "").trim();
-  if (!last) return client.firstName;
-  return `${client.firstName} ${last.charAt(0)}.`;
-}
+export { shortName };
 
 export function hoursAgoIso(hours: number) {
   return new Date(Date.now() - hours * 3600000).toISOString();
