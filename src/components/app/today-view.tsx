@@ -7,7 +7,7 @@ import { activeClient, useStudio } from "@/lib/studio-store";
 import { KbjuMeters, SectionLabel, Surface } from "@/components/app/bits";
 import { specialDataAllowed } from "@/lib/privacy";
 import { balanceSummary } from "@/lib/balance-summary";
-import { getTelegramUser, openTrainerChat } from "@/lib/telegram";
+import { getTelegramUser, openPhone, openTrainerChat } from "@/lib/telegram";
 import { TRAINER_TG_ID } from "@/data/studio";
 import {
   clientFlag,
@@ -184,19 +184,27 @@ export function TodayView() {
             </p>
             {attention.slice(0, 5).map(({ client: c, flag }) => {
               return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className="pressable w-full text-left"
-                  onClick={() => openClientSheet(c.id)}
-                >
-                  <Surface>
-                    <p className="text-sm font-medium">
-                      {c.firstName} {c.lastName}
-                    </p>
-                    {flag.badge ? <p className="mt-0.5 text-tiny text-muted-foreground">{flag.badge}</p> : null}
-                  </Surface>
-                </button>
+                <div key={c.id} className="space-y-1.5">
+                  <button type="button" className="pressable w-full text-left" onClick={() => openClientSheet(c.id)}>
+                    <Surface>
+                      <p className="text-sm font-medium">
+                        {c.firstName} {c.lastName}
+                      </p>
+                      {flag.badge ? <p className="mt-0.5 text-tiny text-muted-foreground">{flag.badge}</p> : null}
+                    </Surface>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!c.telegramUsername && !c.phone}
+                    className="pressable h-10 w-full rounded-xl bg-secondary text-sm disabled:opacity-50"
+                    onClick={() => {
+                      if (c.telegramUsername) openTrainerChat(c.telegramUsername);
+                      else openPhone(c.phone);
+                    }}
+                  >
+                    Написать
+                  </button>
+                </div>
               );
             })}
           </div>
