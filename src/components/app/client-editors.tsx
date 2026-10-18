@@ -252,9 +252,9 @@ export function ProgramEditor({
         <input className={inputClass} value={draft.programTitle} onChange={(e) => setDraft({ ...draft, programTitle: e.target.value })} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Недель">
+        <Field label="Длительность">
           <WheelField
-            label="Недель"
+            label="Длительность"
             value={String(draft.programWeeks)}
             onChange={(v) => setDraft({ ...draft, programWeeks: Number(v) || 1 })}
             max={52}
@@ -311,7 +311,7 @@ export function ProgramEditor({
               }}
               className={cn(
                 "pressable h-10 min-w-10 rounded-lg px-2 text-xs",
-                on ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
+                on ? "bg-ok/35 font-medium text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
               {label}

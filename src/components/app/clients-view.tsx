@@ -119,7 +119,7 @@ export function ClientsView() {
     if (clientFilter === "packSoon") return isPackSoon(r.client, today);
     if (clientFilter === "lapsed") return r.lapsed;
     return true;
-  });
+  }).sort((a, b) => Number(b.flag.attention) - Number(a.flag.attention));
   const myCoachKey = String(me?.id ?? TRAINER_TG_ID);
   const mineRows = visible.filter((r) => clientCoach(r.client) === myCoachKey);
 
@@ -715,7 +715,14 @@ function ClientSheetBody({
             </Surface>
 
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("program")}>
+              <button
+                type="button"
+                className={cn(
+                  "pressable h-14 rounded-xl text-sm",
+                  client.sessions.length === 0 ? "bg-primary font-medium text-primary-foreground" : "bg-secondary",
+                )}
+                onClick={() => setMode("program")}
+              >
                 Назначить программу
               </button>
               <button type="button" className="pressable h-14 rounded-xl bg-secondary text-sm" onClick={() => setMode("food")}>
