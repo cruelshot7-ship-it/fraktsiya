@@ -263,7 +263,7 @@ export function ProgramEditor({
           />
         </Field>
         <Field label="Старт">
-          <input className={inputClass} type="date" value={draft.programStart} onChange={(e) => setDraft({ ...draft, programStart: e.target.value })} />
+          <input className={`${inputClass} min-w-0`} type="date" value={draft.programStart} onChange={(e) => setDraft({ ...draft, programStart: e.target.value })} />
         </Field>
       </div>
       <Fold title={`Фазы по неделям · ${Object.keys(draft.programPhases ?? {}).length ? `${Object.keys(draft.programPhases ?? {}).length} нед. с фазой` : "не заданы"}`}>
