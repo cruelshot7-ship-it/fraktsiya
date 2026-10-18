@@ -37,13 +37,13 @@ function ReferenceItem({ row }: { row: ReferenceRow }) {
   return (
     <li className="min-w-0 space-y-1 border-b border-border py-3 last:border-b-0">
       <p className="break-words text-sm font-medium text-foreground">{row.name}</p>
-      <p className="break-words text-xs text-muted-foreground">
+      <p className="break-words text-2xs text-muted-foreground">
         {stateUnknown ? "состояние не указано — в расчёт не войдёт" : STATE_LABEL[row.state]}
         {" · "}
         {row.per100.kcal ?? "—"} ккал · Б {row.per100.protein ?? "—"} · Ж {row.per100.fat ?? "—"} · У {row.per100.carbs ?? "—"}
         {" на 100 г"}
       </p>
-      <p className="break-words text-xs text-muted-foreground">
+      <p className="break-words text-2xs text-muted-foreground">
         {sourceLine(row)}
         {note ? <span className="text-destructive"> · {note}</span> : null}
       </p>
@@ -239,7 +239,7 @@ export function FoodReferencePanel() {
         </div>
       ) : null}
 
-      <p className="text-xs text-muted-foreground">Данные USDA FoodData Central (CC0). Источник каждой записи указан.</p>
+      <p className="text-2xs text-muted-foreground">Данные USDA FoodData Central (CC0). Источник каждой записи указан.</p>
     </Surface>
   );
 }

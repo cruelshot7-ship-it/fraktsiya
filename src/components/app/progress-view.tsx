@@ -34,7 +34,7 @@ function WeightChart({ history }: { history: Client["weightHistory"] }) {
             type="button"
             aria-pressed={range === item.value}
             onClick={() => setRange(item.value)}
-            className={`pressable h-9 rounded-lg px-3 text-xs ${
+            className={`pressable h-9 rounded-lg px-3 text-2xs ${
               range === item.value ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
             }`}
           >
@@ -103,7 +103,7 @@ function WeightEntry({ current }: { current: number }) {
   };
   return (
     <Surface>
-      <label className="text-xs text-muted-foreground">Вес сегодня, кг</label>
+      <label className="text-2xs text-muted-foreground">Вес сегодня, кг</label>
       <div className="mt-1.5 flex gap-2">
         <WheelField
           label="Вес сегодня, кг"

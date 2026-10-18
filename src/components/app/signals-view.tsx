@@ -59,7 +59,7 @@ export function SignalsView() {
             key={id}
             type="button"
             className={cn(
-              "pressable h-9 flex-1 rounded-lg text-xs font-medium",
+              "pressable h-9 flex-1 rounded-lg text-2xs font-medium",
               pane === id ? "bg-card shadow-border" : "text-muted-foreground",
             )}
             onClick={() => setPane(id)}
@@ -134,7 +134,7 @@ export function SignalsView() {
                   type="button"
                   onClick={() => setNotifyPrefs({ windowHours: hours })}
                   className={cn(
-                    "pressable h-9 rounded-lg px-3 text-xs",
+                    "pressable h-9 rounded-lg px-3 text-2xs",
                     active ? "bg-ok text-ok-foreground lit-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
@@ -153,7 +153,7 @@ export function SignalsView() {
                   type="button"
                   onClick={() => setNotifyPrefs({ absentDays: days })}
                   className={cn(
-                    "pressable h-9 rounded-lg px-3 text-xs",
+                    "pressable h-9 rounded-lg px-3 text-2xs",
                     active ? "bg-ok text-ok-foreground lit-ok" : "bg-secondary text-muted-foreground",
                   )}
                 >
@@ -288,7 +288,7 @@ function SignalCard({
         <button
           type="button"
           onClick={onOpen}
-          className="pressable h-9 rounded-lg bg-secondary px-3 text-xs font-medium"
+          className="pressable h-9 rounded-lg bg-secondary px-3 text-2xs font-medium"
         >
           Открыть
         </button>
@@ -296,7 +296,7 @@ function SignalCard({
           <button
             type="button"
             onClick={onOffer}
-            className="pressable h-9 rounded-lg bg-secondary px-3 text-xs font-medium"
+            className="pressable h-9 rounded-lg bg-secondary px-3 text-2xs font-medium"
           >
             К слотам
           </button>
@@ -304,7 +304,7 @@ function SignalCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="pressable h-9 rounded-lg bg-secondary px-3 text-xs font-medium text-foreground"
+          className="pressable h-9 rounded-lg bg-secondary px-3 text-2xs font-medium text-foreground"
         >
           Готово
         </button>

@@ -230,7 +230,7 @@ export function SessionResultForm({
           </div>
         ))}
       </div>
-      <button type="button" className="mt-2 text-xs text-alert-text" onClick={() => setRows((r) => [...r, emptyRow()])}>
+      <button type="button" className="mt-2 text-2xs text-alert-text" onClick={() => setRows((r) => [...r, emptyRow()])}>
         + упражнение
       </button>
       <div className="mt-3 grid grid-cols-2 gap-2">

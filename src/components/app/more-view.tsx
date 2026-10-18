@@ -228,7 +228,7 @@ function TrainerProfile() {
 
       <Surface className="glow-hero">
         <SectionLabel>Ваши клиенты</SectionLabel>
-        <p className="mt-2 text-xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
+        <p className="mt-2 text-2xs text-muted-foreground">По этой ссылке человек попадает только к вам. Чужих клиентов не видно.</p>
         <div className="mt-3 flex flex-col items-center gap-2">
           {qrSrc ? (
             <img src={qrSrc} alt="QR-код ссылки для клиентов" width={180} height={180} className="rounded-xl bg-white p-2" />
@@ -241,7 +241,7 @@ function TrainerProfile() {
         </div>
         <button
           type="button"
-          className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-xs text-muted-foreground"
+          className="pressable mt-3 min-h-11 w-full rounded-lg bg-secondary px-3 text-left text-2xs text-muted-foreground"
           onClick={() => {
             void navigator.clipboard?.writeText(myLink);
             showToast("Ссылка скопирована");

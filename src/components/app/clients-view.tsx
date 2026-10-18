@@ -422,7 +422,7 @@ export function ClientsView() {
 
       {adding ? (
         <div className="rounded-xl bg-card p-4 shadow-border">
-          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground ">Новый клиент</p>
+          <p className="font-display text-2xs tracking-[0.08em] text-muted-foreground ">Новый клиент</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Field label="Имя">
               <input className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Анна" />
@@ -537,7 +537,7 @@ export function ClientsView() {
                             showToast("Ссылка тренера скопирована");
                           }}
                         >
-                          <p className="text-xs text-foreground">
+                          <p className="text-2xs text-foreground">
                             {coach.firstName} · @{coach.username}
                             {coach.telegramId ? "" : " · ещё не открыл бота"}
                           </p>
@@ -572,7 +572,7 @@ export function ClientsView() {
 
       <details className="rounded-xl bg-card px-4 py-3 shadow-border">
         <summary className="cursor-pointer text-sm text-muted-foreground">Разработка</summary>
-        <p className="mt-3 text-xs text-muted-foreground">Наклейки на стойки. Нажатие копирует ссылку для QR.</p>
+        <p className="mt-3 text-2xs text-muted-foreground">Наклейки на стойки. Нажатие копирует ссылку для QR.</p>
         <div className="mt-2 flex flex-col gap-2">
           {MACHINES.map((item) => {
             const url = inviteUrl(BOT_USERNAME, `m_${item.id}`);
@@ -763,7 +763,7 @@ function ClientSheetBody({
             {client.sessions.length > 0 ? (
               <Surface>
                 <SectionLabel>Программа на день прихода</SectionLabel>
-                <p className="mt-1 text-xs text-muted-foreground">Любой день записи. Без выбора идёт по порядку.</p>
+                <p className="mt-1 text-2xs text-muted-foreground">Любой день записи. Без выбора идёт по порядку.</p>
                 <div className="mt-3 flex flex-col gap-3">
                   {(bookings.some((b) => b.clientId === client.id && b.date >= today)
                     ? [...new Set(bookings.filter((b) => b.clientId === client.id && b.date >= today).map((b) => b.date))].sort()
@@ -779,7 +779,7 @@ function ClientSheetBody({
                               key={item.id}
                               type="button"
                               className={cn(
-                                "pressable h-9 rounded-lg px-2.5 text-xs",
+                                "pressable h-9 rounded-lg px-2.5 text-2xs",
                                 on ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                               )}
                               onClick={() =>

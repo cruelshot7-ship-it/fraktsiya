@@ -272,13 +272,13 @@ export function WheelField({
         className={cn(inputClass, "flex items-center justify-between text-left tabular-nums disabled:opacity-40", className)}
       >
         <span className={value ? "" : "text-muted-foreground"}>{value || placeholder || "—"}</span>
-        {unit && value ? <span className="ml-2 shrink-0 text-xs text-muted-foreground">{unit}</span> : null}
+        {unit && value ? <span className="ml-2 shrink-0 text-2xs text-muted-foreground">{unit}</span> : null}
       </button>
       {open ? createPortal(
         // В body, а не внутри родительской шторки: родитель с анимацией и overflow-hidden иначе перекрывает или прячет эту шторку.
         <BottomSheet compact onClose={() => setOpen(false)}>
           <div className="flex flex-col px-5 pt-3 pb-4">
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-2xs text-muted-foreground">{label}</p>
             <p className="font-display text-3xl tabular-nums" aria-live="polite">
               {shownDraft !== "" ? (unit ? `${shownDraft} ${unit}` : shownDraft) : "—"}
             </p>

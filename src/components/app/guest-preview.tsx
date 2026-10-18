@@ -153,11 +153,11 @@ export function OfferLanding({ live }: { live: boolean }) {
             <style>{PRE_ENTRY_CSS}</style>
             <div className="pre-rise flex items-center justify-between">
               <span className="text-xl tracking-[.14em] uppercase" style={{ fontFamily: OSWALD }}>Discipline</span>
-              <span className="text-xs text-[#8e929b]">{STUDIO.city} · Titan</span>
+              <span className="text-2xs text-[#8e929b]">{STUDIO.city} · Titan</span>
             </div>
 
             <div className="mt-6 flex flex-col gap-3">
-              <span className="pre-rise pre-d1 inline-flex items-center gap-2 text-xs font-semibold tracking-[.12em] uppercase text-[#e8685c]">
+              <span className="pre-rise pre-d1 inline-flex items-center gap-2 text-2xs font-semibold tracking-[.12em] uppercase text-[#e8685c]">
                 <span className="pre-live" aria-hidden="true" />
                 Первый визит
               </span>
@@ -178,7 +178,7 @@ export function OfferLanding({ live }: { live: boolean }) {
                   <p className="m-0 text-[32px] leading-none" style={{ fontFamily: OSWALD }}>
                     {fact.value}
                   </p>
-                  <p className="mt-1 text-xs leading-tight text-[#8e929b]">{fact.label}</p>
+                  <p className="mt-1 text-2xs leading-tight text-[#8e929b]">{fact.label}</p>
                 </div>
               ))}
             </div>
@@ -272,7 +272,7 @@ export function OfferLanding({ live }: { live: boolean }) {
                         type="button"
                         onClick={() => setGoal(option)}
                         className={cn(
-                          "pressable h-10 flex-1 rounded-lg text-xs font-medium",
+                          "pressable h-10 flex-1 rounded-lg text-2xs font-medium",
                           option === goal ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                         )}
                       >

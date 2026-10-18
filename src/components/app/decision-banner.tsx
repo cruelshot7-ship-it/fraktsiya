@@ -46,7 +46,7 @@ export function DecisionBanner() {
           <div className="mt-2 flex gap-2">
             <button
               type="button"
-              className="pressable rounded-lg px-3 py-1.5 text-xs text-muted-foreground"
+              className="pressable rounded-lg px-3 py-1.5 text-2xs text-muted-foreground"
               onClick={() => dismissSignal(n.id)}
             >
               Скрыть

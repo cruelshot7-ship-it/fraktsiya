@@ -97,7 +97,7 @@ export function TemplatesPanel() {
             key={t.id}
             type="button"
             onClick={() => setSelectedId(t.id)}
-            className={`pressable h-9 rounded-lg px-3 text-xs ${
+            className={`pressable h-9 rounded-lg px-3 text-2xs ${
               t.id === tpl.id ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground"
             }`}
           >
@@ -120,7 +120,7 @@ export function TemplatesPanel() {
         Назначить активному клиенту
       </button>
       {tpl.id !== SEED.id ? (
-        <button type="button" onClick={remove} className="mt-2 h-10 w-full text-xs text-muted-foreground">
+        <button type="button" onClick={remove} className="mt-2 h-10 w-full text-2xs text-muted-foreground">
           Удалить шаблон
         </button>
       ) : null}

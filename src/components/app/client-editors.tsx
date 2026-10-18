@@ -209,7 +209,7 @@ export function ProgramEditor({
           </p>
           {parsed.sessions.map((s) => (
             <div key={s.id}>
-              <p className="text-xs font-medium">
+              <p className="text-2xs font-medium">
                 {s.name} · {s.blocks.length} упр.
               </p>
               <ul className="mt-1 flex flex-col gap-1">
@@ -310,7 +310,7 @@ export function ProgramEditor({
                 setDraft({ ...draft, trainDays });
               }}
               className={cn(
-                "pressable h-10 min-w-10 rounded-lg px-2 text-xs",
+                "pressable h-10 min-w-10 rounded-lg px-2 text-2xs",
                 on ? "bg-ok/35 font-medium text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
@@ -406,7 +406,7 @@ export function ProgramEditor({
       </div>
       <button
         type="button"
-        className="pressable h-11 w-full rounded-xl bg-secondary text-sm"
+        className="pressable h-11 w-full rounded-lg bg-secondary text-sm"
         onClick={async () => {
           const hasDays = draft.sessions.some((s) => s.items.length > 0);
           if (hasDays && !await confirmAction("Заменить дни сборкой по цели? Дни пересоберутся, дата старта станет сегодня, несохранённые правки дней пропадут. Клиент увидит программу только после «Сохранить программу».")) return;
@@ -458,7 +458,7 @@ export function ProgramEditor({
                 setDraft({ ...draft, trainTimes });
               }}
               className={cn(
-                "pressable h-10 rounded-lg px-2 text-xs",
+                "pressable h-10 rounded-lg px-2 text-2xs",
                 on ? "bg-ok-dim text-ok ring-1 ring-inset ring-ok" : "bg-secondary text-muted-foreground",
               )}
             >
@@ -484,7 +484,7 @@ export function ProgramEditor({
       ))}
       <button
         type="button"
-        className="h-10 rounded-lg border border-hairline text-xs text-muted-foreground"
+        className="h-10 rounded-lg border border-hairline text-2xs text-muted-foreground"
         onClick={() => {
           const n = draft.sessions.length + 1;
           const session: ProgramSession = withBlocks(
@@ -621,15 +621,15 @@ function SessionEditor({
       <div className="flex items-center justify-between gap-2">
         <p className="text-2xs text-muted-foreground">Визит {index + 1} на неделе</p>
         <div className="flex gap-3">
-          <button type="button" onClick={onSaveTemplate} className="text-2xs text-muted-foreground">
+          <button type="button" onClick={onSaveTemplate} className="inline-flex min-h-11 items-center px-1 text-2xs text-muted-foreground">
             в шаблон
           </button>
-          <button type="button" onClick={onRemove} className="text-2xs text-muted-foreground">
+          <button type="button" onClick={onRemove} className="inline-flex min-h-11 items-center px-1 text-2xs text-muted-foreground">
             убрать
           </button>
         </div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-1 gap-2">
         <input className={inputClass} value={session.name} onChange={(e) => onChange({ ...session, name: e.target.value })} />
         <input className={inputClass} value={session.focus} onChange={(e) => onChange({ ...session, focus: e.target.value })} />
       </div>
@@ -765,7 +765,7 @@ function SessionEditor({
       </div>
       <button
         type="button"
-        className="mt-2 h-10 w-full rounded-lg border border-hairline text-xs text-muted-foreground"
+        className="mt-2 h-10 w-full rounded-lg border border-hairline text-2xs text-muted-foreground"
         onClick={() => {
           const created = newBlock();
           update([...blocks, created]);

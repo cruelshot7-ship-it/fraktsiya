@@ -181,7 +181,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
   return (
     <Surface>
       <SectionLabel>Прогрессия · решение тренера</SectionLabel>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-2xs text-muted-foreground">
         Предложение только по зафиксированным результатам. Без вашего решения план не меняется.
         {source === "local" ? " · данные с устройства" : source === "server" ? " · сервер" : ""}
       </p>
@@ -220,7 +220,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
               type="button"
               disabled={busy || suggestion.status === "insufficient_data"}
               onClick={() => void decide("accept")}
-              className="pressable h-10 rounded-lg bg-primary text-xs font-medium text-primary-foreground disabled:opacity-40"
+              className="pressable h-10 rounded-lg bg-primary text-2xs font-medium text-primary-foreground disabled:opacity-40"
             >
               Принять
             </button>
@@ -228,7 +228,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
               type="button"
               disabled={busy}
               onClick={() => void decide("reject")}
-              className="pressable h-10 rounded-lg bg-secondary text-xs font-medium"
+              className="pressable h-10 rounded-lg bg-secondary text-2xs font-medium"
             >
               Оставить
             </button>
@@ -236,7 +236,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
               type="button"
               disabled={busy}
               onClick={() => void decide("manual")}
-              className="pressable h-10 rounded-lg bg-secondary text-xs font-medium"
+              className="pressable h-10 rounded-lg bg-secondary text-2xs font-medium"
             >
               Вручную
             </button>

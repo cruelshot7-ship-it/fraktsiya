@@ -279,7 +279,7 @@ function NutritionContent({ client }: { client: Client }) {
                 aria-selected={addTab === tab.id}
                 onClick={() => setAddTab(tab.id)}
                 className={cn(
-                  "pressable h-8 min-w-0 flex-1 truncate rounded-full px-1 text-xs font-medium",
+                  "pressable h-8 min-w-0 flex-1 truncate rounded-full px-1 text-2xs font-medium",
                   addTab === tab.id ? "bg-background text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -297,7 +297,7 @@ function NutritionContent({ client }: { client: Client }) {
                     type="button"
                     onClick={() => setSlot(id)}
                     className={cn(
-                      "pressable h-8 rounded-full px-3 text-xs font-medium",
+                      "pressable h-8 rounded-full px-3 text-2xs font-medium",
                       slot === id ? "bg-ok text-ok-foreground" : "bg-secondary text-muted-foreground",
                     )}
                   >
@@ -319,7 +319,7 @@ function NutritionContent({ client }: { client: Client }) {
                         onClick={() => pick(meal.id)}
                         className={cn("pressable flex min-w-0 flex-col gap-1 rounded-xl bg-card px-2.5 py-2.5 text-left shadow-border", fits ? "" : "opacity-70")}
                       >
-                        <span className="line-clamp-2 text-xs font-medium leading-snug">{meal.name}</span>
+                        <span className="line-clamp-2 text-2xs font-medium leading-snug">{meal.name}</span>
                         <span className="text-2xs tabular-nums text-muted-foreground">
                           {meal.calories} ккал · <span className="text-protein">Б{meal.protein}</span>
                         </span>

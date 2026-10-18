@@ -100,7 +100,7 @@ export function MeasuresSummary({ client }: { client: Client }) {
             <span className="tabular-nums">
               {last.value} см
               {change !== null ? (
-                <span className="ml-2 text-xs text-muted-foreground">
+                <span className="ml-2 text-2xs text-muted-foreground">
                   {change > 0 ? "+" : ""}
                   {change}
                 </span>

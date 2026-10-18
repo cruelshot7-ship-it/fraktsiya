@@ -78,7 +78,7 @@ export function TrainerSlots() {
         </button>
       </div>
       {ownHall ? null : (
-        <p className="pb-3 text-xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
+        <p className="pb-3 text-2xs text-muted-foreground">Это ваши слоты. Их видят только ваши клиенты, чужие слоты не закрываются.</p>
       )}
       <div className="flex gap-1 pt-1 pb-4">
         {/* прошедшие дни не показываем: полоска начинается с сегодня */}
@@ -101,7 +101,7 @@ export function TrainerSlots() {
                 {day.key === tomorrowKey ? "ЗАВТ" : DOW[(day.date.getDay() + 6) % 7]}
               </span>
               <span className="font-display mt-0.5 block text-lg leading-none font-semibold">{day.date.getDate()}</span>
-              <span className="mt-0.5 block text-3xs text-muted-foreground">{day.total === 0 ? "—" : `${day.booked} зап.`}</span>
+              <span className="mt-0.5 block text-2xs text-muted-foreground">{day.total === 0 ? "—" : `${day.booked} зап.`}</span>
             </button>
           );
         })}
@@ -243,7 +243,7 @@ export function TrainerSlots() {
 
       {adding ? (
         <div className="mt-3 rounded-xl bg-card p-4 shadow-border">
-          <p className="font-display text-xs tracking-[0.08em] text-muted-foreground ">Новый слот</p>
+          <p className="font-display text-2xs tracking-[0.08em] text-muted-foreground ">Новый слот</p>
           <p className="mt-2 text-center font-display text-lg font-semibold tabular-nums">
             {time} · {cap} {cap === 1 ? "место" : cap < 5 ? "места" : "мест"}
           </p>
