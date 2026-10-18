@@ -193,6 +193,7 @@ function TrainerProfile() {
   const clients = useStudio((s) => s.clients);
   const bookings = useStudio((s) => s.bookings);
   const food = useStudio((s) => s.food);
+  const visits = useStudio((s) => s.visits);
   const showToast = useStudio((s) => s.showToast);
   const tgUser = getTelegramUser();
   const myLink = inviteUrl(BOT_USERNAME, `c_${tgUser?.id ?? TRAINER_TG_ID}`);
@@ -200,7 +201,7 @@ function TrainerProfile() {
   const weekEnd = isoDate(addDays(startOfWeek(new Date()), 7));
   const todayCount = bookings.filter((b) => b.date === today).length;
   const weekBookings = bookings.filter((b) => b.date >= today && b.date < weekEnd).length;
-  const attentionCount = clients.filter((c) => clientFlag(c, today, food, bookings).attention).length;
+  const attentionCount = clients.filter((c) => clientFlag(c, today, food, bookings, visits).attention).length;
 
   return (
     <div className="space-y-3">
@@ -232,7 +233,7 @@ function TrainerProfile() {
           <ProfileStat value={weekBookings} label="записей на неделю" />
         </div>
         <p className="mt-3 text-tiny text-muted-foreground">
-          Внимание, если у клиента: нет отчёта 3 и больше дней или отчёта не было вовсе · еда ниже 72% цели за сегодня · 2 и больше поздних отмен · 2 занятия или меньше на балансе · заморозка · пакет истекает в ближайшие 7 дней. Список — во вкладке «Клиенты», фильтр «Внимание».
+          Внимание: осталось 2 занятия или меньше (включая 0) либо без тренировок больше 14 дней. Клиенты на заморозке не попадают. Остальные сигналы (отчёт, калории, отмены, срок пакета) видны на карточке, но не в «Внимании». Список — во вкладке «Клиенты», фильтр «Внимание».
         </p>
       </Surface>
     </div>
