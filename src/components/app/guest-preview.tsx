@@ -3,7 +3,7 @@ import { STUDIO, formatLongDate, isSlotPast } from "@/data/studio";
 import { slotTaken, useStudio } from "@/lib/studio-store";
 import { PRIVACY_VERSION } from "@/lib/privacy";
 import { requestJoin, type JoinResult } from "@/lib/studio-sync";
-import { getTelegramInitData } from "@/lib/telegram";
+import { getTelegramInitData, openTrainerChat } from "@/lib/telegram";
 import { SectionLabel } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,7 @@ export function OfferLanding({ live }: { live: boolean }) {
   const sendJoinRequest = useStudio((s) => s.sendJoinRequest);
   const slots = useStudio((s) => s.slots);
   const bookings = useStudio((s) => s.bookings);
+  const trainerUsername = useStudio((s) => s.trainerUsername);
   const closed = useStudio((s) => s.closedSlotIds);
   const pending = useStudio((s) => s.joinRequests.find((r) => r.status === "pending"));
 
@@ -78,6 +79,8 @@ export function OfferLanding({ live }: { live: boolean }) {
   // Заявка без времени: тренер согласует время сам (если свободных окон нет или ни одно не подходит).
   const [anyTime, setAnyTime] = useState(false);
 
+  // запись возможна, только если есть свободные слоты; иначе главное действие — написать тренеру
+  const canBook = openings.length > 0;
   const picked = openings.find((s) => s.id === slotId);
   const timeChosen = Boolean(picked) || anyTime;
   const waiting = live && (sent || Boolean(pending));
@@ -182,20 +185,40 @@ export function OfferLanding({ live }: { live: boolean }) {
             <p className="pre-rise pre-d4 mt-6 text-sm text-[#8e929b]">Возьмите форму, воду и кроссовки.</p>
 
             <div className="pre-rise pre-d5 mt-auto flex flex-col gap-2.5 pt-8">
-              <button
-                type="button"
-                className="pre-cta h-14 rounded-2xl text-base font-bold text-white"
-                style={{ background: "#c2362b" }}
-                onClick={() => setStep("time")}
-              >
-                Выбрать время
-              </button>
-              <button type="button" className="pre-ghost h-11 text-sm text-[#c9cbd0]" onClick={() => openNote()}>
-                Сначала написать тренеру
-              </button>
-              <p className="mt-1 text-[11px] leading-snug text-[#8e929b]">
-                Заявка отправит тренеру ваше имя, @username и выбранное время. Согласие на обработку данных — на следующем шаге, до отправки.
-              </p>
+              {canBook ? (
+                <>
+                  <button
+                    type="button"
+                    className="pre-cta h-14 rounded-2xl text-base font-bold text-white"
+                    style={{ background: "#c2362b" }}
+                    onClick={() => setStep("time")}
+                  >
+                    Выбрать слот
+                  </button>
+                  <button type="button" className="pre-ghost h-11 text-sm text-[#c9cbd0]" onClick={() => openNote()}>
+                    Сначала написать тренеру
+                  </button>
+                  <p className="mt-1 text-[11px] leading-snug text-[#8e929b]">
+                    Заявка отправит тренеру ваше имя, @username и выбранное время. Согласие на обработку данных — на следующем шаге, до отправки.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="pre-cta h-14 rounded-2xl text-base font-bold text-white"
+                    style={{ background: "#c2362b" }}
+                    onClick={() => {
+                      if (!openTrainerChat(trainerUsername)) openNote();
+                    }}
+                  >
+                    Связаться с тренером
+                  </button>
+                  <p className="mt-1 text-[11px] leading-snug text-[#8e929b]">
+                    Свободных слотов сейчас нет. Напишите тренеру, он подскажет ближайшее время.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (
