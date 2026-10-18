@@ -91,7 +91,10 @@ export function MiniApp() {
   const dismissSignal = useStudio((s) => s.dismissSignal);
   const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
-  const inviteBlocked = useStudio((s) => s.inviteBlocked);
+  const inviteBlockedRaw = useStudio((s) => s.inviteBlocked);
+  const cloudState = useStudio((s) => s.cloudState);
+  // до ответа сервера не понятно, гость это или клиент: лендинг и заявку не показываем
+  const inviteBlocked = inviteBlockedRaw && cloudState !== "pending";
   const openNote = useStudio((s) => s.openNote);
   const guestPreview = useStudio((s) => s.guestPreview);
   const client = activeClient({ clients, activeClientId });
@@ -258,7 +261,9 @@ export function MiniApp() {
             showNav ? "pb-[calc(5.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
           )}>
           <div key={`${role}-${tab}`} className="pt-4">
-            {inviteBlocked && role === "client" ? (
+            {role === "client" && cloudState === "pending" ? (
+              <p className="pt-16 text-center text-sm text-muted-foreground">Открываем зал…</p>
+            ) : inviteBlocked && role === "client" ? (
               <JoinGate />
             ) : role === "client" && client && needsDecision(client.consent) ? (
               <PrivacyGate />

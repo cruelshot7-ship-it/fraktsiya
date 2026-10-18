@@ -146,6 +146,8 @@ type State = {
   programTemplates: ProgramTemplate[];
   menus: MenuRecord[];
   inviteBlocked: boolean;
+  /** ответ сервера о роли и статусе клиента: до него лендинг гостя не показываем */
+  cloudState: "pending" | "ready" | "offline";
   noteOpen: boolean;
   guestPreview: boolean;
   toast: string | null;
@@ -485,6 +487,7 @@ export const useStudio = create<State>((set, get) => ({
   programTemplates: [],
   menus: [],
   inviteBlocked: false,
+  cloudState: "pending",
   noteOpen: false,
   guestPreview: false,
   toast: null,
@@ -618,7 +621,10 @@ export const useStudio = create<State>((set, get) => ({
       tab: role === "trainer" ? "clients" : getStartParam().toLowerCase().startsWith("m_") ? ("hall" as TabId) : "slots",
     });
     void syncFromCloud().then((cloud) => {
-      if (!cloud) return;
+      if (!cloud) {
+        set({ cloudState: "offline" });
+        return;
+      }
       const payload = cloud.payload;
       slotHolds = payload.foreignHolds ?? {};
       const extra = mergeExtraSlots(get().extraSlots, payload.extraSlots ?? []);
@@ -642,7 +648,10 @@ export const useStudio = create<State>((set, get) => ({
       });
       set({
         role: cloud.role,
+        cloudState: "ready",
         inviteBlocked: Boolean(cloud.blocked) && !next.clients.length,
+        // существующий клиент открывает главный экран, а не запись (вкладка «Запись» — только по выбору)
+        tab: cloud.role === "client" && next.clients.length > 0 && get().tab === "slots" ? "today" : get().tab,
         removedClientIds: next.removedClientIds,
         clients: next.clients,
         coaches: payload.coaches ?? [],
