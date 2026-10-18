@@ -409,7 +409,7 @@ export function ProgramEditor({
         className="pressable h-11 w-full rounded-xl bg-secondary text-sm"
         onClick={async () => {
           const hasDays = draft.sessions.some((s) => s.items.length > 0);
-          if (hasDays && !await confirmAction("Заменить дни сборкой по цели? Правки дней, что не сохранены, пропадут.")) return;
+          if (hasDays && !await confirmAction("Заменить дни сборкой по цели? Дни пересоберутся, дата старта станет сегодня, несохранённые правки дней пропадут. Клиент увидит программу только после «Сохранить программу».")) return;
           const built = buildProgram(draft, goal, preset);
           const n = built.sessions.length;
           const defaultDays: Record<number, number[]> = {
