@@ -53,7 +53,7 @@ export function ActionCenter() {
     <div className="stagger-in flex flex-col gap-2">
       <SectionLabel>Центр действий</SectionLabel>
       {items.map((item) => (
-        <button key={item.id} type="button" onClick={() => open(item)} className="pressable text-left">
+        <button key={item.id} type="button" onClick={() => open(item)} className="pressable rounded-[1rem] text-left">
           <Surface
             className={cn(
               item.priority <= 12 && "shadow-glow-alert",

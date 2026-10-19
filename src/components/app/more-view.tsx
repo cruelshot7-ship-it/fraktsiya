@@ -115,7 +115,7 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
       ) : null}
 
 
-      <button type="button" className="pressable w-full text-left" onClick={() => setSub("policy")}>
+      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("policy")}>
         <Surface className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Политика конфиденциальности</p>
@@ -125,7 +125,7 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
         </Surface>
       </button>
 
-      <button type="button" className="pressable w-full text-left" onClick={() => setSub("privacy")}>
+      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("privacy")}>
         <Surface className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Мои данные</p>
@@ -136,7 +136,7 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
       </button>
 
       {FEATURES.hall ? (
-      <button type="button" className="pressable w-full text-left" onClick={() => setSub("hall")}>
+      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("hall")}>
         <Surface className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Зал</p>
@@ -167,7 +167,7 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
         </Surface>
       ) : null}
 
-      <button type="button" className="pressable w-full text-left" onClick={() => openNote()}>
+      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => openNote()}>
         <Surface className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Написать тренеру</p>
