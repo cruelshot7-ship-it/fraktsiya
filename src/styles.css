@@ -525,7 +525,27 @@ button:active:not(:disabled) {
   }
 }
 
+/*
+ * Адаптация под экран. Ширина колонки растёт с экраном: телефон в портрете — как раньше (на всю ширину),
+ * планшет и десктоп — шире, телефон в альбоме — почти на всю ширину (правило идёт последним, поэтому побеждает).
+ */
+@media (min-width: 640px) {
+  :root {
+    --max-width-app: 40rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --max-width-app: 48rem;
+  }
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --max-width-app: 52rem;
+  }
+
   header h1 {
     font-size: 1.5rem;
   }
