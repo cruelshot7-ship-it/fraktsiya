@@ -738,10 +738,11 @@ export async function loadStudioState(): Promise<StudioPayload> {
   const rows = await sql<{ payload: StudioPayload }>`select payload from studio_state where id = ${STUDIO_ID}`;
   const row = rows[0]?.payload;
   if (row && isRevisioned(row)) return normalizedState(row);
-  // A row without a revision predates them. The Telegram copy is today's truth, so it becomes the first revision.
+  // A row without a revision predates them. The row is the truth: the Telegram copy is no longer written after a save,
+  // so it can be stale and is never preferred over the row. It is read only when no row exists at all (restore).
   const { loadRemoteStrict } = await import("@/lib/studio-remote");
-  const copy = await loadRemoteStrict();
-  const state = await normalizedState(copy ?? row ?? null);
+  const copy = row ? null : await loadRemoteStrict();
+  const state = await normalizedState(row ?? copy ?? null);
   const first: StudioPayload = { ...state, rev: nextRevision(row) };
   const written = await sql<{ id: string }>`
     insert into studio_state (id, payload, updated_at) values (${STUDIO_ID}, ${JSON.stringify(first)}::jsonb, now())
