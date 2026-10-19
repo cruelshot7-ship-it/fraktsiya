@@ -105,7 +105,6 @@ export function TemplatesPanel() {
           </button>
         ))}
       </div>
-      <p className="mt-3 text-sm font-medium">{tpl.title}</p>
       <ul className="mt-2 space-y-1 text-tiny text-muted-foreground">
         {preview.map((line, i) => (
           <li key={`${i}-${line}`}>{line}</li>
