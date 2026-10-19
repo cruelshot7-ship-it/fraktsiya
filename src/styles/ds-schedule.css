@@ -55,7 +55,7 @@
   inset: -20% -10% auto auto;
   width: 70%;
   height: 55%;
-  background: radial-gradient(ellipse at 70% 20%, rgb(232 56 47 / 0.17), transparent 65%);
+  background: radial-gradient(ellipse at 70% 20%, rgb(232 56 47 / 0.3), transparent 65%);
   z-index: 0;
 }
 .ambient-glow::after {
@@ -65,7 +65,7 @@
   inset: auto auto -15% -15%;
   width: 65%;
   height: 50%;
-  background: radial-gradient(ellipse at 30% 80%, rgb(69 212 228 / 0.08), transparent 65%);
+  background: radial-gradient(ellipse at 30% 80%, rgb(69 212 228 / 0.14), transparent 65%);
   z-index: 0;
 }
 
