@@ -328,12 +328,12 @@ export function MiniApp() {
                 return (
                   <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn(
                     "pressable relative flex min-h-11 flex-1 flex-col items-center gap-0.5 py-2 text-2xs",
-                      active ? "text-ok" : "text-muted-foreground",
+                      active ? "text-primary" : "text-muted-foreground",
                     )} aria-current={active ? "page" : undefined}
                     aria-label={badge > 0 ? `${item.label}, сигналов: ${badge}` : undefined}>
                     <span className="relative">
                       {/* активный пункт — стеклянная пилюля под иконкой; полоска сверху убрана */}
-                      <span className={cn("grid h-8 w-14 place-items-center rounded-2xl transition-colors", active && "bg-ok-dim shadow-border")}>
+                      <span className={cn("grid h-8 w-14 place-items-center rounded-2xl transition-colors", active && "bg-primary/15 shadow-border")}>
                         <Icon className="size-5" />
                       </span>
                       {badge > 0 ? (

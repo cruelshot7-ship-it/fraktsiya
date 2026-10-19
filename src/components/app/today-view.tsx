@@ -321,7 +321,7 @@ export function TodayView() {
       </div>
 
       {me ? (
-        <Surface glow={lowPack ? "alert" : "ok"}>
+        <Surface glow={lowPack ? "alert" : "ok"} glass>
           <p className="text-2xs tracking-wide text-muted-foreground ">Баланс</p>
           <p className="display-num mt-2">
             {me.sessionsLeft ?? 0}
@@ -344,14 +344,14 @@ export function TodayView() {
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Запись</p>
+        <SectionLabel>Запись</SectionLabel>
         {next && isToday ? (
-          <Surface>
+          <Surface glass>
             <p className="font-display text-xl leading-tight">Сегодня · {next.time}</p>
             <p className="mt-1 text-tiny text-muted-foreground">{next.duration} мин · слот подтверждён</p>
           </Surface>
         ) : next ? (
-          <Surface>
+          <Surface glass>
             <p className="font-display text-xl leading-tight">
               {formatDayMonth(next.date)} · {next.time}
             </p>
@@ -480,7 +480,7 @@ function TodayKbju({
   const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
   const goal = dayKbju(client, today, bookings);
   return (
-    <Surface glow={goal.kbju.calories > 0 && sumFood(todayFood).calories < goal.kbju.calories * 0.72 ? "alert" : "ok"}>
+    <Surface glow={goal.kbju.calories > 0 && sumFood(todayFood).calories < goal.kbju.calories * 0.72 ? "alert" : "ok"} glass>
       <KbjuMeters
         title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`}
         eaten={sumFood(todayFood)}

@@ -26,16 +26,20 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 export function Surface({
   className,
   glow,
+  glass,
   children,
 }: {
   className?: string;
   glow?: "ok" | "alert" | "soft";
+  /** полупрозрачный фон (стекло), для блоков поверх фона экрана */
+  glass?: boolean;
   children: ReactNode;
 }) {
   return (
     <div
       className={cn(
         "apple-block p-4",
+        glass && "apple-block-glass",
         glow === "ok" && "glow-ok",
         glow === "alert" && "glow-alert",
         glow === "soft" && "glow-soft",
