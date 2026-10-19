@@ -366,6 +366,7 @@ export function ProgramEditor({
       {exerciseError ? <p className="text-tiny text-destructive">{exerciseError}</p> : null}
       </Fold>
       <Fold title="Собрать программу заново по цели">
+      <div className="flex flex-col gap-3">
       <SectionLabel>Сплит · шаблон</SectionLabel>
       <div className="grid grid-cols-1 gap-1.5">
         {PROGRAM_PRESETS.map((row) => (
@@ -441,6 +442,7 @@ export function ProgramEditor({
           : "выберутся при сборке"}
         . Старт цикла — сегодня (сброс при «Собрать»).
       </p>
+      </div>
       </Fold>
       <SectionLabel>Время</SectionLabel>
       <div className="flex flex-wrap gap-1">
