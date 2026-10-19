@@ -880,13 +880,6 @@ export async function commitStudioState(payload: StudioPayload) {
       console.error("[studio-visits]", err);
     }
   }
-  // The Telegram copy is a backup, written after the database. Its failure does not undo the save.
-  try {
-    const { saveRemote } = await import("@/lib/studio-remote");
-    await saveRemote(next);
-  } catch (err) {
-    console.error("[studio-backup]", err);
-  }
   try {
     await maybeDailyDigest(next);
   } catch (err) {
