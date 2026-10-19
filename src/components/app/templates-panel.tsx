@@ -25,7 +25,7 @@ const SEED: ProgramTemplate = {
 
 function exercisesToItems(ex: TemplateExercise[]): string[] {
   return ex.map((e) => {
-    const load = e.unit === "bw" ? "свой вес" : e.load != null ? `${e.load} ${e.unit ?? "kg"}` : "";
+    const load = e.unit === "bw" ? "свой вес" : e.load != null ? `${e.load} ${e.unit === "lb" ? "lb" : "кг"}` : "";
     return [e.name, `${e.sets}×${e.repsMin}-${e.repsMax}`, load].filter(Boolean).join(" · ");
   });
 }

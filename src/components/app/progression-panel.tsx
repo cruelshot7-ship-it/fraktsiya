@@ -125,7 +125,7 @@ export function ProgressionPanel({ clientId, coachId, programId }: Props) {
     if (!suggestionId || !suggestion) return;
     const changeText =
       suggestion.proposedChanges
-        .map((c) => `${c.exercise}: ${c.fromLoad}→${c.toLoad} ${c.unit}`)
+        .map((c) => `${c.exercise}: ${c.fromLoad}→${c.toLoad} ${c.unit === "kg" ? "кг" : c.unit}`)
         .join("; ") || "без изменения нагрузки";
 
     setBusy(true);
