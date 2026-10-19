@@ -190,7 +190,7 @@ export function TodayView() {
             {attention.slice(0, 5).map(({ client: c, flag }) => {
               return (
                 <div key={c.id} className="space-y-1.5">
-                  <button type="button" className="pressable w-full text-left" onClick={() => openClientSheet(c.id)}>
+                  <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => openClientSheet(c.id)}>
                     <Surface>
                       <p className="text-sm font-medium">
                         {c.firstName} {c.lastName}
@@ -392,7 +392,7 @@ export function TodayView() {
       <div className="space-y-2">
         <p className="text-2xs font-medium tracking-wide text-muted-foreground ">Тренировка</p>
         {isToday || afterSession ? (
-          <button type="button" className="pressable w-full text-left" onClick={() => setTab("program")}>
+          <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setTab("program")}>
             <Surface glow="ok" className="border border-ok/30">
               <p className="text-2xs tracking-wide text-muted-foreground">
                 {afterSession ? "После слота" : "Сейчас"}
@@ -450,7 +450,7 @@ export function TodayView() {
             <span className="ml-3 text-sm text-muted-foreground">→</span>
           </button>
         ) : (
-          <button type="button" className="pressable w-full text-left" onClick={() => setTab("food")}>
+          <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setTab("food")}>
             <Surface>
               <p className="font-display text-base leading-tight">Питание</p>
               <p className="mt-1 text-tiny text-muted-foreground">Дневник и КБЖУ за день</p>
