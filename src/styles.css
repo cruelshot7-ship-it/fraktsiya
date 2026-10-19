@@ -377,16 +377,32 @@ button:active:not(:disabled) {
   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
-/* Самый нижний слой фона: общий для клиента и тренера, виден сквозь полупрозрачные блоки */
+/*
+ * Самый нижний слой фона: общий для клиента и тренера, виден сквозь полупрозрачные блоки.
+ * Тёмный «пол» зала: мягкая сетка плиток, которая растворяется вверху, и два свечения (красное и бирюзовое).
+ */
 .app-bottom-backdrop {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse at 85% 0%, rgb(232 56 47 / 0.12), transparent 55%),
-    radial-gradient(ellipse at 10% 100%, rgb(69 212 228 / 0.08), transparent 55%),
-    linear-gradient(180deg, #1a1d23 0%, #15171b 60%, #111316 100%);
+    radial-gradient(ellipse at 85% 0%, rgb(232 56 47 / 0.14), transparent 55%),
+    radial-gradient(ellipse at 10% 100%, rgb(69 212 228 / 0.09), transparent 55%),
+    linear-gradient(180deg, #1a1d23 0%, #15171b 55%, #101215 100%);
+}
+
+.app-bottom-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(237 239 242 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(237 239 242 / 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 45%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 45%, #000 100%);
 }
 
 @supports (corner-shape: squircle) {
