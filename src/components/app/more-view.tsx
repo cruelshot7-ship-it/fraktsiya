@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ChevronRight } from "lucide-react";
 import { FormView } from "@/components/app/form-view";
 import { HallView } from "@/components/app/hall-view";
+import { HubTile } from "@/components/app/hub-tile";
 import { MyDataPanel, PolicyText } from "@/components/app/privacy-panel";
 import { SectionLabel, Surface } from "@/components/app/bits";
 import { activeClient, useStudio } from "@/lib/studio-store";
@@ -115,36 +115,16 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
       ) : null}
 
 
-      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("policy")}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Политика конфиденциальности</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Какие данные, зачем и кому передаются</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
+      <HubTile
+        title="Политика конфиденциальности"
+        hint="Какие данные, зачем и кому передаются"
+        onClick={() => setSub("policy")}
+      />
 
-      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("privacy")}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Мои данные</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Политика, согласие, удаление</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
+      <HubTile title="Мои данные" hint="Политика, согласие, удаление" onClick={() => setSub("privacy")} />
 
       {FEATURES.hall ? (
-      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => setSub("hall")}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Зал</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Стойки, техника, маршрут</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
+        <HubTile title="Зал" hint="Стойки, техника, маршрут" onClick={() => setSub("hall")} />
       ) : null}
 
 
@@ -167,15 +147,7 @@ export function MoreView({ initial, role = "client" }: { initial?: "form" | "hal
         </Surface>
       ) : null}
 
-      <button type="button" className="pressable w-full rounded-[1rem] text-left" onClick={() => openNote()}>
-        <Surface className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Написать тренеру</p>
-            <p className="mt-0.5 text-tiny text-muted-foreground">Вопрос по плану или записи</p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Surface>
-      </button>
+      <HubTile title="Написать тренеру" hint="Вопрос по плану или записи" onClick={() => openNote()} />
     </div>
   );
 }
