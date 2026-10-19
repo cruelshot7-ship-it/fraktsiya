@@ -5,7 +5,7 @@ import { isEmptyClient, isPackSoon } from "@/lib/balance-summary";
 import { isLapsed, lastActivityDate, retentionExpired } from "@/lib/lapsed";
 import { weightChangeWeek } from "@/lib/weight-trend";
 import { useEffect, useMemo, useState } from "react";
-import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   clientFlag,
   clientCoach,
@@ -902,9 +902,9 @@ function ClientSheetBody({
                 />
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2">
-                <MacroMini label="белки" now={flag.eaten.protein} max={todayGoal.kbju.protein} />
-                <MacroMini label="жиры" now={flag.eaten.fat} max={todayGoal.kbju.fat} />
-                <MacroMini label="углеводы" now={flag.eaten.carbs} max={todayGoal.kbju.carbs} />
+                <MacroMini label="белки" now={flag.eaten.protein} max={todayGoal.kbju.protein} color="var(--color-protein)" />
+                <MacroMini label="жиры" now={flag.eaten.fat} max={todayGoal.kbju.fat} color="var(--color-fat)" />
+                <MacroMini label="углеводы" now={flag.eaten.carbs} max={todayGoal.kbju.carbs} color="var(--color-carb)" />
               </div>
             </Surface>
 
@@ -928,10 +928,21 @@ function ClientSheetBody({
                   </p>
                 ) : null}
               </div>
-              <div className="mt-2 h-24">
+              <div className="mt-2 h-28">
                 {chartReady && client.weightHistory.length > 1 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={client.weightHistory} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <LineChart data={client.weightHistory} margin={{ top: 12, right: 12, left: 12, bottom: 0 }}>
+                      {/* тренеру нужны даты и масштаб, иначе линия без привязки к времени */}
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(d) => formatDayMonth(String(d))}
+                        tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                        minTickGap={24}
+                      />
+                      <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
                       <Tooltip
                         contentStyle={{
                           background: "var(--color-popover)",

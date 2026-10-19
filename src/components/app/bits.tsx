@@ -149,10 +149,13 @@ export function ProgressRail({
   value,
   max,
   tone = "ok",
+  color,
 }: {
   value: number;
   max: number;
   tone?: "ok" | "alert";
+  /** CSS-значение цвета полосы (токен КБЖУ). Без него — по tone. */
+  color?: string;
 }) {
   const pct = max <= 0 ? 0 : Math.min(100, (value / max) * 100);
   return (
@@ -160,9 +163,9 @@ export function ProgressRail({
       <span
         className={cn(
           "bar-fill block h-full rounded-full",
-          tone === "alert" ? "bg-primary" : "bg-ok",
+          !color && (tone === "alert" ? "bg-primary" : "bg-ok"),
         )}
-        style={{ width: `${pct}%` }}
+        style={{ width: `${pct}%`, ...(color ? { backgroundColor: color } : {}) }}
       />
     </div>
   );
