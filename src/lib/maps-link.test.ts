@@ -81,4 +81,10 @@ describe("routeUrl", () => {
     assert.ok(android.includes(encodeURIComponent(VENUE.address)));
     assert.ok(!ios.includes(encodeURIComponent(VENUE.name)));
   });
+
+  it("venue with coordinates routes to the point on iPhone and Android", () => {
+    const withPoint: Venue = { ...VENUE, coords: { lat: 53.67432, lon: 23.852 } };
+    assert.equal(routeUrl("Гродно, Лидская 1", "ios", withPoint), "https://maps.apple.com/?daddr=53.67432,23.852&dirflg=d");
+    assert.equal(routeUrl("Гродно, Лидская 1", "android", withPoint), "https://www.google.com/maps/dir/?api=1&destination=53.67432,23.852");
+  });
 });

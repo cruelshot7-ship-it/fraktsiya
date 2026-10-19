@@ -5,7 +5,7 @@
  */
 
 export type MapPlatform = "ios" | "android" | "other";
-export type Venue = { name: string; address: string; yandexOrgUrl?: string };
+export type Venue = { name: string; address: string; yandexOrgUrl?: string; coords?: { lat: number; lon: number } };
 
 const STOP_WORDS = new Set(["улица", "ул", "г", "город"]);
 
@@ -38,8 +38,10 @@ export function routeUrl(address: string, platform: MapPlatform, venue?: Venue):
   const typed = address.trim();
   if (!typed) return "";
   const atVenue = venue !== undefined && isVenueAddress(typed, venue);
+  // у зала есть координаты — ведём по точке; адрес остаётся для случаев без координат
+  const point = atVenue && venue.coords ? `${venue.coords.lat},${venue.coords.lon}` : undefined;
   const q = atVenue ? venue.address : typed;
-  const encoded = encodeURIComponent(q);
+  const encoded = point ?? encodeURIComponent(q);
   if (platform === "ios") return `https://maps.apple.com/?daddr=${encoded}&dirflg=d`;
   if (platform === "android") return `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
   if (atVenue && venue.yandexOrgUrl) return venue.yandexOrgUrl;

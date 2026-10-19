@@ -81,6 +81,7 @@ export const STUDIO_VENUE = {
   name: "Titan",
   address: "Гродно, улица Лидская, 1",
   yandexOrgUrl: "https://yandex.ru/maps/org/198928680684",
+  coords: { lat: 53.67432, lon: 23.852 },
 };
 
 export const DOW = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"] as const;
