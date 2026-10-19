@@ -185,6 +185,7 @@ export function MiniApp() {
 
   return (
     <div className="app-frame flex justify-center overflow-hidden bg-background">
+      <div aria-hidden="true" className="app-bottom-backdrop" />
       <HapticLayer />
       <div className="ambient-glow app-frame relative flex w-full max-w-app flex-col overflow-hidden">
         <Toast message={toast} />

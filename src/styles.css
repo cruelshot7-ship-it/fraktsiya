@@ -377,6 +377,18 @@ button:active:not(:disabled) {
   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
+/* Самый нижний слой фона: общий для клиента и тренера, виден сквозь полупрозрачные блоки */
+.app-bottom-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 85% 0%, rgb(232 56 47 / 0.12), transparent 55%),
+    radial-gradient(ellipse at 10% 100%, rgb(69 212 228 / 0.08), transparent 55%),
+    linear-gradient(180deg, #1a1d23 0%, #15171b 60%, #111316 100%);
+}
+
 @supports (corner-shape: squircle) {
   .apple-block {
     corner-shape: squircle;
@@ -518,6 +530,7 @@ button:active:not(:disabled) {
 
 @media (min-width: 1024px) {
   .app-frame.ambient-glow {
+    background: var(--color-background);
     border-radius: 1.5rem;
     margin: 1.25rem 0;
     height: calc(var(--app-height, 100dvh) - 2.5rem);

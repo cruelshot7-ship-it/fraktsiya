@@ -42,11 +42,11 @@
   --color-carb: #4c8dff;
 }
 
-/* Ambient glow — red top-right, cyan bottom-left */
+/* Ambient glow — red top-right, cyan bottom-left. Фон прозрачный: общий слой фона лежит ниже (.app-bottom-backdrop). */
 .ambient-glow {
   position: relative;
   isolation: isolate;
-  background: var(--color-background);
+  background: transparent;
 }
 .ambient-glow::before {
   content: "";
