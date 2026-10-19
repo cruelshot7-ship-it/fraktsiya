@@ -365,11 +365,16 @@ button:active:not(:disabled) {
   transition: transform 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
 }
 
-/* полупрозрачная карточка: фон просвечивает, как плитки на референсе */
+/*
+ * Стеклянная карточка с градиентом: сверху плотнее, книзу прозрачнее;
+ * красное свечение из левого нижнего угла (акцент приложения) и размытие фона.
+ */
 .apple-block-glass {
-  background: color-mix(in srgb, var(--color-card) 62%, transparent);
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  background:
+    radial-gradient(120% 90% at 0% 100%, rgb(232 56 47 / 0.16), transparent 60%),
+    linear-gradient(180deg, rgb(30 33 39 / 0.8) 0%, rgb(21 23 27 / 0.4) 100%);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 @supports (corner-shape: squircle) {
