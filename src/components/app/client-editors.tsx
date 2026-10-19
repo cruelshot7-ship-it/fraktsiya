@@ -112,7 +112,7 @@ export function FilterChip({
   );
 }
 
-export function MacroMini({ label, now, max }: { label: string; now: number; max: number }) {
+export function MacroMini({ label, now, max, color }: { label: string; now: number; max: number; color?: string }) {
   return (
     <div>
       <p className="text-sm tabular-nums">
@@ -120,7 +120,7 @@ export function MacroMini({ label, now, max }: { label: string; now: number; max
       </p>
       <p className="text-2xs text-muted-foreground">{label}</p>
       <div className="mt-1.5">
-        <ProgressRail value={now} max={max} />
+        <ProgressRail value={now} max={max} color={color} />
       </div>
     </div>
   );

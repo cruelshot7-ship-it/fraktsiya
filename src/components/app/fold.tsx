@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 export function Fold({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
     <details className="group">
-      <summary className="pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+      <summary className="apple-block pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 break-words">{title}</span>
         <span aria-hidden className="shrink-0 text-muted-foreground transition-transform group-open:rotate-45">
           +
