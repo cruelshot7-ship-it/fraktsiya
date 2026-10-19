@@ -255,6 +255,23 @@ export function ProgramView() {
 
   return (
     <div className="stagger-in flex flex-col gap-3">
+      {restLeft > 0 ? (
+        <div className="sticky top-0 z-20 bg-background pb-2">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-ok-dim px-4 py-3">
+              <p className="flex items-baseline gap-2 text-sm text-ok">
+                Отдых
+                <span className="font-display text-3xl leading-none tabular-nums text-ok">{formatMmSs(restLeft)}</span>
+              </p>
+              <button
+                type="button"
+                className="pressable h-9 rounded-lg px-3 text-sm text-muted-foreground"
+                onClick={() => setRestUntil(null)}
+              >
+                Пропустить
+              </button>
+            </div>
+        </div>
+      ) : null}
       <Surface glow="ok">
         <SectionLabel>{motive.kicker}</SectionLabel>
         <p className="font-display mt-2 text-xl leading-tight tracking-wide">{motive.line}</p>
@@ -357,21 +374,6 @@ export function ProgramView() {
               </button>
             ) : null}
           </div>
-          {restLeft > 0 ? (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ok-dim px-4 py-3">
-              <p className="flex items-baseline gap-2 text-sm text-ok">
-                Отдых
-                <span className="font-display text-3xl leading-none tabular-nums text-ok">{formatMmSs(restLeft)}</span>
-              </p>
-              <button
-                type="button"
-                className="pressable h-9 rounded-lg px-3 text-sm text-muted-foreground"
-                onClick={() => setRestUntil(null)}
-              >
-                Пропустить
-              </button>
-            </div>
-          ) : null}
           {!showDone && plan.blocks.length > 0 && doneCount === plan.blocks.length ? (
             <p className="mt-2 text-sm text-foreground">Всё выполнено</p>
           ) : null}
