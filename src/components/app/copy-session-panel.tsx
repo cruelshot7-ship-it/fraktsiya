@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { appendCopiedSession } from "@/lib/templates/copy-session";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { inputClass, SectionLabel, Surface } from "@/components/app/bits";
 
 export function CopySessionPanel() {
   const role = useStudio((s) => s.role);
@@ -44,7 +44,7 @@ export function CopySessionPanel() {
         Независимая копия дня. Правки шаблона позже не затронут этот день.
       </p>
       <select
-        className="mt-3 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+        className={`mt-3 ${inputClass}`}
         value={sourceId || client.sessions[client.sessions.length - 1]?.id || ""}
         onChange={(e) => setSourceId(e.target.value)}
       >
