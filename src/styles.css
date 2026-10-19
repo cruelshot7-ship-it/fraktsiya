@@ -365,6 +365,13 @@ button:active:not(:disabled) {
   transition: transform 280ms var(--ease-apple), box-shadow 280ms var(--ease-apple);
 }
 
+/* полупрозрачная карточка: фон просвечивает, как плитки на референсе */
+.apple-block-glass {
+  background: color-mix(in srgb, var(--color-card) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+}
+
 @supports (corner-shape: squircle) {
   .apple-block {
     corner-shape: squircle;
