@@ -3,7 +3,7 @@ import { WheelField } from "@/components/app/wheel-picker";
 import { getTelegramInitData } from "@/lib/telegram";
 import { useStudio } from "@/lib/studio-store";
 import { neonBookingId } from "@/lib/booking/client-dual-write";
-import { SectionLabel, Surface } from "@/components/app/bits";
+import { inputClass, SectionLabel, Surface } from "@/components/app/bits";
 
 type SetRow = {
   exercise: string;
@@ -184,7 +184,7 @@ export function SessionResultForm({
         {rows.map((row, i) => (
           <div key={i} className="rounded-xl bg-secondary/40 p-3 space-y-2">
             <input
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              className={inputClass}
               placeholder="Упражнение"
               value={row.exercise}
               onChange={(e) => updateRow(i, { exercise: e.target.value })}
@@ -212,7 +212,7 @@ export function SessionResultForm({
                 allowEmpty
               />
               <select
-                className="rounded-lg border border-border bg-background px-2 py-2 text-sm"
+                className={inputClass}
                 value={row.unit}
                 onChange={(e) => updateRow(i, { unit: e.target.value as SetRow["unit"] })}
               >
@@ -236,7 +236,7 @@ export function SessionResultForm({
       <div className="mt-3 grid grid-cols-2 gap-2">
         <WheelField label="RPE" kind="dec" min={1} max={10} start={8} placeholder="RPE (необяз.)" value={rpe} onChange={setRpe} allowEmpty />
         <input
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className={inputClass}
           placeholder="Заметка"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
