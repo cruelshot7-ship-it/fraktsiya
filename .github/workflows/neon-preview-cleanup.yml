@@ -1,0 +1,37 @@
+name: neon-preview-cleanup
+
+# Когда PR закрыт (смерджен или отменён), удаляем его превью-ветку в Neon: preview/<ветка>.
+# Нужны секреты NEON_API_KEY и NEON_PROJECT_ID. Без них шаг просто пропускается.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  delete-preview-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon preview branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "NEON_API_KEY или NEON_PROJECT_ID не заданы, пропускаю."
+            exit 0
+          fi
+          NAME="preview/${HEAD_REF}"
+          API="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches"
+          ID=$(curl -sS -H "Authorization: Bearer ${NEON_API_KEY}" "$API" | jq -r --arg n "$NAME" '.branches[] | select(.name == $n) | .id')
+          if [ -z "$ID" ]; then
+            echo "Ветки ${NAME} в Neon нет, удалять нечего."
+            exit 0
+          fi
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer ${NEON_API_KEY}" "$API/$ID")
+          echo "Удаление ${NAME}: HTTP ${CODE}"
+          if [ "$CODE" = "200" ] || [ "$CODE" = "204" ] || [ "$CODE" = "404" ]; then exit 0; fi
+          exit 1
