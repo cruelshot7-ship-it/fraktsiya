@@ -72,7 +72,6 @@ export function MiniApp() {
   const notices = useStudio((s) => s.notices);
   const dismissed = useStudio((s) => s.dismissedSignalIds);
   const dismissSignal = useStudio((s) => s.dismissSignal);
-  const bookings = useStudio((s) => s.bookings);
   const sheetClientId = useStudio((s) => s.sheetClientId);
   const inviteBlocked = useStudio((s) => s.inviteBlocked);
   const inviteChecked = useStudio((s) => s.inviteChecked);
