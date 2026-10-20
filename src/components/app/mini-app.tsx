@@ -321,7 +321,7 @@ export function MiniApp() {
         ) : null}
 
         {showNav ? (
-          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
+          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20">
             <div className="flex pt-1.5 pb-[calc(var(--inset-bottom)+0.375rem)] pl-[calc(var(--inset-left)+0.5rem)] pr-[calc(var(--inset-right)+0.5rem)]">
               {navItems.map((item) => {
                 const active = navActive(item.id, tab);
