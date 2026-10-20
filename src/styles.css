@@ -430,14 +430,19 @@ button:active:not(:disabled) {
   box-shadow: none;
 }
 
-/* Шапка без подложки: только «Назад» и действия поверх контента. */
+/* Шапка парит поверх контента: едва заметная подложка сверху вниз, контент виден под ней. */
 .chrome {
-  background: transparent;
+  background: linear-gradient(180deg, rgb(21 23 27 / 0.45) 0%, rgb(21 23 27 / 0) 100%);
+  pointer-events: none;
 }
 
 .chrome.is-scrolled {
-  background: transparent;
-  box-shadow: none;
+  background: linear-gradient(180deg, rgb(21 23 27 / 0.6) 0%, rgb(21 23 27 / 0) 100%);
+}
+
+/* кнопки внутри шапки остаются нажимаемыми, пустое место — нет */
+.chrome button {
+  pointer-events: auto;
 }
 
 /* Открытие блока «Инструменты» — движение в ответ на действие тренера. */
