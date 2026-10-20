@@ -198,9 +198,12 @@ export function MiniApp() {
             <button
               type="button"
               onClick={goBack}
-              className="pressable -ml-1 mb-1 flex h-11 items-center gap-1 self-start rounded-lg px-2 text-sm text-muted-foreground"
+              className="pressable mb-1 flex min-h-11 flex-col items-center gap-0.5 self-start px-1 text-2xs text-primary"
             >
-              <ArrowLeft className="size-4" aria-hidden />
+              {/* как пункт нижней панели, но в красном: пилюля под иконкой */}
+              <span className="grid h-8 w-14 place-items-center rounded-2xl bg-primary-dim shadow-border">
+                <ArrowLeft className="size-5" aria-hidden />
+              </span>
               Назад
             </button>
           ) : null}
