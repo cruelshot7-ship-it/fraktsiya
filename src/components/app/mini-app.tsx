@@ -207,15 +207,13 @@ export function MiniApp() {
           ) : null}
           {role === "trainer" ? (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <BrandLockup compact />
-                {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
-              </div>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div>
+              {/* подпись бренда убрана: шапка ниже, видимая часть экрана больше */}
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
                   <h1 key={title} className="title-in title-grad font-display text-4xl leading-none tracking-wide">{title}</h1>
                   <SyncStatusChip className="mt-1" quietWhenOk />
                 </div>
+                {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
               </div>
             </>
           ) : (
