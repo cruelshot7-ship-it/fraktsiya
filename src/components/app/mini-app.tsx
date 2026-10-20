@@ -5,7 +5,6 @@ import { ArrowLeft, Bell, CalendarDays, ClipboardList, MessageCircle, Sparkles, 
 import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
-import { BrandLockup } from "@/components/app/brand-mark";
 import { HapticLayer } from "@/components/app/haptic-layer";
 import { SyncStatusChip } from "@/components/app/sync-status";
 import { TodayView } from "@/components/app/today-view";
@@ -218,9 +217,26 @@ export function MiniApp() {
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <BrandLockup />
-                <div className="flex items-center gap-1.5">
+              {/* подпись бренда убрана: шапка ниже, видимая часть экрана больше */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 key={title} className="title-in title-grad font-display text-2xl leading-none tracking-wide">{title}</h1>
+                  {inviteBlocked ? null : (
+                  <>
+                  <SyncStatusChip className="mt-1" quietWhenOk />
+                  <p className="mt-1.5 text-tiny text-muted-foreground">
+                    {!client
+                      ? "Профиль появится, когда тренер добавит вас в зал"
+                      : isFrozen(client)
+                      ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
+                      : soon !== null && soon > 0 && soon < 24
+                        ? `Ближайшая ${nextMine!.time} · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`
+                        : `${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)} на балансе`}
+                  </p>
+                  </>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
                   {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
                   <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-secondary text-foreground" aria-label="Написать тренеру">
                     <MessageCircle className="size-4" />
@@ -231,21 +247,6 @@ export function MiniApp() {
                   </button>
                 </div>
               </div>
-              {inviteBlocked ? null : (
-              <>
-              <h1 key={title} className="title-in title-grad font-display mt-3 text-2xl leading-none tracking-wide">{title}</h1>
-              <SyncStatusChip className="mt-1" quietWhenOk />
-              <p className="mt-1.5 text-tiny text-muted-foreground">
-                {!client
-                  ? inviteBlocked ? "Тренер добавит вас в зал" : "Профиль появится, когда тренер добавит вас в зал"
-                  : isFrozen(client)
-                  ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
-                  : soon !== null && soon > 0 && soon < 24
-                    ? `Ближайшая ${nextMine!.time} · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`
-                    : `${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)} на балансе`}
-              </p>
-              </>
-              )}
             </>
           )}
         </header>
