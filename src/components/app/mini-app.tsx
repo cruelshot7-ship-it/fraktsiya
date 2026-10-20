@@ -1,8 +1,8 @@
 import { PrivacyGate } from "@/components/app/privacy-panel";
 import { needsDecision } from "@/lib/privacy";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Bell, CalendarDays, ClipboardList, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
-import { formatDayMonth, hoursUntilSlot, isFrozen, isSlotPast, relativeLabel, sessionsRu, type Notice } from "@/data/studio";
+import { relativeLabel, type Notice } from "@/data/studio";
 import { activeClient, useStudio, type TabId } from "@/lib/studio-store";
 import { Toast } from "@/components/app/bits";
 import { HapticLayer } from "@/components/app/haptic-layer";
@@ -48,22 +48,6 @@ const TRAINER_NAV: NavItem[] = [
   { id: "programs", label: "Программы", icon: ClipboardList },
   { id: "more", label: "Профиль", icon: User },
 ];
-
-const TITLES: Partial<Record<TabId, string>> = {
-  today: "Сегодня",
-  schedule: "Расписание",
-  program: "Программа",
-  progress: "Прогресс",
-  more: "Профиль",
-  slots: "Слоты",
-  bookings: "Записи",
-  food: "Питание",
-  form: "Форма",
-  hall: "Зал",
-  clients: "Клиенты",
-  signals: "Сигналы",
-  programs: "Программы",
-};
 
 function navActive(id: TabId, tab: TabId) {
   // «Сигналы» — экран внутри «Сегодня» у тренера, с подсветкой вкладки «Сегодня»
@@ -150,23 +134,8 @@ export function MiniApp() {
     notices.filter((n) => n.audience === "trainer" && n.kind !== "join" && !dismissed.includes(n.id)).length +
     joinRequests.filter((r) => r.status === "pending").length;
   const clientInbox = notices.filter((n) => n.audience === "client" && n.clientId === client?.id && !dismissed.includes(n.id));
-  const nextMine = bookings
-    .filter((b) => b.clientId === client?.id && !isSlotPast(b.date, b.time))
-    .sort((a, b) => `${a.date}_${a.time}`.localeCompare(`${b.date}_${b.time}`))[0];
-  const soon = nextMine ? hoursUntilSlot(nextMine.date, nextMine.time) : null;
-
   const showNav = role === "trainer" || (!inviteBlocked && !sheetClientId && !guestPreview);
   const navItems = role === "trainer" ? TRAINER_NAV : CLIENT_NAV;
-
-  const title = useMemo(() => {
-    // the trainer always sees whose program is open: the name is the only guard against editing the wrong client
-    if (role === "trainer") return tab === "program" && client ? `${client.firstName} · программа` : TITLES[tab] ?? "Сегодня";
-    if (inviteBlocked) return "Заявка в зал";
-    if (tab === "today") return client ? `${client.firstName} · сегодня` : "Мой день";
-    if (tab === "schedule" || tab === "slots" || tab === "bookings") return "Расписание";
-    if (tab === "program") return client ? `${client.firstName} · программа` : TITLES.program;
-    return TITLES[tab] ?? "Discipline";
-  }, [tab, client, role, inviteBlocked]);
 
   function readScroll() {
     const el = scroller.current;
@@ -193,53 +162,30 @@ export function MiniApp() {
         {sheetClientId ? null : (
         <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>
         <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
-        <header className="pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)] pt-[calc(var(--inset-top)+0.75rem)] pb-3">
-          {tabHistory.length > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              className="pressable mb-1 flex min-h-11 flex-col items-center gap-0.5 self-start px-1 text-2xs text-primary"
-            >
-              {/* как пункт нижней панели, но в красном: пилюля под иконкой */}
-              <span className="grid h-8 w-14 place-items-center rounded-2xl bg-primary-dim shadow-border">
-                <ArrowLeft className="size-5" aria-hidden />
-              </span>
-              Назад
-            </button>
-          ) : null}
-          {role === "trainer" ? (
-            <>
-              {/* подпись бренда убрана: шапка ниже, видимая часть экрана больше */}
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <h1 key={title} className="title-in title-grad font-display text-4xl leading-none tracking-wide">{title}</h1>
-                  <SyncStatusChip className="mt-1" quietWhenOk />
-                </div>
-                {tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* подпись бренда убрана: шапка ниже, видимая часть экрана больше */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h1 key={title} className="title-in title-grad font-display text-2xl leading-none tracking-wide">{title}</h1>
-                  {inviteBlocked ? null : (
-                  <>
-                  <SyncStatusChip className="mt-1" quietWhenOk />
-                  <p className="mt-1.5 text-tiny text-muted-foreground">
-                    {!client
-                      ? "Профиль появится, когда тренер добавит вас в зал"
-                      : isFrozen(client)
-                      ? `Заморозка до ${formatDayMonth(client.frozenUntil!)}`
-                      : soon !== null && soon > 0 && soon < 24
-                        ? `Ближайшая ${nextMine!.time} · ${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)}`
-                        : `${client.sessionsLeft} ${sessionsRu(client.sessionsLeft)} на балансе`}
-                  </p>
-                  </>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
+        {/* шапка без заголовка и подписей: слева только «Назад», справа — действия */}
+        <header className="pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)] pt-[calc(var(--inset-top)+0.5rem)] pb-1">
+          <div className="flex min-h-11 items-center justify-between gap-2">
+            {tabHistory.length > 0 ? (
+              <button
+                type="button"
+                onClick={goBack}
+                className="pressable flex min-h-11 flex-col items-center gap-0.5 self-start px-1 text-2xs text-primary"
+              >
+                {/* как пункт нижней панели, но в красном: пилюля под иконкой */}
+                <span className="grid h-8 w-14 place-items-center rounded-2xl bg-primary-dim shadow-border">
+                  <ArrowLeft className="size-5" aria-hidden />
+                </span>
+                Назад
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <SyncStatusChip quietWhenOk />
+              {role === "trainer" ? (
+                tgLocked ? null : <RoleSwitch role={role} onChange={setRole} compact />
+              ) : (
+                <>
                   {tgLocked || inviteBlocked ? null : <RoleSwitch role={role} onChange={setRole} />}
                   <button type="button" onClick={() => openNote()} className="pressable relative grid size-11 place-items-center rounded-xl border border-border bg-secondary text-foreground" aria-label="Написать тренеру">
                     <MessageCircle className="size-4" />
@@ -248,10 +194,10 @@ export function MiniApp() {
                     <Bell className="size-4" />
                     {clientInbox.length > 0 ? <span className="glow-dot absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null}
                   </button>
-                </div>
-              </div>
-            </>
-          )}
+                </>
+              )}
+            </div>
+          </div>
         </header>
 
         </div>
@@ -321,7 +267,7 @@ export function MiniApp() {
         ) : null}
 
         {showNav ? (
-          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20 border-t border-hairline">
+          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20">
             <div className="flex pt-1.5 pb-[calc(var(--inset-bottom)+0.375rem)] pl-[calc(var(--inset-left)+0.5rem)] pr-[calc(var(--inset-right)+0.5rem)]">
               {navItems.map((item) => {
                 const active = navActive(item.id, tab);
