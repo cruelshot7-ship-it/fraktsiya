@@ -160,7 +160,7 @@ export function MiniApp() {
         <ClientNoticeSheet />
 
         {sheetClientId ? null : (
-        <div className={cn("chrome relative z-10 shrink-0", scrolled && "is-scrolled")}>
+        <div className={cn("chrome absolute inset-x-0 top-0 z-10", scrolled && "is-scrolled")}>
         <div className="scroll-progress" style={{ transform: `scaleX(${progress})` }} />
         {/* шапка без заголовка и подписей: слева только «Назад», справа — действия */}
         <header className="pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)] pt-[calc(var(--inset-top)+0.5rem)] pb-1">
@@ -206,6 +206,8 @@ export function MiniApp() {
         <main ref={scroller} onScroll={readScroll} className={cn(
             "min-h-0 flex-1 overflow-y-auto overscroll-y-contain pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)]",
             showNav ? "pb-[calc(5.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
+            // шапка парит поверх: контент начинается под ней и уходит под неё при прокрутке
+            !sheetClientId && "pt-[calc(var(--inset-top)+4rem)]",
           )}>
           <div key={`${role}-${tab}`} className="pt-4">
             {role === "client" && !inviteChecked ? (
