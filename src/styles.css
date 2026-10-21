@@ -421,8 +421,12 @@ button:active:not(:disabled) {
 }
 
 .nav-blur {
-  /* без линии и плашки: контент плавно уходит в затемнение у низа, подписи вкладок читаются поверх текста */
-  background: linear-gradient(0deg, rgb(21 23 27 / 0.9) 0%, rgb(21 23 27 / 0.7) 60%, rgb(21 23 27 / 0) 100%);
+  /* плавающая стеклянная пилюля: подписи читаются на самом блоке, контент уходит под неё */
+  border-radius: 1.5rem;
+  background: rgb(21 23 27 / 0.72);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--shadow-border), 0 10px 30px rgb(0 0 0 / 0.35);
 }
 
 /* В нижней панели нажатие без красного свечения: выделяет только пилюля выбранной вкладки. */

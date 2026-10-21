@@ -84,6 +84,9 @@ export function MiniApp() {
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
+  // нижняя панель уезжает вниз при прокрутке к низу списка и возвращается при прокрутке вверх
+  const [navHidden, setNavHidden] = useState(false);
+  const lastScrollTop = useRef(0);
 
   useEffect(() => {
     ensureBookDualWrite();
@@ -143,6 +146,10 @@ export function MiniApp() {
     setScrolled(el.scrollTop > 6);
     setProgress(max > 8 ? Math.min(1, el.scrollTop / max) : 0);
     setCanScroll(max > 48);
+    const top = el.scrollTop;
+    const dy = top - lastScrollTop.current;
+    lastScrollTop.current = top;
+    if (Math.abs(dy) > 4) setNavHidden(dy > 0 && top > 80);
   }
 
   useEffect(() => {
@@ -204,7 +211,7 @@ export function MiniApp() {
 
         <main ref={scroller} onScroll={readScroll} className={cn(
             "min-h-0 flex-1 overflow-y-auto overscroll-y-contain pl-[calc(var(--inset-left)+1rem)] pr-[calc(var(--inset-right)+1rem)]",
-            showNav ? "pb-[calc(5.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
+            showNav ? "pb-[calc(6.5rem+var(--inset-bottom))]" : "pb-[calc(2.5rem+var(--inset-bottom))]",
             // шапка парит поверх: контент начинается под ней и уходит под неё при прокрутке
             !sheetClientId && "pt-[calc(var(--inset-top)+4rem)]",
           )}>
@@ -268,8 +275,14 @@ export function MiniApp() {
         ) : null}
 
         {showNav ? (
-          <nav className="nav-blur absolute inset-x-0 bottom-0 z-20">
-            <div className="flex pt-1.5 pb-[calc(var(--inset-bottom)+0.375rem)] pl-[calc(var(--inset-left)+0.5rem)] pr-[calc(var(--inset-right)+0.5rem)]">
+          <nav
+            className={cn(
+              "nav-blur absolute inset-x-3 z-20 transition-transform duration-300 ease-out",
+              navHidden && "pointer-events-none translate-y-[calc(100%+2rem)]",
+            )}
+            style={{ bottom: "calc(var(--inset-bottom) + 0.75rem)" }}
+          >
+            <div className="flex py-1.5 pl-[calc(var(--inset-left)+0.5rem)] pr-[calc(var(--inset-right)+0.5rem)]">
               {navItems.map((item) => {
                 const active = navActive(item.id, tab);
                 const Icon = item.icon;
