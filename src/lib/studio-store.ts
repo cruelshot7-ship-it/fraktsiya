@@ -182,8 +182,9 @@ type State = {
   cancelSlotBookings: (slotId: string) => void;
   saveMenu: (record: MenuRecord) => void;
   setMenuChoice: (clientId: string, date: string, slotId: string, dishId: string) => void;
-  addFood: (mealId: string) => void;
-  addCustomFood: (meal: Omit<Meal, "id">) => void;
+  /** date — ISO-день записи; без него — сегодня */
+  addFood: (mealId: string, date?: string) => void;
+  addCustomFood: (meal: Omit<Meal, "id">, date?: string) => void;
   removeFood: (logId: string) => void;
   saveDayCheck: (patch: Partial<Pick<DayCheck, "steps" | "sleepHours" | "waterMl" | "moveMin" | "moveKind" | "fatigue" | "soreness" | "pain">>) => void;
   importFatSecret: (meal: { calories: number; protein: number; fat: number; carbs: number }) => void;
@@ -226,6 +227,8 @@ type State = {
 const KEY = "ruksha:v8";
 const LEGACY_KEYS = ["ruksha:v7", "fraktsiya:v7", "fraktsiya:v6", "fraktsiya:v5"];
 const todayIso = () => studioToday();
+/** Дата записи еды: ISO-день из календаря или сегодня. */
+const foodDay = (date?: string) => (date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayIso());
 
 function readPersist(): string | null {
   try {
@@ -1549,33 +1552,37 @@ export const useStudio = create<State>((set, get) => ({
     persist(snap(get()));
   },
 
-  addFood: (mealId) => {
+  addFood: (mealId, date) => {
     const meal = MEALS.find((m) => m.id === mealId);
     if (!meal) return;
+    const day = foodDay(date);
     const entry: FoodLog = {
       ...meal,
       logId: `f_${Date.now()}`,
-      date: todayIso(),
+      date: day,
       clientId: get().activeClientId,
     };
     const food = [...get().food, entry];
-    // серия считается от визитов (clientStreak), запись еды её не двигает
-    const clients = get().clients.map((c) => (c.id === entry.clientId ? { ...c, lastReportAt: todayIso() } : c));
+    // серия считается от визитов (clientStreak), запись еды её не двигает; «последний отчёт» — только за сегодня
+    const clients = get().clients.map((c) =>
+      c.id === entry.clientId && day === todayIso() ? { ...c, lastReportAt: todayIso() } : c,
+    );
     set({ food, clients });
     persist(snap(get()));
   },
 
-  addCustomFood: (meal) => {
+  addCustomFood: (meal, date) => {
+    const day = foodDay(date);
     const entry: FoodLog = {
       id: `custom_${Date.now()}`,
       ...meal,
       logId: `f_${Date.now()}`,
-      date: todayIso(),
+      date: day,
       clientId: get().activeClientId,
     };
     const food = [...get().food, entry];
     const clients = get().clients.map((c) =>
-      c.id === entry.clientId ? { ...c, lastReportAt: todayIso() } : c,
+      c.id === entry.clientId && day === todayIso() ? { ...c, lastReportAt: todayIso() } : c,
     );
     set({ food, clients });
     persist(snap(get()));

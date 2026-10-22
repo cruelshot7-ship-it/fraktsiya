@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
-import { addDays, dayKbju, isoDate, MEALS, parseISODate, studioToday, sumFood, type Client, type FoodLog, type Meal } from "@/data/studio";
+import { addDays, dayKbju, formatDayMonth, isoDate, MEALS, parseISODate, studioToday, sumFood, type Client, type FoodLog, type Meal } from "@/data/studio";
 import { scaleKbju, type ScanProduct } from "@/data/scan";
 import { activeClient, useStudio } from "@/lib/studio-store";
 import { specialDataAllowed } from "@/lib/privacy";
@@ -9,6 +9,7 @@ import { MenuDay } from "@/components/app/menu-day";
 import { FEATURES } from "@/lib/features";
 import { ScannerSheet } from "@/components/app/scanner-sheet";
 import { FoodReferencePanel } from "@/components/app/food-reference-panel";
+import { FoodCalendar, shiftIso } from "@/components/app/food-calendar";
 import { WheelField } from "@/components/app/wheel-picker";
 import { cn } from "@/lib/utils";
 
@@ -87,20 +88,28 @@ function NutritionContent({ client }: { client: Client }) {
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  /** день дневника: по умолчанию сегодня, меняется календарём */
+  const [day, setDay] = useState(() => studioToday());
+  const [calOpen, setCalOpen] = useState(false);
 
   const today = studioToday();
   const tomorrow = isoDate(addDays(parseISODate(today), 1));
   const tomorrowReady = menus.some((m) => m.clientId === client.id && m.date === tomorrow && m.confirmed);
-  const todayFood = food.filter((f) => f.date === today && f.clientId === client.id);
-
-  const yesterday = isoDate(addDays(parseISODate(today), -1));
-  const yesterdayFood = useMemo(
-    () => (client ? food.filter((f) => f.clientId === client.id && f.date === yesterday) : []),
-    [client, food, yesterday],
+  const dayFood = food.filter((f) => f.date === day && f.clientId === client.id);
+  const isToday = day === today;
+  const dayLabel = isToday ? "Сегодня" : formatDayMonth(day);
+  /** дни с записями — точка в календаре */
+  const foodDays = useMemo(() => new Set(food.filter((f) => f.clientId === client.id).map((f) => f.date)), [food, client.id]);
+  const prevDay = shiftIso(day, -1);
+  const prevFood = useMemo(
+    () => food.filter((f) => f.clientId === client.id && f.date === prevDay),
+    [food, client.id, prevDay],
   );
+  /** записи пишутся в выбранный день дневника */
+  const addOnDay = (meal: Omit<Meal, "id">) => addCustomFood(meal, day);
 
-  const totals = sumFood(todayFood);
-  const goal = dayKbju(client, today, bookings);
+  const totals = sumFood(dayFood);
+  const goal = dayKbju(client, day, bookings);
   const hasGoal = goal.kbju.calories > 0;
   const overCal = Math.max(0, totals.calories - (goal.kbju.calories || 0));
   const leftCal = Math.max(0, (goal.kbju.calories || 0) - totals.calories);
@@ -108,7 +117,7 @@ function NutritionContent({ client }: { client: Client }) {
   const low = totals.calories > 0 && hasGoal && totals.calories < goal.kbju.calories * 0.72;
 
   const groups = DIARY_GROUPS.map((g) => {
-    const items = todayFood.filter((f) => (f.kind ?? "other") === g.key);
+    const items = dayFood.filter((f) => (f.kind ?? "other") === g.key);
     return { ...g, items, kcal: items.reduce((sum, f) => sum + f.calories, 0) };
   }).filter((g) => g.items.length > 0);
 
@@ -125,13 +134,14 @@ function NutritionContent({ client }: { client: Client }) {
     return rankMeals(pool, hasGoal ? leftCal : 2000, hasGoal ? leftP : 150).slice(0, 8);
   }, [slot, query, leftCal, leftP, hasGoal]);
 
-  function repeatYesterday() {
-    if (!yesterdayFood.length) {
-      showToast("Вчера записей еды не было");
+  function repeatPrevDay() {
+    const prevLabel = isToday ? "вчера" : formatDayMonth(prevDay);
+    if (!prevFood.length) {
+      showToast(`${isToday ? "Вчера" : formatDayMonth(prevDay)}: записей еды не было`);
       return;
     }
-    for (const entry of yesterdayFood) {
-      addCustomFood({
+    for (const entry of prevFood) {
+      addOnDay({
         name: entry.name,
         calories: entry.calories,
         protein: entry.protein,
@@ -140,12 +150,12 @@ function NutritionContent({ client }: { client: Client }) {
         kind: entry.kind,
       });
     }
-    showToast(`Повторено вчера · ${yesterdayFood.length} поз.`);
+    showToast(`Повторено с ${prevLabel} · ${prevFood.length} поз.`);
   }
 
   function addScanned(product: ScanProduct, grams: number) {
     const macros = scaleKbju(product.per100, grams);
-    addCustomFood({
+    addOnDay({
       name: `${product.name} · ${grams} г`,
       calories: macros.calories,
       protein: macros.protein,
@@ -157,7 +167,7 @@ function NutritionContent({ client }: { client: Client }) {
   }
 
   function pick(mealId: string) {
-    addFood(mealId);
+    addFood(mealId, day);
     const meal = MEALS.find((m) => m.id === mealId);
     showToast(meal ? `+ ${meal.name}` : "Добавлено");
   }
@@ -167,7 +177,7 @@ function NutritionContent({ client }: { client: Client }) {
       showToast("Укажите название и калории");
       return;
     }
-    addCustomFood({
+    addOnDay({
       name: name.trim(),
       calories: Number(cal) || 0,
       protein: Number(protein) || 0,
@@ -196,7 +206,7 @@ function NutritionContent({ client }: { client: Client }) {
     <div className="stagger-in relative flex flex-col gap-3">
       {/* 1. День одним блоком: цифры и одна честная строка статуса */}
       <Surface glow={low ? "alert" : "ok"}>
-        <KbjuMeters title={`Сегодня · ${goal.train ? "тренировка" : "отдых"}`} eaten={totals} target={goal.kbju} />
+        <KbjuMeters title={`${dayLabel} · ${goal.train ? "тренировка" : "отдых"}`} eaten={totals} target={goal.kbju} />
         <p className={cn("mt-3 text-tiny", overCal > 0 ? "text-destructive" : "text-muted-foreground")}>
           {!hasGoal
             ? "Цель КБЖУ ещё не задана — тренер укажет её."
@@ -217,12 +227,35 @@ function NutritionContent({ client }: { client: Client }) {
       <Surface>
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Дневник</SectionLabel>
-          {yesterdayFood.length > 0 ? (
-            <button type="button" onClick={repeatYesterday} className="pressable h-9 px-2 text-tiny text-muted-foreground">
-              Повторить вчера · {yesterdayFood.length}
+          <div className="flex items-center gap-1">
+            {prevFood.length > 0 ? (
+              <button type="button" onClick={repeatPrevDay} className="pressable h-9 px-2 text-tiny text-muted-foreground">
+                Повторить {isToday ? "вчера" : formatDayMonth(prevDay)} · {prevFood.length}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              aria-expanded={calOpen}
+              onClick={() => setCalOpen((open) => !open)}
+              className="pressable h-9 rounded-lg bg-secondary px-3 text-tiny"
+            >
+              {dayLabel} · календарь
             </button>
-          ) : null}
+          </div>
         </div>
+        {calOpen ? (
+          <div className="mt-3">
+            <FoodCalendar
+              value={day}
+              today={today}
+              marks={foodDays}
+              onChange={(iso) => {
+                setDay(iso);
+                setCalOpen(false);
+              }}
+            />
+          </div>
+        ) : null}
         {groups.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">Пока пусто. Добавьте первое блюдо кнопкой ниже.</p>
         ) : (
